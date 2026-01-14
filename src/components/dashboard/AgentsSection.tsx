@@ -25,6 +25,12 @@ function useDebounce<T>(value: T, delay: number): T {
     return debouncedValue;
 }
 
+// Tool reference format as stored in API
+interface ToolReference {
+    toolName?: string;  // For built-in tools
+    toolId?: string;    // For custom tools
+}
+
 interface Agent {
     _id: string;
     talkrixAgentId: string;
@@ -59,7 +65,7 @@ interface Agent {
             message: string;
             endBehavior?: string;
         }>;
-        selectedTools?: Tool[];
+        selectedTools?: ToolReference[];
         vadSettings?: {
             turnEndpointDelay?: string;
             minimumTurnDuration?: string;
@@ -140,6 +146,87 @@ const defaultFormData: FormData = {
         minimumInterruptionDuration: "",
         frameActivationThreshold: 0,
     },
+};
+
+// Built-in tools for converting API references back to Tool objects
+const BUILT_IN_TOOLS_MAP: Tool[] = [
+    {
+        talkrixToolId: "builtin-warm-transfer",
+        name: "warmTransfer",
+        ownership: "public",
+        definition: {
+            modelToolName: "warmTransfer",
+            description: "Transfer the call with a warm handoff.",
+        },
+    },
+    {
+        talkrixToolId: "builtin-cold-transfer",
+        name: "coldTransfer",
+        ownership: "public",
+        definition: {
+            modelToolName: "coldTransfer",
+            description: "Transfer the call immediately (cold transfer).",
+        },
+    },
+    {
+        talkrixToolId: "builtin-leave-voicemail",
+        name: "leaveVoicemail",
+        ownership: "public",
+        definition: {
+            modelToolName: "leaveVoicemail",
+            description: "Allow the caller to leave a voicemail message.",
+        },
+    },
+    {
+        talkrixToolId: "builtin-query-corpus",
+        name: "queryCorpus",
+        ownership: "public",
+        definition: {
+            modelToolName: "queryCorpus",
+            description: "Search through a knowledge base or document corpus.",
+        },
+    },
+    {
+        talkrixToolId: "builtin-play-dtmf",
+        name: "playDtmfSounds",
+        ownership: "public",
+        definition: {
+            modelToolName: "playDtmfSounds",
+            description: "Play DTMF (touch-tone) sounds during the call.",
+        },
+    },
+    {
+        talkrixToolId: "builtin-hang-up",
+        name: "hangUp",
+        ownership: "public",
+        definition: {
+            modelToolName: "hangUp",
+            description: "End the current call.",
+        },
+    },
+];
+
+// Helper function to convert API tool references back to full Tool objects
+const convertToolReferencesToTools = async (toolRefs: ToolReference[], customTools: Tool[]): Promise<Tool[]> => {
+    const result: Tool[] = [];
+    
+    for (const ref of toolRefs) {
+        if (ref.toolName) {
+            // Built-in tool - find by modelToolName
+            const builtIn = BUILT_IN_TOOLS_MAP.find(t => t.definition.modelToolName === ref.toolName);
+            if (builtIn) {
+                result.push(builtIn);
+            }
+        } else if (ref.toolId) {
+            // Custom tool - find by talkrixToolId
+            const custom = customTools.find(t => t.talkrixToolId === ref.toolId);
+            if (custom) {
+                result.push(custom);
+            }
+        }
+    }
+    
+    return result;
 };
 
 // Agent Templates
@@ -2248,6 +2335,19 @@ export default function AgentsSection() {
         const hasUserSpeaksFirst = !!agent.callTemplate?.firstSpeakerSettings?.user;
         const firstSpeaker = hasUserSpeaksFirst ? 'user' : 'agent';
         
+        // Convert tool references to full Tool objects
+        let convertedTools: Tool[] = [];
+        if (agent.callTemplate?.selectedTools && agent.callTemplate.selectedTools.length > 0) {
+            try {
+                // Fetch custom tools to match against
+                const toolsRes = await fetchUserTools();
+                const customTools = toolsRes.success && toolsRes.data ? toolsRes.data : [];
+                convertedTools = await convertToolReferencesToTools(agent.callTemplate.selectedTools, customTools);
+            } catch (err) {
+                console.error('Failed to convert tool references:', err);
+            }
+        }
+        
         setFormData({
             name: agent.name,
             callTemplateName: agent.callTemplate?.name || "",
@@ -2265,7 +2365,7 @@ export default function AgentsSection() {
             userFallbackDelay: agent.callTemplate?.firstSpeakerSettings?.user?.fallback?.delay || "5s",
             userFallbackText: agent.callTemplate?.firstSpeakerSettings?.user?.fallback?.text || "",
             inactivityMessages: inactivityMsgs,
-            selectedTools: agent.callTemplate?.selectedTools || [],
+            selectedTools: convertedTools,
             // Advanced settings
             languageHint: agent.callTemplate?.languageHint || "",
             timeExceededMessage: agent.callTemplate?.timeExceededMessage || "",
@@ -2674,12 +2774,6 @@ export default function AgentsSection() {
                                     e.currentTarget.style.boxShadow = "none";
                                 }}
                             >
-                                {/* Top accent bar */}
-                                <div style={{
-                                    height: "3px",
-                                    background: `linear-gradient(90deg, ${accent.primary} 0%, ${accent.secondary} 100%)`,
-                                }} />
-                                
                                 <div style={{ padding: "20px" }}>
                                     {/* Header */}
                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>

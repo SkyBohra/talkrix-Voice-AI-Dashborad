@@ -574,12 +574,6 @@ export default function ToolsSection() {
                                         e.currentTarget.style.boxShadow = "none";
                                     }}
                                 >
-                                    {/* Top accent bar */}
-                                    <div style={{
-                                        height: "3px",
-                                        background: `linear-gradient(90deg, ${accent.primary} 0%, ${accent.secondary} 100%)`,
-                                    }} />
-                                    
                                     <div style={{ padding: "20px" }}>
                                         {/* Header */}
                                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
@@ -807,12 +801,6 @@ export default function ToolsSection() {
                                     e.currentTarget.style.boxShadow = "none";
                                 }}
                             >
-                                {/* Top accent bar */}
-                                <div style={{
-                                    height: "3px",
-                                    background: `linear-gradient(90deg, ${accent.primary} 0%, ${accent.secondary} 100%)`,
-                                }} />
-                                
                                 <div style={{ padding: "20px" }}>
                                     {/* Header */}
                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
