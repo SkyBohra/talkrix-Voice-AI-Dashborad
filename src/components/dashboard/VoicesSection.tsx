@@ -99,50 +99,85 @@ export default function VoicesSection() {
         return colors[provider] || { color: "#9ca3af", bg: "rgba(156, 163, 175, 0.1)" };
     };
 
-    const getLanguageFlag = (lang: string | null) => {
-        if (!lang) return "🌐";
-        const langMap: Record<string, string> = {
-            "en": "🇺🇸",
-            "en-US": "🇺🇸",
-            "en-GB": "🇬🇧",
-            "en-IN": "🇮🇳",
-            "en-NZ": "🇳🇿",
-            "en-NG": "🇳🇬",
-            "es": "🇪🇸",
-            "es-ES": "🇪🇸",
-            "fr": "🇫🇷",
-            "de": "🇩🇪",
-            "it": "🇮🇹",
-            "pt": "🇵🇹",
-            "pt-BR": "🇧🇷",
-            "pt-PT": "🇵🇹",
-            "nl": "🇳🇱",
-            "pl": "🇵🇱",
-            "ru": "🇷🇺",
-            "ja": "🇯🇵",
-            "ko": "🇰🇷",
-            "zh": "🇨🇳",
-            "ar": "🇸🇦",
-            "ar-EG": "🇪🇬",
-            "ar-KW": "🇰🇼",
-            "el": "🇬🇷",
-            "ua": "🇺🇦",
-            "vi": "🇻🇳",
-            "ta": "🇮🇳",
-            "hi": "🇮🇳",
-            "sk": "🇸🇰",
-            "ro": "🇷🇴",
-            "fi": "🇫🇮",
-            "bg": "🇧🇬",
-            "hu": "🇭🇺",
-            "da": "🇩🇰",
-            "cs": "🇨🇿",
+    // Country code mapping for flag images (works on all platforms including Windows)
+    const getCountryCode = (lang: string | null): string | null => {
+        if (!lang) return null;
+        const langToCountry: Record<string, string> = {
+            "en": "us",
+            "en-US": "us",
+            "en-GB": "gb",
+            "en-IN": "in",
+            "en-NZ": "nz",
+            "en-NG": "ng",
+            "es": "es",
+            "es-ES": "es",
+            "fr": "fr",
+            "de": "de",
+            "it": "it",
+            "pt": "pt",
+            "pt-BR": "br",
+            "pt-PT": "pt",
+            "nl": "nl",
+            "pl": "pl",
+            "ru": "ru",
+            "ja": "jp",
+            "ko": "kr",
+            "zh": "cn",
+            "ar": "sa",
+            "ar-EG": "eg",
+            "ar-KW": "kw",
+            "el": "gr",
+            "ua": "ua",
+            "vi": "vn",
+            "ta": "in",
+            "hi": "in",
+            "sk": "sk",
+            "ro": "ro",
+            "fi": "fi",
+            "bg": "bg",
+            "hu": "hu",
+            "da": "dk",
+            "cs": "cz",
         };
-        return langMap[lang] || "🌐";
+        return langToCountry[lang] || null;
+    };
+
+    // Flag component that uses CDN images for cross-platform compatibility
+    const FlagIcon = ({ lang }: { lang: string | null }) => {
+        const countryCode = getCountryCode(lang);
+        if (!countryCode) {
+            return <Globe size={16} style={{ color: "rgba(255,255,255,0.5)" }} />;
+        }
+        return (
+            <img
+                src={`https://flagcdn.com/w20/${countryCode}.png`}
+                srcSet={`https://flagcdn.com/w40/${countryCode}.png 2x`}
+                width="20"
+                height="15"
+                alt={lang || ""}
+                style={{ 
+                    borderRadius: "2px",
+                    objectFit: "cover",
+                }}
+                onError={(e) => {
+                    // Fallback to globe icon if image fails to load
+                    e.currentTarget.style.display = "none";
+                }}
+            />
+        );
     };
 
     return (
-        <div style={{ padding: "32px 40px", maxWidth: "1400px", margin: "0 auto" }}>
+        <div 
+            className="voices-scroll-container"
+            style={{ 
+                padding: "32px 40px", 
+                maxWidth: "1400px", 
+                margin: "0 auto",
+                height: "100%",
+                overflow: "auto",
+            }}
+        >
             {/* Header */}
             <div style={{ marginBottom: "32px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "8px" }}>
@@ -312,7 +347,7 @@ export default function VoicesSection() {
                                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "8px" }}>
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                         <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "2px" }}>
-                                            <span style={{ fontSize: "16px" }}>{getLanguageFlag(voice.primaryLanguage)}</span>
+                                            <FlagIcon lang={voice.primaryLanguage} />
                                             <h3
                                                 style={{
                                                     fontSize: "14px",
@@ -467,6 +502,30 @@ export default function VoicesSection() {
                 
                 .voice-card:active {
                     transform: scale(0.98) !important;
+                }
+
+                /* Custom scrollbar for voices section */
+                .voices-scroll-container {
+                    scrollbar-width: thin;
+                    scrollbar-color: rgba(0, 200, 255, 0.3) transparent;
+                }
+                
+                .voices-scroll-container::-webkit-scrollbar {
+                    width: 8px;
+                    height: 8px;
+                }
+                
+                .voices-scroll-container::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                
+                .voices-scroll-container::-webkit-scrollbar-thumb {
+                    background-color: rgba(0, 200, 255, 0.3);
+                    border-radius: 4px;
+                }
+                
+                .voices-scroll-container::-webkit-scrollbar-thumb:hover {
+                    background-color: rgba(0, 200, 255, 0.5);
                 }
             `}</style>
         </div>
