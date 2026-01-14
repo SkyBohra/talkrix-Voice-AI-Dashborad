@@ -3,9 +3,9 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/dashboard/Sidebar";
-import DashboardSection from "@/components/dashboard/DashboardSection";
+import AgentsSection from "@/components/dashboard/AgentsSection";
 
-export default function Dashboard() {
+export default function AgentsPage() {
     const router = useRouter();
 
     useEffect(() => {
@@ -39,7 +39,7 @@ export default function Dashboard() {
 
             {/* Sidebar */}
             <Sidebar
-                activeSection="dashboard"
+                activeSection="agents"
                 onSectionChange={(section) => {
                     if (section === "dashboard") {
                         router.push("/dashboard");
@@ -60,7 +60,7 @@ export default function Dashboard() {
                     height: "100vh",
                 }}
             >
-                <DashboardSection />
+                <AgentsSection />
             </main>
         </div>
     );
