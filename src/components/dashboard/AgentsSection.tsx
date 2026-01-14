@@ -2485,197 +2485,220 @@ export default function AgentsSection() {
                 <div
                     style={{
                         display: "grid",
-                        gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))",
-                        gap: "24px",
+                        gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+                        gap: "20px",
                     }}
                 >
                     {agents.map((agent, index) => {
-                        const cardGradients = [
-                            "linear-gradient(135deg, rgba(0, 200, 255, 0.1) 0%, rgba(120, 0, 255, 0.05) 100%)",
-                            "linear-gradient(135deg, rgba(120, 0, 255, 0.1) 0%, rgba(255, 60, 100, 0.05) 100%)",
-                            "linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(0, 200, 255, 0.05) 100%)",
-                            "linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(120, 0, 255, 0.05) 100%)",
+                        const accentColors = [
+                            { primary: "#00C8FF", secondary: "#7800FF", glow: "rgba(0, 200, 255, 0.15)" },
+                            { primary: "#7800FF", secondary: "#FF3C64", glow: "rgba(120, 0, 255, 0.15)" },
+                            { primary: "#22c55e", secondary: "#00C8FF", glow: "rgba(34, 197, 94, 0.15)" },
+                            { primary: "#f59e0b", secondary: "#FF3C64", glow: "rgba(245, 158, 11, 0.15)" },
                         ];
-                        const iconGradients = [
-                            "linear-gradient(135deg, #00C8FF 0%, #7800FF 100%)",
-                            "linear-gradient(135deg, #7800FF 0%, #FF3C64 100%)",
-                            "linear-gradient(135deg, #22c55e 0%, #00C8FF 100%)",
-                            "linear-gradient(135deg, #f59e0b 0%, #7800FF 100%)",
-                        ];
+                        const accent = accentColors[index % 4];
                         
                         return (
                             <div
                                 key={agent._id}
                                 style={{
-                                    background: cardGradients[index % 4],
+                                    background: "rgba(20, 20, 28, 0.9)",
                                     backdropFilter: "blur(20px)",
-                                    border: "1px solid rgba(0, 200, 255, 0.12)",
-                                    borderRadius: "20px",
-                                    padding: "28px",
-                                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                                    position: "relative",
+                                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                                    borderRadius: "16px",
                                     overflow: "hidden",
+                                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                                 }}
                                 onMouseEnter={(e) => {
-                                    e.currentTarget.style.borderColor = "rgba(0, 200, 255, 0.4)";
-                                    e.currentTarget.style.transform = "translateY(-4px)";
-                                    e.currentTarget.style.boxShadow = "0 20px 40px rgba(0, 200, 255, 0.15)";
+                                    e.currentTarget.style.borderColor = `${accent.primary}40`;
+                                    e.currentTarget.style.transform = "translateY(-2px)";
+                                    e.currentTarget.style.boxShadow = `0 12px 32px ${accent.glow}`;
                                 }}
                                 onMouseLeave={(e) => {
-                                    e.currentTarget.style.borderColor = "rgba(0, 200, 255, 0.12)";
+                                    e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.08)";
                                     e.currentTarget.style.transform = "translateY(0)";
                                     e.currentTarget.style.boxShadow = "none";
                                 }}
                             >
-                                {/* Decorative background element */}
+                                {/* Top accent bar */}
                                 <div style={{
-                                    position: "absolute",
-                                    top: "-50px",
-                                    right: "-50px",
-                                    width: "150px",
-                                    height: "150px",
-                                    borderRadius: "50%",
-                                    background: iconGradients[index % 4],
-                                    opacity: 0.05,
-                                    pointerEvents: "none",
+                                    height: "3px",
+                                    background: `linear-gradient(90deg, ${accent.primary} 0%, ${accent.secondary} 100%)`,
                                 }} />
-
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
-                                    <div
-                                        style={{
-                                            width: "56px",
-                                            height: "56px",
-                                            borderRadius: "16px",
-                                            background: iconGradients[index % 4],
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            color: "white",
-                                            boxShadow: "0 8px 24px rgba(0, 200, 255, 0.25)",
-                                        }}
-                                    >
-                                        <Bot size={28} />
-                                    </div>
-                                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                
+                                <div style={{ padding: "20px" }}>
+                                    {/* Header */}
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1 }}>
+                                            <div
+                                                style={{
+                                                    width: "40px",
+                                                    height: "40px",
+                                                    borderRadius: "10px",
+                                                    background: `linear-gradient(135deg, ${accent.primary}20 0%, ${accent.secondary}20 100%)`,
+                                                    border: `1px solid ${accent.primary}30`,
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    justifyContent: "center",
+                                                    color: accent.primary,
+                                                    flexShrink: 0,
+                                                }}
+                                            >
+                                                <Bot size={20} />
+                                            </div>
+                                            <div style={{ minWidth: 0 }}>
+                                                <h3 style={{ 
+                                                    fontSize: "15px", 
+                                                    fontWeight: "600", 
+                                                    color: "white", 
+                                                    margin: 0,
+                                                    whiteSpace: "nowrap",
+                                                    overflow: "hidden",
+                                                    textOverflow: "ellipsis",
+                                                }}>
+                                                    {agent.name}
+                                                </h3>
+                                                <p style={{ 
+                                                    fontSize: "12px", 
+                                                    color: "rgba(255, 255, 255, 0.4)", 
+                                                    margin: "2px 0 0 0",
+                                                }}>
+                                                    ID: {agent.talkrixAgentId?.slice(0, 8)}...
+                                                </p>
+                                            </div>
+                                        </div>
                                         <div
                                             style={{
-                                                padding: "6px 14px",
-                                                borderRadius: "20px",
-                                                fontSize: "12px",
+                                                padding: "4px 8px",
+                                                borderRadius: "6px",
+                                                fontSize: "10px",
                                                 fontWeight: "600",
-                                                background: "rgba(34, 197, 94, 0.15)",
+                                                background: "rgba(34, 197, 94, 0.12)",
                                                 color: "#22c55e",
-                                                border: "1px solid rgba(34, 197, 94, 0.25)",
                                                 display: "flex",
                                                 alignItems: "center",
-                                                gap: "6px",
+                                                gap: "4px",
+                                                flexShrink: 0,
                                             }}
                                         >
-                                            <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#22c55e" }} />
+                                            <div style={{ width: "5px", height: "5px", borderRadius: "50%", background: "#22c55e" }} />
                                             Active
                                         </div>
                                     </div>
-                                </div>
 
-                                <h3 style={{ fontSize: "20px", fontWeight: "700", color: "white", marginBottom: "10px", letterSpacing: "-0.02em" }}>
-                                    {agent.name}
-                                </h3>
-                                <p style={{ 
-                                    fontSize: "14px", 
-                                    color: "rgba(255, 255, 255, 0.55)", 
-                                    marginBottom: "20px", 
-                                    lineHeight: "1.6",
-                                    display: "-webkit-box",
-                                    WebkitLineClamp: 2,
-                                    WebkitBoxOrient: "vertical",
-                                    overflow: "hidden",
-                                }}>
-                                    {agent.callTemplate?.systemPrompt?.substring(0, 100) || "No description available"}...
-                                </p>
-
-                                {/* Stats Row */}
-                                <div style={{ 
-                                    display: "grid", 
-                                    gridTemplateColumns: "1fr 1fr 1fr", 
-                                    gap: "12px", 
-                                    marginBottom: "24px",
-                                    padding: "16px",
-                                    background: "rgba(0, 0, 0, 0.2)",
-                                    borderRadius: "12px",
-                                }}>
-                                    <div>
-                                        <p style={{ fontSize: "10px", color: "rgba(255, 255, 255, 0.4)", marginBottom: "4px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Voice</p>
-                                        <p style={{ fontSize: "13px", color: "#00C8FF", fontWeight: "600" }}>{agent.callTemplate?.voice || "Default"}</p>
-                                    </div>
-                                    <div>
-                                        <p style={{ fontSize: "10px", color: "rgba(255, 255, 255, 0.4)", marginBottom: "4px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Duration</p>
-                                        <p style={{ fontSize: "13px", color: "white", fontWeight: "500" }}>{agent.callTemplate?.maxDuration || "N/A"}</p>
-                                    </div>
-                                    <div>
-                                        <p style={{ fontSize: "10px", color: "rgba(255, 255, 255, 0.4)", marginBottom: "4px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Recording</p>
-                                        <p style={{ fontSize: "13px", color: agent.callTemplate?.recordingEnabled ? "#22c55e" : "rgba(255,255,255,0.5)", fontWeight: "500" }}>
-                                            {agent.callTemplate?.recordingEnabled ? "On" : "Off"}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div style={{ display: "flex", gap: "10px" }}>
-                                    <button
-                                        onClick={() => openEditModal(agent)}
-                                        style={{
-                                            flex: 1,
+                                    {/* Info chips */}
+                                    <div style={{ 
+                                        display: "flex", 
+                                        flexWrap: "wrap",
+                                        gap: "8px", 
+                                        marginBottom: "16px",
+                                    }}>
+                                        <div style={{ 
+                                            padding: "6px 10px",
+                                            borderRadius: "6px",
+                                            background: "rgba(255, 255, 255, 0.04)",
+                                            border: "1px solid rgba(255, 255, 255, 0.06)",
                                             display: "flex",
                                             alignItems: "center",
-                                            justifyContent: "center",
-                                            gap: "8px",
-                                            padding: "12px",
-                                            borderRadius: "10px",
-                                            border: "none",
-                                            background: "linear-gradient(135deg, #00C8FF 0%, #7800FF 100%)",
-                                            color: "white",
-                                            fontSize: "14px",
-                                            fontWeight: "600",
-                                            cursor: "pointer",
-                                            transition: "all 0.2s ease",
-                                            boxShadow: "0 4px 16px rgba(0, 200, 255, 0.25)",
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.transform = "scale(1.02)";
-                                            e.currentTarget.style.boxShadow = "0 6px 20px rgba(0, 200, 255, 0.35)";
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.transform = "scale(1)";
-                                            e.currentTarget.style.boxShadow = "0 4px 16px rgba(0, 200, 255, 0.25)";
-                                        }}
-                                    >
-                                        <Pencil size={15} />
-                                        Configure
-                                    </button>
-                                    <button
-                                        onClick={() => handleDelete(agent._id)}
-                                        style={{
+                                            gap: "6px",
+                                        }}>
+                                            <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.5)" }}>🎙️</span>
+                                            <span style={{ fontSize: "12px", color: accent.primary, fontWeight: "500" }}>
+                                                {agent.callTemplate?.voice || "Default"}
+                                            </span>
+                                        </div>
+                                        <div style={{ 
+                                            padding: "6px 10px",
+                                            borderRadius: "6px",
+                                            background: "rgba(255, 255, 255, 0.04)",
+                                            border: "1px solid rgba(255, 255, 255, 0.06)",
                                             display: "flex",
                                             alignItems: "center",
-                                            justifyContent: "center",
-                                            padding: "12px 14px",
-                                            borderRadius: "10px",
-                                            border: "1px solid rgba(255, 60, 100, 0.25)",
-                                            background: "rgba(255, 60, 100, 0.1)",
-                                            color: "#FF3C64",
-                                            cursor: "pointer",
-                                            transition: "all 0.2s ease",
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.background = "rgba(255, 60, 100, 0.2)";
-                                            e.currentTarget.style.borderColor = "rgba(255, 60, 100, 0.4)";
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.background = "rgba(255, 60, 100, 0.1)";
-                                            e.currentTarget.style.borderColor = "rgba(255, 60, 100, 0.25)";
-                                        }}
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
+                                            gap: "6px",
+                                        }}>
+                                            <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.5)" }}>⏱️</span>
+                                            <span style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.7)", fontWeight: "500" }}>
+                                                {agent.callTemplate?.maxDuration || "N/A"}
+                                            </span>
+                                        </div>
+                                        <div style={{ 
+                                            padding: "6px 10px",
+                                            borderRadius: "6px",
+                                            background: agent.callTemplate?.recordingEnabled ? "rgba(34, 197, 94, 0.08)" : "rgba(255, 255, 255, 0.04)",
+                                            border: `1px solid ${agent.callTemplate?.recordingEnabled ? "rgba(34, 197, 94, 0.15)" : "rgba(255, 255, 255, 0.06)"}`,
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: "6px",
+                                        }}>
+                                            <span style={{ fontSize: "11px" }}>{agent.callTemplate?.recordingEnabled ? "🔴" : "⚫"}</span>
+                                            <span style={{ 
+                                                fontSize: "12px", 
+                                                color: agent.callTemplate?.recordingEnabled ? "#22c55e" : "rgba(255, 255, 255, 0.4)", 
+                                                fontWeight: "500" 
+                                            }}>
+                                                {agent.callTemplate?.recordingEnabled ? "Recording" : "No Rec"}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Actions */}
+                                    <div style={{ display: "flex", gap: "8px" }}>
+                                        <button
+                                            onClick={() => openEditModal(agent)}
+                                            style={{
+                                                flex: 1,
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                gap: "6px",
+                                                padding: "10px 16px",
+                                                borderRadius: "8px",
+                                                border: "none",
+                                                background: `linear-gradient(135deg, ${accent.primary} 0%, ${accent.secondary} 100%)`,
+                                                color: "white",
+                                                fontSize: "13px",
+                                                fontWeight: "600",
+                                                cursor: "pointer",
+                                                transition: "all 0.2s ease",
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.opacity = "0.9";
+                                                e.currentTarget.style.transform = "scale(1.01)";
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.opacity = "1";
+                                                e.currentTarget.style.transform = "scale(1)";
+                                            }}
+                                        >
+                                            <Pencil size={14} />
+                                            Configure
+                                        </button>
+                                        <button
+                                            onClick={() => handleDelete(agent._id)}
+                                            style={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                padding: "10px",
+                                                borderRadius: "8px",
+                                                border: "1px solid rgba(255, 60, 100, 0.2)",
+                                                background: "rgba(255, 60, 100, 0.08)",
+                                                color: "#FF3C64",
+                                                cursor: "pointer",
+                                                transition: "all 0.2s ease",
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.background = "rgba(255, 60, 100, 0.15)";
+                                                e.currentTarget.style.borderColor = "rgba(255, 60, 100, 0.35)";
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.background = "rgba(255, 60, 100, 0.08)";
+                                                e.currentTarget.style.borderColor = "rgba(255, 60, 100, 0.2)";
+                                            }}
+                                        >
+                                            <Trash2 size={15} />
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         );
