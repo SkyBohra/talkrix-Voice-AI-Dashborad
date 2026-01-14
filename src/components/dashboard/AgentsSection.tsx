@@ -38,10 +38,19 @@ interface Agent {
         systemPrompt: string;
         temperature: number;
         voice: string;
+        languageHint?: string;
+        timeExceededMessage?: string;
         firstSpeakerSettings?: {
             agent?: {
                 uninterruptible: boolean;
                 text: string;
+                delay?: string;
+            };
+            user?: {
+                fallback?: {
+                    delay: string;
+                    text: string;
+                };
             };
         };
         inactivityMessages?: Array<{
@@ -49,6 +58,12 @@ interface Agent {
             message: string;
             endBehavior?: string;
         }>;
+        vadSettings?: {
+            turnEndpointDelay?: string;
+            minimumTurnDuration?: string;
+            minimumInterruptionDuration?: string;
+            frameActivationThreshold?: number;
+        };
     };
 }
 
