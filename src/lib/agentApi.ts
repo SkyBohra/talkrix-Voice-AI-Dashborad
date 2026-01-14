@@ -62,3 +62,17 @@ export const fetchVoices = async (search?: string) => {
   });
   return normalizeResponse(res);
 };
+
+/**
+ * Create a call to test an agent
+ * Returns joinUrl that can be used with Ultravox Client SDK
+ */
+export const createAgentCall = async (agentId: string, options?: {
+  maxDuration?: string;
+  recordingEnabled?: boolean;
+}) => {
+  const res = await axios.post(`${API_BASE}/${agentId}/call`, options || {}, {
+    headers: getAuthHeaders(),
+  });
+  return normalizeResponse(res);
+};

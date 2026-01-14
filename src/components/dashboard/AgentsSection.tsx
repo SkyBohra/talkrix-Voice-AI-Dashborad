@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Bot, Plus, Pencil, Trash2, X, Save, Play, Pause, Loader2, Search, Mic } from "lucide-react";
-import { createAgent, fetchAgentsByUser, updateAgent, deleteAgent, fetchVoices } from "../../lib/agentApi";
+import { Bot, Plus, Pencil, Trash2, X, Save, Play, Pause, Loader2, Search, Mic, Phone, PhoneOff, MicOff } from "lucide-react";
+import { createAgent, fetchAgentsByUser, updateAgent, deleteAgent, fetchVoices, createAgentCall } from "../../lib/agentApi";
 import AgentBuilder from "./AgentBuilder";
 
 interface Voice {
@@ -2063,6 +2063,18 @@ export default function AgentsSection() {
     const voiceDropdownRef = useRef<HTMLDivElement>(null);
     const debouncedVoiceSearch = useDebounce(voiceSearch, 300);
 
+    // Test call state
+    const [testingAgent, setTestingAgent] = useState<Agent | null>(null);
+    const [isTestModalOpen, setIsTestModalOpen] = useState(false);
+    const [callStatus, setCallStatus] = useState<'idle' | 'connecting' | 'connected' | 'ended'>('idle');
+    const [joinUrl, setJoinUrl] = useState<string | null>(null);
+    const [callError, setCallError] = useState<string | null>(null);
+    const [transcript, setTranscript] = useState<Array<{ role: string; text: string }>>([]);
+    const [isMuted, setIsMuted] = useState(false);
+    const [agentStatus, setAgentStatus] = useState<string>('');
+    const ultravoxSessionRef = useRef<any>(null);
+    const transcriptEndRef = useRef<HTMLDivElement>(null);
+
     // Get userId from localStorage (set during login)
     const getUserId = () => {
         if (typeof window !== "undefined") {
@@ -2415,6 +2427,127 @@ export default function AgentsSection() {
         setError(null);
     };
 
+    // Test agent function
+    const handleTestAgent = async (agent: Agent) => {
+        setTestingAgent(agent);
+        setIsTestModalOpen(true);
+        setCallStatus('idle');
+        setJoinUrl(null);
+        setCallError(null);
+        setTranscript([]);
+        setAgentStatus('');
+        setIsMuted(false);
+    };
+
+    const startTestCall = async () => {
+        if (!testingAgent) return;
+        
+        setCallStatus('connecting');
+        setCallError(null);
+        setTranscript([]);
+        
+        try {
+            // First create the call to get joinUrl
+            const response = await createAgentCall(testingAgent._id, {
+                maxDuration: '300s', // 5 minutes for testing
+                recordingEnabled: false,
+            });
+            
+            if (!response.success || !response.data?.joinUrl) {
+                setCallError(response.message || 'Failed to create call');
+                setCallStatus('idle');
+                return;
+            }
+
+            const callJoinUrl = response.data.joinUrl;
+            setJoinUrl(callJoinUrl);
+
+            // Dynamically import the Ultravox client
+            const { UltravoxSession } = await import('ultravox-client');
+            
+            // Create a new session
+            const session = new UltravoxSession();
+            ultravoxSessionRef.current = session;
+
+            // Set up event listeners
+            session.addEventListener('status', (event: any) => {
+                console.log('Session status:', session.status);
+                setAgentStatus(session.status || '');
+                
+                if (session.status === 'idle') {
+                    setCallStatus('ended');
+                }
+            });
+
+            session.addEventListener('transcripts', (event: any) => {
+                const transcripts = session.transcripts || [];
+                const formattedTranscripts = transcripts.map((t: any) => ({
+                    role: t.speaker === 'agent' ? 'agent' : 'user',
+                    text: t.text || '',
+                    isFinal: t.isFinal,
+                }));
+                setTranscript(formattedTranscripts);
+                
+                // Auto-scroll to bottom
+                setTimeout(() => {
+                    transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+            });
+
+            // Join the call
+            await session.joinCall(callJoinUrl);
+            setCallStatus('connected');
+            
+        } catch (err: any) {
+            console.error('Error starting test call:', err);
+            setCallError(err?.message || 'Failed to start call');
+            setCallStatus('idle');
+        }
+    };
+
+    const endTestCall = async () => {
+        try {
+            if (ultravoxSessionRef.current) {
+                await ultravoxSessionRef.current.leaveCall();
+                ultravoxSessionRef.current = null;
+            }
+        } catch (err) {
+            console.error('Error ending call:', err);
+        }
+        setCallStatus('ended');
+    };
+
+    const toggleMute = () => {
+        if (ultravoxSessionRef.current) {
+            if (isMuted) {
+                ultravoxSessionRef.current.unmuteMic();
+            } else {
+                ultravoxSessionRef.current.muteMic();
+            }
+            setIsMuted(!isMuted);
+        }
+    };
+
+    const closeTestModal = async () => {
+        // End call if still connected
+        if (ultravoxSessionRef.current) {
+            try {
+                await ultravoxSessionRef.current.leaveCall();
+            } catch (err) {
+                console.error('Error leaving call:', err);
+            }
+            ultravoxSessionRef.current = null;
+        }
+        setIsTestModalOpen(false);
+        setTestingAgent(null);
+        setCallStatus('idle');
+        setJoinUrl(null);
+        setCallError(null);
+        setTranscript([]);
+        setAgentStatus('');
+        setIsMuted(false);
+    };
+
     const handleDelete = async (id: string) => {
         if (!confirm("Are you sure you want to delete this agent?")) return;
         
@@ -2643,6 +2776,35 @@ export default function AgentsSection() {
 
                                     {/* Actions */}
                                     <div style={{ display: "flex", gap: "8px" }}>
+                                        <button
+                                            onClick={() => handleTestAgent(agent)}
+                                            style={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                gap: "6px",
+                                                padding: "10px 14px",
+                                                borderRadius: "8px",
+                                                border: "1px solid rgba(34, 197, 94, 0.25)",
+                                                background: "rgba(34, 197, 94, 0.1)",
+                                                color: "#22c55e",
+                                                fontSize: "13px",
+                                                fontWeight: "600",
+                                                cursor: "pointer",
+                                                transition: "all 0.2s ease",
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.background = "rgba(34, 197, 94, 0.2)";
+                                                e.currentTarget.style.borderColor = "rgba(34, 197, 94, 0.4)";
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.background = "rgba(34, 197, 94, 0.1)";
+                                                e.currentTarget.style.borderColor = "rgba(34, 197, 94, 0.25)";
+                                            }}
+                                        >
+                                            <Phone size={14} />
+                                            Test
+                                        </button>
                                         <button
                                             onClick={() => openEditModal(agent)}
                                             style={{
@@ -3514,10 +3676,516 @@ export default function AgentsSection() {
                 />
             )}
 
+            {/* Test Agent Modal */}
+            {isTestModalOpen && testingAgent && (
+                <div
+                    style={{
+                        position: "fixed",
+                        inset: 0,
+                        background: "rgba(0, 0, 0, 0.9)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        zIndex: 200,
+                        padding: "20px",
+                    }}
+                    onClick={closeTestModal}
+                >
+                    <div
+                        style={{
+                            background: "rgba(15, 15, 20, 0.98)",
+                            backdropFilter: "blur(20px)",
+                            border: "1px solid rgba(0, 200, 255, 0.1)",
+                            borderRadius: "24px",
+                            width: "100%",
+                            maxWidth: callStatus === 'connected' || callStatus === 'ended' ? "600px" : "480px",
+                            maxHeight: "90vh",
+                            overflow: "hidden",
+                            display: "flex",
+                            flexDirection: "column",
+                            position: "relative",
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Header */}
+                        <div style={{
+                            padding: "24px 24px 20px",
+                            borderBottom: "1px solid rgba(255, 255, 255, 0.06)",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                        }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                                <div style={{
+                                    width: "48px",
+                                    height: "48px",
+                                    borderRadius: "14px",
+                                    background: callStatus === 'connected' 
+                                        ? "linear-gradient(135deg, #22c55e 0%, #00C8FF 100%)"
+                                        : "linear-gradient(135deg, #00C8FF 0%, #7800FF 100%)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    boxShadow: callStatus === 'connected' 
+                                        ? "0 4px 20px rgba(34, 197, 94, 0.3)"
+                                        : "0 4px 20px rgba(0, 200, 255, 0.2)",
+                                }}>
+                                    {callStatus === 'connecting' ? (
+                                        <Loader2 size={24} color="white" style={{ animation: "spin 1s linear infinite" }} />
+                                    ) : (
+                                        <Bot size={24} color="white" />
+                                    )}
+                                </div>
+                                <div>
+                                    <h2 style={{ fontSize: "18px", fontWeight: "600", color: "white", margin: 0 }}>
+                                        {testingAgent.name}
+                                    </h2>
+                                    <p style={{ 
+                                        fontSize: "12px", 
+                                        color: callStatus === 'connected' ? "#22c55e" : "rgba(255, 255, 255, 0.4)", 
+                                        margin: "2px 0 0 0",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "6px",
+                                    }}>
+                                        {callStatus === 'idle' && "Ready to call"}
+                                        {callStatus === 'connecting' && "Connecting..."}
+                                        {callStatus === 'connected' && (
+                                            <>
+                                                <span style={{ 
+                                                    width: "6px", 
+                                                    height: "6px", 
+                                                    borderRadius: "50%", 
+                                                    background: "#22c55e",
+                                                    animation: "pulse 2s ease-in-out infinite",
+                                                }} />
+                                                Call Active
+                                            </>
+                                        )}
+                                        {callStatus === 'ended' && "Call ended"}
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={closeTestModal}
+                                style={{
+                                    background: "rgba(255, 255, 255, 0.05)",
+                                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                                    borderRadius: "10px",
+                                    padding: "10px",
+                                    cursor: "pointer",
+                                    color: "rgba(255, 255, 255, 0.5)",
+                                    transition: "all 0.2s ease",
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)";
+                                    e.currentTarget.style.color = "white";
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+                                    e.currentTarget.style.color = "rgba(255, 255, 255, 0.5)";
+                                }}
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        {/* Content Area */}
+                        <div style={{ padding: "24px", flex: 1, overflow: "auto" }}>
+                            {/* Error message */}
+                            {callError && (
+                                <div style={{
+                                    padding: "14px 16px",
+                                    background: "rgba(255, 60, 100, 0.08)",
+                                    border: "1px solid rgba(255, 60, 100, 0.2)",
+                                    borderRadius: "12px",
+                                    marginBottom: "20px",
+                                }}>
+                                    <p style={{ fontSize: "13px", color: "#FF3C64", margin: 0 }}>
+                                        {callError}
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Idle State */}
+                            {callStatus === 'idle' && (
+                                <div style={{ textAlign: "center", padding: "20px 0" }}>
+                                    <div style={{
+                                        width: "100px",
+                                        height: "100px",
+                                        borderRadius: "50%",
+                                        background: "rgba(0, 200, 255, 0.08)",
+                                        border: "2px solid rgba(0, 200, 255, 0.15)",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        margin: "0 auto 24px",
+                                    }}>
+                                        <Phone size={40} color="#00C8FF" />
+                                    </div>
+                                    <p style={{ 
+                                        fontSize: "14px", 
+                                        color: "rgba(255, 255, 255, 0.5)", 
+                                        marginBottom: "24px", 
+                                        lineHeight: 1.6,
+                                    }}>
+                                        Start a voice call to test your agent.<br/>
+                                        Make sure your microphone is enabled.
+                                    </p>
+                                    <button
+                                        onClick={startTestCall}
+                                        style={{
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            gap: "10px",
+                                            padding: "16px 40px",
+                                            borderRadius: "14px",
+                                            border: "none",
+                                            background: "linear-gradient(135deg, #00C8FF 0%, #7800FF 100%)",
+                                            color: "white",
+                                            fontSize: "16px",
+                                            fontWeight: "600",
+                                            cursor: "pointer",
+                                            transition: "all 0.2s ease",
+                                            boxShadow: "0 4px 24px rgba(0, 200, 255, 0.3)",
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.transform = "translateY(-2px)";
+                                            e.currentTarget.style.boxShadow = "0 8px 32px rgba(0, 200, 255, 0.4)";
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.transform = "translateY(0)";
+                                            e.currentTarget.style.boxShadow = "0 4px 24px rgba(0, 200, 255, 0.3)";
+                                        }}
+                                    >
+                                        <Phone size={20} />
+                                        Start Call
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Connecting State */}
+                            {callStatus === 'connecting' && (
+                                <div style={{ textAlign: "center", padding: "40px 0" }}>
+                                    <div style={{
+                                        width: "80px",
+                                        height: "80px",
+                                        borderRadius: "50%",
+                                        background: "linear-gradient(135deg, #00C8FF 0%, #7800FF 100%)",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        margin: "0 auto 20px",
+                                        boxShadow: "0 0 40px rgba(0, 200, 255, 0.3)",
+                                    }}>
+                                        <Loader2 size={36} color="white" style={{ animation: "spin 1s linear infinite" }} />
+                                    </div>
+                                    <p style={{ fontSize: "16px", fontWeight: "500", color: "white", marginBottom: "6px" }}>
+                                        Connecting...
+                                    </p>
+                                    <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.4)" }}>
+                                        Setting up your call session
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Connected State - Show Transcript */}
+                            {callStatus === 'connected' && (
+                                <div>
+                                    {/* Transcript Area */}
+                                    <div style={{
+                                        background: "rgba(0, 0, 0, 0.3)",
+                                        borderRadius: "16px",
+                                        padding: "4px",
+                                        marginBottom: "20px",
+                                        height: "300px",
+                                        overflow: "hidden",
+                                    }}>
+                                        <div style={{
+                                            height: "100%",
+                                            overflowY: "auto",
+                                            padding: "16px",
+                                        }}>
+                                            {transcript.length === 0 ? (
+                                                <div style={{ 
+                                                    textAlign: "center", 
+                                                    padding: "60px 20px",
+                                                    color: "rgba(255, 255, 255, 0.3)",
+                                                }}>
+                                                    <Mic size={32} style={{ marginBottom: "12px", opacity: 0.5 }} />
+                                                    <p style={{ fontSize: "14px", margin: 0 }}>
+                                                        Start speaking to see the conversation...
+                                                    </p>
+                                                </div>
+                                            ) : (
+                                                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                                                    {transcript.map((msg, index) => (
+                                                        <div
+                                                            key={index}
+                                                            style={{
+                                                                display: "flex",
+                                                                justifyContent: msg.role === 'user' ? "flex-end" : "flex-start",
+                                                            }}
+                                                        >
+                                                            <div style={{
+                                                                maxWidth: "80%",
+                                                                padding: "12px 16px",
+                                                                borderRadius: msg.role === 'user' 
+                                                                    ? "16px 16px 4px 16px" 
+                                                                    : "16px 16px 16px 4px",
+                                                                background: msg.role === 'user'
+                                                                    ? "linear-gradient(135deg, #00C8FF 0%, #7800FF 100%)"
+                                                                    : "rgba(255, 255, 255, 0.08)",
+                                                                border: msg.role === 'user'
+                                                                    ? "none"
+                                                                    : "1px solid rgba(255, 255, 255, 0.1)",
+                                                            }}>
+                                                                <p style={{ 
+                                                                    fontSize: "10px", 
+                                                                    fontWeight: "600",
+                                                                    color: msg.role === 'user' 
+                                                                        ? "rgba(255, 255, 255, 0.8)" 
+                                                                        : "rgba(255, 255, 255, 0.4)",
+                                                                    marginBottom: "4px",
+                                                                    textTransform: "uppercase",
+                                                                    letterSpacing: "0.5px",
+                                                                }}>
+                                                                    {msg.role === 'user' ? 'You' : 'Agent'}
+                                                                </p>
+                                                                <p style={{ 
+                                                                    fontSize: "14px", 
+                                                                    color: "white", 
+                                                                    margin: 0,
+                                                                    lineHeight: 1.5,
+                                                                }}>
+                                                                    {msg.text}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                    <div ref={transcriptEndRef} />
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Call Controls */}
+                                    <div style={{ 
+                                        display: "flex", 
+                                        justifyContent: "center", 
+                                        gap: "16px",
+                                    }}>
+                                        <button
+                                            onClick={toggleMute}
+                                            style={{
+                                                width: "60px",
+                                                height: "60px",
+                                                borderRadius: "50%",
+                                                border: "none",
+                                                background: isMuted 
+                                                    ? "rgba(255, 60, 100, 0.15)"
+                                                    : "rgba(255, 255, 255, 0.08)",
+                                                color: isMuted ? "#FF3C64" : "white",
+                                                cursor: "pointer",
+                                                transition: "all 0.2s ease",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.transform = "scale(1.05)";
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.transform = "scale(1)";
+                                            }}
+                                        >
+                                            {isMuted ? <MicOff size={24} /> : <Mic size={24} />}
+                                        </button>
+                                        <button
+                                            onClick={endTestCall}
+                                            style={{
+                                                width: "60px",
+                                                height: "60px",
+                                                borderRadius: "50%",
+                                                border: "none",
+                                                background: "linear-gradient(135deg, #FF3C64 0%, #ff6b6b 100%)",
+                                                color: "white",
+                                                cursor: "pointer",
+                                                transition: "all 0.2s ease",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                boxShadow: "0 4px 20px rgba(255, 60, 100, 0.3)",
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.transform = "scale(1.05)";
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.transform = "scale(1)";
+                                            }}
+                                        >
+                                            <PhoneOff size={24} />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Ended State - Show Transcript History */}
+                            {callStatus === 'ended' && (
+                                <div>
+                                    {/* Show transcript if available */}
+                                    {transcript.length > 0 && (
+                                        <div style={{
+                                            background: "rgba(0, 0, 0, 0.3)",
+                                            borderRadius: "16px",
+                                            padding: "4px",
+                                            marginBottom: "20px",
+                                            maxHeight: "250px",
+                                            overflow: "hidden",
+                                        }}>
+                                            <div style={{
+                                                maxHeight: "242px",
+                                                overflowY: "auto",
+                                                padding: "16px",
+                                            }}>
+                                                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                                                    {transcript.map((msg, index) => (
+                                                        <div
+                                                            key={index}
+                                                            style={{
+                                                                display: "flex",
+                                                                justifyContent: msg.role === 'user' ? "flex-end" : "flex-start",
+                                                            }}
+                                                        >
+                                                            <div style={{
+                                                                maxWidth: "80%",
+                                                                padding: "12px 16px",
+                                                                borderRadius: msg.role === 'user' 
+                                                                    ? "16px 16px 4px 16px" 
+                                                                    : "16px 16px 16px 4px",
+                                                                background: msg.role === 'user'
+                                                                    ? "linear-gradient(135deg, #00C8FF 0%, #7800FF 100%)"
+                                                                    : "rgba(255, 255, 255, 0.08)",
+                                                                border: msg.role === 'user'
+                                                                    ? "none"
+                                                                    : "1px solid rgba(255, 255, 255, 0.1)",
+                                                                opacity: 0.7,
+                                                            }}>
+                                                                <p style={{ 
+                                                                    fontSize: "10px", 
+                                                                    fontWeight: "600",
+                                                                    color: msg.role === 'user' 
+                                                                        ? "rgba(255, 255, 255, 0.8)" 
+                                                                        : "rgba(255, 255, 255, 0.4)",
+                                                                    marginBottom: "4px",
+                                                                    textTransform: "uppercase",
+                                                                    letterSpacing: "0.5px",
+                                                                }}>
+                                                                    {msg.role === 'user' ? 'You' : 'Agent'}
+                                                                </p>
+                                                                <p style={{ 
+                                                                    fontSize: "14px", 
+                                                                    color: "white", 
+                                                                    margin: 0,
+                                                                    lineHeight: 1.5,
+                                                                }}>
+                                                                    {msg.text}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div style={{ textAlign: "center" }}>
+                                        <div style={{
+                                            width: "64px",
+                                            height: "64px",
+                                            borderRadius: "50%",
+                                            background: "rgba(255, 255, 255, 0.05)",
+                                            border: "1px solid rgba(255, 255, 255, 0.1)",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            margin: "0 auto 16px",
+                                        }}>
+                                            <Phone size={28} color="rgba(255, 255, 255, 0.4)" />
+                                        </div>
+                                        <p style={{ fontSize: "16px", fontWeight: "500", color: "white", marginBottom: "4px" }}>
+                                            Call Ended
+                                        </p>
+                                        <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.4)", marginBottom: "24px" }}>
+                                            Your test call has ended
+                                        </p>
+                                        <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+                                            <button
+                                                onClick={() => {
+                                                    setCallStatus('idle');
+                                                    setJoinUrl(null);
+                                                    setTranscript([]);
+                                                }}
+                                                style={{
+                                                    padding: "12px 28px",
+                                                    borderRadius: "12px",
+                                                    border: "none",
+                                                    background: "linear-gradient(135deg, #00C8FF 0%, #7800FF 100%)",
+                                                    color: "white",
+                                                    fontSize: "14px",
+                                                    fontWeight: "600",
+                                                    cursor: "pointer",
+                                                    transition: "all 0.2s ease",
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.opacity = "0.9";
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.opacity = "1";
+                                                }}
+                                            >
+                                                Call Again
+                                            </button>
+                                            <button
+                                                onClick={closeTestModal}
+                                                style={{
+                                                    padding: "12px 28px",
+                                                    borderRadius: "12px",
+                                                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                                                    background: "rgba(255, 255, 255, 0.05)",
+                                                    color: "rgba(255, 255, 255, 0.8)",
+                                                    fontSize: "14px",
+                                                    fontWeight: "600",
+                                                    cursor: "pointer",
+                                                    transition: "all 0.2s ease",
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)";
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+                                                }}
+                                            >
+                                                Close
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <style>{`
                 @keyframes spin {
                     from { transform: rotate(0deg); }
                     to { transform: rotate(360deg); }
+                }
+                @keyframes pulse {
+                    0%, 100% { transform: scale(1); opacity: 1; }
+                    50% { transform: scale(1.05); opacity: 0.8; }
                 }
             `}</style>
         </div>
