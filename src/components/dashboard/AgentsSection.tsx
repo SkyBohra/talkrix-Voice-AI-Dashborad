@@ -59,6 +59,7 @@ interface Agent {
             message: string;
             endBehavior?: string;
         }>;
+        selectedTools?: Tool[];
         vadSettings?: {
             turnEndpointDelay?: string;
             minimumTurnDuration?: string;
