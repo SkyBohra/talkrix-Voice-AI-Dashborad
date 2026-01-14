@@ -3098,112 +3098,112 @@ export default function AgentsSection() {
 
                             {/* Inactivity Messages Section */}
                             <div>
-                                <h3 style={{ fontSize: "14px", fontWeight: "600", color: "white", marginBottom: "12px" }}>
-                                    Inactivity Messages
-                                </h3>
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
+                                    <h3 style={{ fontSize: "14px", fontWeight: "600", color: "white" }}>
+                                        Inactivity Messages
+                                    </h3>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const newMessages = [...formData.inactivityMessages, {
+                                                duration: "30s",
+                                                text: "",
+                                                endBehavior: "hangup" as const,
+                                            }];
+                                            setFormData({ ...formData, inactivityMessages: newMessages });
+                                        }}
+                                        style={{
+                                            padding: "6px 12px",
+                                            borderRadius: "6px",
+                                            border: "1px solid rgba(0, 200, 255, 0.3)",
+                                            background: "rgba(0, 200, 255, 0.1)",
+                                            color: "#00C8FF",
+                                            fontSize: "12px",
+                                            cursor: "pointer",
+                                        }}
+                                    >
+                                        + Add Message
+                                    </button>
+                                </div>
                                 
                                 <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                                    {/* Message 1 */}
-                                    <div style={{ display: "grid", gridTemplateColumns: "80px 1fr", gap: "12px" }}>
-                                        <input
-                                            type="text"
-                                            value={formData.inactivityMessage1Duration}
-                                            onChange={(e) => setFormData({ ...formData, inactivityMessage1Duration: e.target.value })}
-                                            placeholder="30s"
-                                            style={{
-                                                padding: "10px 12px",
-                                                borderRadius: "8px",
-                                                border: "1px solid rgba(0, 200, 255, 0.1)",
-                                                background: "rgba(255, 255, 255, 0.05)",
-                                                color: "white",
-                                                fontSize: "13px",
-                                                outline: "none",
-                                            }}
-                                        />
-                                        <input
-                                            type="text"
-                                            value={formData.inactivityMessage1Text}
-                                            onChange={(e) => setFormData({ ...formData, inactivityMessage1Text: e.target.value })}
-                                            placeholder="Are you still there?"
-                                            style={{
-                                                padding: "10px 12px",
-                                                borderRadius: "8px",
-                                                border: "1px solid rgba(0, 200, 255, 0.1)",
-                                                background: "rgba(255, 255, 255, 0.05)",
-                                                color: "white",
-                                                fontSize: "13px",
-                                                outline: "none",
-                                            }}
-                                        />
-                                    </div>
-
-                                    {/* Message 2 */}
-                                    <div style={{ display: "grid", gridTemplateColumns: "80px 1fr", gap: "12px" }}>
-                                        <input
-                                            type="text"
-                                            value={formData.inactivityMessage2Duration}
-                                            onChange={(e) => setFormData({ ...formData, inactivityMessage2Duration: e.target.value })}
-                                            placeholder="15s"
-                                            style={{
-                                                padding: "10px 12px",
-                                                borderRadius: "8px",
-                                                border: "1px solid rgba(0, 200, 255, 0.1)",
-                                                background: "rgba(255, 255, 255, 0.05)",
-                                                color: "white",
-                                                fontSize: "13px",
-                                                outline: "none",
-                                            }}
-                                        />
-                                        <input
-                                            type="text"
-                                            value={formData.inactivityMessage2Text}
-                                            onChange={(e) => setFormData({ ...formData, inactivityMessage2Text: e.target.value })}
-                                            placeholder="If there's nothing else, may I end the call?"
-                                            style={{
-                                                padding: "10px 12px",
-                                                borderRadius: "8px",
-                                                border: "1px solid rgba(0, 200, 255, 0.1)",
-                                                background: "rgba(255, 255, 255, 0.05)",
-                                                color: "white",
-                                                fontSize: "13px",
-                                                outline: "none",
-                                            }}
-                                        />
-                                    </div>
-
-                                    {/* Message 3 (with hang up) */}
-                                    <div style={{ display: "grid", gridTemplateColumns: "80px 1fr", gap: "12px" }}>
-                                        <input
-                                            type="text"
-                                            value={formData.inactivityMessage3Duration}
-                                            onChange={(e) => setFormData({ ...formData, inactivityMessage3Duration: e.target.value })}
-                                            placeholder="10s"
-                                            style={{
-                                                padding: "10px 12px",
-                                                borderRadius: "8px",
-                                                border: "1px solid rgba(0, 200, 255, 0.1)",
-                                                background: "rgba(255, 255, 255, 0.05)",
-                                                color: "white",
-                                                fontSize: "13px",
-                                                outline: "none",
-                                            }}
-                                        />
-                                        <input
-                                            type="text"
-                                            value={formData.inactivityMessage3Text}
-                                            onChange={(e) => setFormData({ ...formData, inactivityMessage3Text: e.target.value })}
-                                            placeholder="Thank you for calling. Goodbye. (hangs up)"
-                                            style={{
-                                                padding: "10px 12px",
-                                                borderRadius: "8px",
-                                                border: "1px solid rgba(0, 200, 255, 0.1)",
-                                                background: "rgba(255, 255, 255, 0.05)",
-                                                color: "white",
-                                                fontSize: "13px",
-                                                outline: "none",
-                                            }}
-                                        />
-                                    </div>
+                                    {formData.inactivityMessages.map((msg, index) => (
+                                        <div key={index} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                            <div style={{ display: "grid", gridTemplateColumns: "80px 1fr", gap: "12px", flex: 1 }}>
+                                                <input
+                                                    type="text"
+                                                    value={msg.duration}
+                                                    onChange={(e) => {
+                                                        const newMessages = [...formData.inactivityMessages];
+                                                        newMessages[index] = { ...newMessages[index], duration: e.target.value };
+                                                        setFormData({ ...formData, inactivityMessages: newMessages });
+                                                    }}
+                                                    placeholder="30s"
+                                                    style={{
+                                                        padding: "10px 12px",
+                                                        borderRadius: "8px",
+                                                        border: "1px solid rgba(0, 200, 255, 0.1)",
+                                                        background: "rgba(255, 255, 255, 0.05)",
+                                                        color: "white",
+                                                        fontSize: "13px",
+                                                        outline: "none",
+                                                    }}
+                                                />
+                                                <input
+                                                    type="text"
+                                                    value={msg.text}
+                                                    onChange={(e) => {
+                                                        const newMessages = [...formData.inactivityMessages];
+                                                        newMessages[index] = { ...newMessages[index], text: e.target.value };
+                                                        setFormData({ ...formData, inactivityMessages: newMessages });
+                                                    }}
+                                                    placeholder={index === 0 ? "Are you still there?" : index === 1 ? "If there's nothing else, may I end the call?" : "Thank you for calling. Goodbye."}
+                                                    style={{
+                                                        padding: "10px 12px",
+                                                        borderRadius: "8px",
+                                                        border: "1px solid rgba(0, 200, 255, 0.1)",
+                                                        background: "rgba(255, 255, 255, 0.05)",
+                                                        color: "white",
+                                                        fontSize: "13px",
+                                                        outline: "none",
+                                                    }}
+                                                />
+                                            </div>
+                                            <label style={{ display: "flex", alignItems: "center", gap: "4px", color: "rgba(255,255,255,0.6)", fontSize: "11px", whiteSpace: "nowrap" }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={msg.endBehavior === "hangup"}
+                                                    onChange={(e) => {
+                                                        const newMessages = [...formData.inactivityMessages];
+                                                        newMessages[index] = { ...newMessages[index], endBehavior: e.target.checked ? "hangup" : "continue" };
+                                                        setFormData({ ...formData, inactivityMessages: newMessages });
+                                                    }}
+                                                    style={{ accentColor: "#00C8FF" }}
+                                                />
+                                                Hang up
+                                            </label>
+                                            {formData.inactivityMessages.length > 1 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const newMessages = formData.inactivityMessages.filter((_, i) => i !== index);
+                                                        setFormData({ ...formData, inactivityMessages: newMessages });
+                                                    }}
+                                                    style={{
+                                                        padding: "6px 8px",
+                                                        borderRadius: "6px",
+                                                        border: "none",
+                                                        background: "rgba(255, 60, 100, 0.2)",
+                                                        color: "#FF3C64",
+                                                        fontSize: "12px",
+                                                        cursor: "pointer",
+                                                    }}
+                                                >
+                                                    ✕
+                                                </button>
+                                            )}
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
 
