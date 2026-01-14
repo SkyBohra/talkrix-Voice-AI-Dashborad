@@ -99,6 +99,7 @@ interface FormData {
     systemPrompt: string;
     temperature: number;
     voice: string;
+    corpusId?: string; // RAG Knowledge Base
     firstSpeaker: 'agent' | 'user';
     firstSpeakerText: string;
     firstSpeakerUninterruptible: boolean;
@@ -124,6 +125,7 @@ const defaultFormData: FormData = {
     systemPrompt: "You are a helpful assistant",
     temperature: 0,
     voice: "Crhysa",
+    corpusId: undefined, // RAG Knowledge Base
     firstSpeaker: "agent",
     firstSpeakerText: "Hello, how can I help you today?",
     firstSpeakerUninterruptible: true,
@@ -2358,6 +2360,7 @@ export default function AgentsSection() {
             systemPrompt: agent.callTemplate?.systemPrompt || "",
             temperature: agent.callTemplate?.temperature ?? 0,
             voice: agent.callTemplate?.voice || "Crhysa",
+            corpusId: agent.callTemplate?.corpusId || undefined,
             firstSpeaker,
             firstSpeakerText: agent.callTemplate?.firstSpeakerSettings?.agent?.text || "",
             firstSpeakerUninterruptible: agent.callTemplate?.firstSpeakerSettings?.agent?.uninterruptible ?? true,
@@ -2483,6 +2486,11 @@ export default function AgentsSection() {
                 // For custom tools, use toolId
                 return { toolId: tool.talkrixToolId };
             });
+        }
+
+        // Add corpusId if a RAG knowledge base is selected
+        if (formData.corpusId) {
+            callTemplate.corpusId = formData.corpusId;
         }
 
         return {
@@ -3820,6 +3828,7 @@ export default function AgentsSection() {
                         systemPrompt: formData.systemPrompt,
                         temperature: formData.temperature,
                         voice: formData.voice,
+                        corpusId: formData.corpusId,
                         firstSpeaker: formData.firstSpeaker,
                         firstSpeakerText: formData.firstSpeakerText,
                         firstSpeakerUninterruptible: formData.firstSpeakerUninterruptible,
@@ -3842,6 +3851,7 @@ export default function AgentsSection() {
                         systemPrompt: data.systemPrompt,
                         temperature: data.temperature,
                         voice: data.voice,
+                        corpusId: data.corpusId,
                         firstSpeaker: data.firstSpeaker,
                         firstSpeakerText: data.firstSpeakerText,
                         firstSpeakerUninterruptible: data.firstSpeakerUninterruptible,

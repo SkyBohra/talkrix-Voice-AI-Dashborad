@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { fetchVoices } from "../../lib/agentApi";
 import { fetchUserTools, Tool } from "../../lib/toolApi";
+import { listCorpora, Corpus } from "../../lib/corpusApi";
 
 interface Voice {
     voiceId: string;
@@ -40,6 +41,7 @@ interface FormData {
     systemPrompt: string;
     temperature: number;
     voice: string;
+    corpusId?: string; // RAG Knowledge Base
     firstSpeaker: 'agent' | 'user';
     firstSpeakerText: string;
     firstSpeakerUninterruptible: boolean;
@@ -175,8 +177,17 @@ export default function AgentBuilder({
     const [toolsTab, setToolsTab] = useState<'builtin' | 'custom'>('builtin');
     const [hoveredTool, setHoveredTool] = useState<string | null>(null);
     
+    // RAG (Corpus) state
+    const [corpora, setCorpora] = useState<Corpus[]>([]);
+    const [corporaLoading, setCorporaLoading] = useState(false);
+    const [selectedCorpus, setSelectedCorpus] = useState<Corpus | null>(null);
+    const [corpusSearch, setCorpusSearch] = useState('');
+    const [isCorpusDropdownOpen, setIsCorpusDropdownOpen] = useState(false);
+    
     const voiceDropdownRef = useRef<HTMLDivElement>(null);
+    const corpusDropdownRef = useRef<HTMLDivElement>(null);
     const debouncedVoiceSearch = useDebounce(voiceSearch, 300);
+    const debouncedCorpusSearch = useDebounce(corpusSearch, 300);
 
     // Load custom tools
     const loadCustomTools = useCallback(async () => {
@@ -196,6 +207,54 @@ export default function AgentBuilder({
     useEffect(() => {
         loadCustomTools();
     }, [loadCustomTools]);
+
+    // Load corpora (RAG knowledge bases)
+    const loadCorpora = useCallback(async () => {
+        setCorporaLoading(true);
+        try {
+            const res = await listCorpora();
+            if (res.success && res.data) {
+                setCorpora(res.data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch corpora:', error);
+        } finally {
+            setCorporaLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadCorpora();
+    }, [loadCorpora]);
+
+    // Load existing corpus for edit mode
+    useEffect(() => {
+        if (formData.corpusId && corpora.length > 0) {
+            const existingCorpus = corpora.find(c => c.talkrixCorpusId === formData.corpusId || c._id === formData.corpusId);
+            if (existingCorpus) {
+                setSelectedCorpus(existingCorpus);
+                setCorpusSearch(existingCorpus.name);
+            }
+        } else if (!formData.corpusId) {
+            // Reset when no corpusId in formData
+            setSelectedCorpus(null);
+            setCorpusSearch('');
+        }
+    }, [formData.corpusId, corpora]);
+
+    // Filter corpora based on search
+    const filteredCorpora = corpora.filter(corpus => 
+        corpus.name.toLowerCase().includes(debouncedCorpusSearch.toLowerCase()) ||
+        (corpus.description && corpus.description.toLowerCase().includes(debouncedCorpusSearch.toLowerCase()))
+    );
+
+    // Corpus selection handler
+    const handleCorpusSelect = (corpus: Corpus) => {
+        setSelectedCorpus(corpus);
+        setCorpusSearch(corpus.name);
+        setFormData({ ...formData, corpusId: corpus.talkrixCorpusId });
+        setIsCorpusDropdownOpen(false);
+    };
 
     // Tool selection helpers
     const isToolSelected = (tool: Tool) => {
@@ -280,6 +339,9 @@ export default function AgentBuilder({
         const handleClickOutside = (event: MouseEvent) => {
             if (voiceDropdownRef.current && !voiceDropdownRef.current.contains(event.target as Node)) {
                 setIsVoiceDropdownOpen(false);
+            }
+            if (corpusDropdownRef.current && !corpusDropdownRef.current.contains(event.target as Node)) {
+                setIsCorpusDropdownOpen(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -614,23 +676,179 @@ export default function AgentBuilder({
                         )}
                     </div>
 
-                    {/* RAG Button */}
-                    <button style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        padding: '8px 16px',
-                        background: 'transparent',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        borderRadius: '8px',
-                        color: 'rgba(255, 255, 255, 0.6)',
-                        cursor: 'pointer',
-                        fontSize: '14px',
-                    }}>
-                        <Database size={16} />
-                        <span>RAG</span>
-                        <ChevronDown size={14} />
-                    </button>
+                    {/* RAG Dropdown */}
+                    <div ref={corpusDropdownRef} style={{ position: 'relative' }}>
+                        <button 
+                            onClick={() => setIsCorpusDropdownOpen(!isCorpusDropdownOpen)}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                padding: '8px 16px',
+                                background: selectedCorpus ? 'rgba(34, 197, 94, 0.15)' : 'transparent',
+                                border: selectedCorpus ? '1px solid rgba(34, 197, 94, 0.5)' : '1px solid rgba(255, 255, 255, 0.1)',
+                                borderRadius: '8px',
+                                color: selectedCorpus ? '#22c55e' : 'rgba(255, 255, 255, 0.6)',
+                                cursor: 'pointer',
+                                fontSize: '14px',
+                            }}
+                        >
+                            <Database size={16} />
+                            <span>{selectedCorpus ? selectedCorpus.name : 'RAG'}</span>
+                            {selectedCorpus && (
+                                <span
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedCorpus(null);
+                                        setCorpusSearch('');
+                                        setFormData({ ...formData, corpusId: undefined });
+                                    }}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        background: 'rgba(255, 255, 255, 0.1)',
+                                        borderRadius: '50%',
+                                        width: '16px',
+                                        height: '16px',
+                                        cursor: 'pointer',
+                                        padding: 0,
+                                    }}
+                                >
+                                    <X size={10} color="white" />
+                                </span>
+                            )}
+                            <ChevronDown size={14} style={{ transform: isCorpusDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
+                        </button>
+
+                        {/* RAG Dropdown Menu */}
+                        {isCorpusDropdownOpen && (
+                            <div style={{
+                                position: 'absolute',
+                                top: 'calc(100% + 8px)',
+                                left: 0,
+                                minWidth: '320px',
+                                background: 'linear-gradient(180deg, rgba(20, 30, 50, 0.98) 0%, rgba(10, 15, 30, 0.98) 100%)',
+                                border: '1px solid rgba(34, 197, 94, 0.2)',
+                                borderRadius: '12px',
+                                boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5)',
+                                zIndex: 1000,
+                                overflow: 'hidden',
+                            }}>
+                                {/* Search Input */}
+                                <div style={{ padding: '12px', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                                    <div style={{ position: 'relative' }}>
+                                        <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255, 255, 255, 0.4)' }} />
+                                        <input
+                                            type="text"
+                                            value={corpusSearch}
+                                            onChange={(e) => setCorpusSearch(e.target.value)}
+                                            placeholder="Search knowledge bases..."
+                                            style={{
+                                                width: '100%',
+                                                padding: '10px 12px 10px 36px',
+                                                background: 'rgba(255, 255, 255, 0.05)',
+                                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                                borderRadius: '8px',
+                                                color: 'white',
+                                                fontSize: '14px',
+                                                outline: 'none',
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Corpus List */}
+                                <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                                    {corporaLoading ? (
+                                        <div style={{ padding: '24px', textAlign: 'center', color: 'rgba(255, 255, 255, 0.5)' }}>
+                                            <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
+                                            <p style={{ marginTop: '8px', fontSize: '14px' }}>Loading knowledge bases...</p>
+                                        </div>
+                                    ) : filteredCorpora.length === 0 ? (
+                                        <div style={{ padding: '24px', textAlign: 'center', color: 'rgba(255, 255, 255, 0.5)' }}>
+                                            <Database size={24} style={{ marginBottom: '8px', opacity: 0.5 }} />
+                                            <p style={{ fontSize: '14px' }}>
+                                                {corpora.length === 0 ? 'No knowledge bases created yet.' : 'No matching knowledge bases.'}
+                                            </p>
+                                            {corpora.length === 0 && (
+                                                <p style={{ fontSize: '12px', marginTop: '4px', opacity: 0.7 }}>Go to RAG section to create one.</p>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        filteredCorpora.map((corpus) => (
+                                            <button
+                                                key={corpus._id}
+                                                onClick={() => handleCorpusSelect(corpus)}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '12px 16px',
+                                                    background: selectedCorpus?._id === corpus._id ? 'rgba(34, 197, 94, 0.15)' : 'transparent',
+                                                    border: 'none',
+                                                    borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '12px',
+                                                    textAlign: 'left',
+                                                    transition: 'background 0.2s',
+                                                }}
+                                                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(34, 197, 94, 0.1)'}
+                                                onMouseLeave={(e) => e.currentTarget.style.background = selectedCorpus?._id === corpus._id ? 'rgba(34, 197, 94, 0.15)' : 'transparent'}
+                                            >
+                                                <div style={{
+                                                    width: '32px',
+                                                    height: '32px',
+                                                    borderRadius: '8px',
+                                                    background: selectedCorpus?._id === corpus._id ? '#22c55e' : 'rgba(34, 197, 94, 0.2)',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    flexShrink: 0,
+                                                }}>
+                                                    {selectedCorpus?._id === corpus._id ? (
+                                                        <Check size={16} color="white" />
+                                                    ) : (
+                                                        <Database size={16} color="#22c55e" />
+                                                    )}
+                                                </div>
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{ color: 'white', fontSize: '14px', fontWeight: 500, marginBottom: '2px' }}>
+                                                        {corpus.name}
+                                                    </div>
+                                                    <div style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        {corpus.description || 'No description'}
+                                                    </div>
+                                                    {corpus.stats && (
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                                                            <span style={{
+                                                                padding: '2px 6px',
+                                                                borderRadius: '4px',
+                                                                fontSize: '10px',
+                                                                fontWeight: 500,
+                                                                background: corpus.stats.status === 'CORPUS_STATUS_READY' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+                                                                color: corpus.stats.status === 'CORPUS_STATUS_READY' ? '#22c55e' : '#f59e0b',
+                                                            }}>
+                                                                {corpus.stats.status === 'CORPUS_STATUS_READY' ? 'Ready' : 'Processing'}
+                                                            </span>
+                                                            {corpus.stats.numDocs !== undefined && (
+                                                                <span style={{ fontSize: '10px', color: 'rgba(255, 255, 255, 0.4)' }}>
+                                                                    {corpus.stats.numDocs} docs
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                {selectedCorpus?._id === corpus._id && (
+                                                    <Check size={16} color="#22c55e" />
+                                                )}
+                                            </button>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Right Section - Save */}
