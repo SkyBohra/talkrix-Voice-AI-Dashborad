@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Bot, Plus, Pencil, Trash2, X, Save, Play, Pause, Loader2, Search, Mic, Phone, PhoneOff, MicOff, Copy, Check } from "lucide-react";
 import { createAgent, fetchAgentsByUser, updateAgent, deleteAgent, fetchVoices, createAgentCall } from "../../lib/agentApi";
+import { fetchUserTools, Tool } from "../../lib/toolApi";
 import AgentBuilder from "./AgentBuilder";
 
 interface Voice {
@@ -98,6 +99,8 @@ interface FormData {
     userFallbackDelay: string;
     userFallbackText: string;
     inactivityMessages: InactivityMessage[];
+    // Tools
+    selectedTools: Tool[];
     // Advanced settings
     languageHint: string;
     timeExceededMessage: string;
@@ -125,6 +128,8 @@ const defaultFormData: FormData = {
         { id: '2', duration: '15s', text: 'If there\'s nothing else, may I end the call?' },
         { id: '3', duration: '10s', text: 'Thank you for calling. Have a great day. Goodbye.', endBehavior: 'END_BEHAVIOR_HANG_UP_SOFT' },
     ],
+    // Tools
+    selectedTools: [],
     // Advanced settings
     languageHint: "",
     timeExceededMessage: "",
@@ -2365,6 +2370,18 @@ export default function AgentsSection() {
         if (Object.keys(vadSettings).length > 0) {
             callTemplate.vadSettings = vadSettings;
         }
+        
+        // Add selectedTools if any are selected
+        if (formData.selectedTools && formData.selectedTools.length > 0) {
+            callTemplate.selectedTools = formData.selectedTools.map(tool => {
+                // For built-in tools, use toolName
+                if (tool.ownership === 'public') {
+                    return { toolName: tool.definition.modelToolName };
+                }
+                // For custom tools, use toolId
+                return { toolId: tool.talkrixToolId };
+            });
+        }
 
         return {
             name: formData.name,
@@ -3708,6 +3725,7 @@ export default function AgentsSection() {
                         maxDuration: formData.maxDuration,
                         recordingEnabled: formData.recordingEnabled,
                         inactivityMessages: formData.inactivityMessages,
+                        selectedTools: formData.selectedTools,
                         languageHint: formData.languageHint,
                         timeExceededMessage: formData.timeExceededMessage,
                         initialOutputMedium: formData.initialOutputMedium,
@@ -3729,6 +3747,7 @@ export default function AgentsSection() {
                         maxDuration: data.maxDuration,
                         recordingEnabled: data.recordingEnabled,
                         inactivityMessages: data.inactivityMessages,
+                        selectedTools: data.selectedTools,
                         languageHint: data.languageHint,
                         timeExceededMessage: data.timeExceededMessage,
                         initialOutputMedium: data.initialOutputMedium,

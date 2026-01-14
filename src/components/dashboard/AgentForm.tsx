@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createAgent, updateAgent, fetchVoices } from '../../lib/agentApi';
+import { fetchUserTools, Tool } from '../../lib/toolApi';
 import { Button } from '../ui/button';
+import { Phone, PhoneCall, Voicemail, Search, Music, PhoneOff, Wrench, ChevronDown, ChevronUp, X, Check } from 'lucide-react';
 
 interface Voice {
   voiceId: string;
@@ -10,6 +12,74 @@ interface Voice {
   previewUrl: string;
   provider: string;
 }
+
+// Built-in tools (same as ToolsSection)
+const BUILT_IN_TOOLS: Tool[] = [
+  {
+    talkrixToolId: "builtin-warm-transfer",
+    name: "warmTransfer",
+    ownership: "public",
+    definition: {
+      modelToolName: "warmTransfer",
+      description: "Transfer the call with a warm handoff.",
+    },
+  },
+  {
+    talkrixToolId: "builtin-cold-transfer",
+    name: "coldTransfer",
+    ownership: "public",
+    definition: {
+      modelToolName: "coldTransfer",
+      description: "Transfer the call immediately (cold transfer).",
+    },
+  },
+  {
+    talkrixToolId: "builtin-leave-voicemail",
+    name: "leaveVoicemail",
+    ownership: "public",
+    definition: {
+      modelToolName: "leaveVoicemail",
+      description: "Allow the caller to leave a voicemail message.",
+    },
+  },
+  {
+    talkrixToolId: "builtin-query-corpus",
+    name: "queryCorpus",
+    ownership: "public",
+    definition: {
+      modelToolName: "queryCorpus",
+      description: "Search through a knowledge base or document corpus.",
+    },
+  },
+  {
+    talkrixToolId: "builtin-play-dtmf",
+    name: "playDtmfSounds",
+    ownership: "public",
+    definition: {
+      modelToolName: "playDtmfSounds",
+      description: "Play DTMF (touch-tone) sounds during the call.",
+    },
+  },
+  {
+    talkrixToolId: "builtin-hang-up",
+    name: "hangUp",
+    ownership: "public",
+    definition: {
+      modelToolName: "hangUp",
+      description: "End the current call.",
+    },
+  },
+];
+
+// Icon mapping for built-in tools
+const builtInToolIcons: Record<string, React.ReactNode> = {
+  warmTransfer: <PhoneCall size={16} />,
+  coldTransfer: <Phone size={16} />,
+  leaveVoicemail: <Voicemail size={16} />,
+  queryCorpus: <Search size={16} />,
+  playDtmfSounds: <Music size={16} />,
+  hangUp: <PhoneOff size={16} />,
+};
 
 interface AgentFormProps {
   userId: string;
@@ -38,9 +108,65 @@ export const AgentForm: React.FC<AgentFormProps> = ({ userId, agent, onSuccess }
   const [voiceSearch, setVoiceSearch] = useState('');
   const [isVoiceDropdownOpen, setIsVoiceDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const toolsDropdownRef = useRef<HTMLDivElement>(null);
+  
+  // Tools selector state
+  const [customTools, setCustomTools] = useState<Tool[]>([]);
+  const [toolsLoading, setToolsLoading] = useState(false);
+  const [selectedTools, setSelectedTools] = useState<Tool[]>([]);
+  const [isToolsDropdownOpen, setIsToolsDropdownOpen] = useState(false);
+  const [toolsTab, setToolsTab] = useState<'builtin' | 'custom'>('builtin');
   
   // Debounced search term for API calls
   const debouncedSearch = useDebounce(voiceSearch, 300);
+
+  // Fetch custom tools
+  const loadCustomTools = useCallback(async () => {
+    setToolsLoading(true);
+    try {
+      const res = await fetchUserTools();
+      if (res.success && res.data) {
+        setCustomTools(res.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch custom tools:', error);
+    } finally {
+      setToolsLoading(false);
+    }
+  }, []);
+
+  // Load custom tools on mount
+  useEffect(() => {
+    loadCustomTools();
+  }, [loadCustomTools]);
+
+  // Parse existing agent's selectedTools for edit mode
+  useEffect(() => {
+    const agentSelectedTools = agent?.callTemplate?.selectedTools || agent?.selectedTools;
+    if (agentSelectedTools && agentSelectedTools.length > 0) {
+      // Map agent's selectedTools to our Tool format
+      const existingTools: Tool[] = agentSelectedTools.map((st: any) => {
+        // Check if it's a built-in tool
+        const builtIn = BUILT_IN_TOOLS.find(t => t.definition.modelToolName === st.toolName);
+        if (builtIn) return builtIn;
+        
+        // Otherwise it's a custom tool - find it or create placeholder
+        const custom = customTools.find(t => t.talkrixToolId === st.toolId);
+        if (custom) return custom;
+        
+        // Placeholder for unknown tool
+        return {
+          talkrixToolId: st.toolId,
+          name: st.toolName || st.toolId,
+          ownership: 'private',
+          definition: { modelToolName: st.toolName || '' },
+        } as Tool;
+      });
+      setSelectedTools(existingTools);
+    }
+  }, [agent?.callTemplate?.selectedTools, agent?.selectedTools, customTools]);
+
+  // Fetch voices when search changes (server-side search)
 
   // Fetch voices when search changes (server-side search)
   const loadVoices = useCallback(async (search?: string) => {
@@ -62,11 +188,12 @@ export const AgentForm: React.FC<AgentFormProps> = ({ userId, agent, onSuccess }
     const initVoices = async () => {
       await loadVoices();
       // If editing agent with existing voice, search for it
-      if (agent?.voice) {
-        const res = await fetchVoices(agent.voice);
+      const agentVoice = agent?.callTemplate?.voice || agent?.voice;
+      if (agentVoice) {
+        const res = await fetchVoices(agentVoice);
         if (res.success && res.data?.results) {
           const existingVoice = res.data.results.find(
-            (v: Voice) => v.voiceId === agent.voice || v.name === agent.voice
+            (v: Voice) => v.voiceId === agentVoice || v.name === agentVoice
           );
           if (existingVoice) {
             setSelectedVoice(existingVoice);
@@ -76,7 +203,7 @@ export const AgentForm: React.FC<AgentFormProps> = ({ userId, agent, onSuccess }
       }
     };
     initVoices();
-  }, [agent?.voice, loadVoices]);
+  }, [agent?.callTemplate?.voice, agent?.voice, loadVoices]);
 
   // Server-side search when debounced search changes
   useEffect(() => {
@@ -92,6 +219,9 @@ export const AgentForm: React.FC<AgentFormProps> = ({ userId, agent, onSuccess }
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsVoiceDropdownOpen(false);
       }
+      if (toolsDropdownRef.current && !toolsDropdownRef.current.contains(event.target as Node)) {
+        setIsToolsDropdownOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -103,14 +233,71 @@ export const AgentForm: React.FC<AgentFormProps> = ({ userId, agent, onSuccess }
     setIsVoiceDropdownOpen(false);
   };
 
+  // Tool selection handlers
+  const isToolSelected = (tool: Tool) => {
+    return selectedTools.some(t => 
+      (t.talkrixToolId && t.talkrixToolId === tool.talkrixToolId) ||
+      (t._id && t._id === tool._id)
+    );
+  };
+
+  const toggleToolSelection = (tool: Tool) => {
+    if (isToolSelected(tool)) {
+      setSelectedTools(prev => prev.filter(t => 
+        !((t.talkrixToolId && t.talkrixToolId === tool.talkrixToolId) ||
+          (t._id && t._id === tool._id))
+      ));
+    } else {
+      setSelectedTools(prev => [...prev, tool]);
+    }
+  };
+
+  const removeSelectedTool = (tool: Tool) => {
+    setSelectedTools(prev => prev.filter(t => 
+      !((t.talkrixToolId && t.talkrixToolId === tool.talkrixToolId) ||
+        (t._id && t._id === tool._id))
+    ));
+  };
+
+  // Format selectedTools for API (Ultravox format)
+  const formatSelectedToolsForApi = () => {
+    return selectedTools.map(tool => {
+      // For built-in tools, use toolName
+      if (tool.ownership === 'public') {
+        return {
+          toolName: tool.definition.modelToolName,
+        };
+      }
+      // For custom tools, use toolId
+      return {
+        toolId: tool.talkrixToolId,
+      };
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     
-    const agentData = {
+    const agentData: any = {
       name,
-      voice: selectedVoice?.voiceId || selectedVoice?.name,
+      callTemplate: {},
     };
+
+    // Add voice to callTemplate if selected
+    if (selectedVoice?.voiceId || selectedVoice?.name) {
+      agentData.callTemplate.voice = selectedVoice.voiceId || selectedVoice.name;
+    }
+
+    // Add selectedTools to callTemplate if any are selected
+    if (selectedTools.length > 0) {
+      agentData.callTemplate.selectedTools = formatSelectedToolsForApi();
+    }
+
+    // Remove empty callTemplate
+    if (Object.keys(agentData.callTemplate).length === 0) {
+      delete agentData.callTemplate;
+    }
     
     if (agent) {
       await updateAgent(agent._id, agentData);
@@ -244,6 +431,152 @@ export const AgentForm: React.FC<AgentFormProps> = ({ userId, agent, onSuccess }
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
+          </div>
+        )}
+      </div>
+
+      {/* Tools Selector */}
+      <div ref={toolsDropdownRef} className="relative">
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Tools <span className="text-gray-400 font-normal">(optional)</span>
+        </label>
+        
+        {/* Selected tools display */}
+        {selectedTools.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-2">
+            {selectedTools.map(tool => (
+              <div
+                key={tool.talkrixToolId || tool._id}
+                className={`flex items-center gap-1 px-2 py-1 rounded-full text-sm ${
+                  tool.ownership === 'public' 
+                    ? 'bg-blue-100 text-blue-700' 
+                    : 'bg-purple-100 text-purple-700'
+                }`}
+              >
+                {tool.ownership === 'public' && builtInToolIcons[tool.name] && (
+                  <span className="opacity-70">{builtInToolIcons[tool.name]}</span>
+                )}
+                {tool.ownership !== 'public' && <Wrench size={14} className="opacity-70" />}
+                <span>{tool.name}</span>
+                <button
+                  type="button"
+                  onClick={() => removeSelectedTool(tool)}
+                  className="ml-1 hover:opacity-70"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Dropdown trigger */}
+        <button
+          type="button"
+          onClick={() => setIsToolsDropdownOpen(!isToolsDropdownOpen)}
+          className="w-full border p-2 rounded flex items-center justify-between text-left focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        >
+          <span className="text-gray-500">
+            {selectedTools.length === 0 
+              ? 'Select tools for this agent...' 
+              : `${selectedTools.length} tool${selectedTools.length > 1 ? 's' : ''} selected`}
+          </span>
+          {isToolsDropdownOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+        </button>
+
+        {/* Tools Dropdown */}
+        {isToolsDropdownOpen && (
+          <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-80 overflow-hidden">
+            {/* Tabs */}
+            <div className="flex border-b">
+              <button
+                type="button"
+                onClick={() => setToolsTab('builtin')}
+                className={`flex-1 py-2 px-4 text-sm font-medium ${
+                  toolsTab === 'builtin'
+                    ? 'border-b-2 border-blue-500 text-blue-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Built-in Tools
+              </button>
+              <button
+                type="button"
+                onClick={() => setToolsTab('custom')}
+                className={`flex-1 py-2 px-4 text-sm font-medium ${
+                  toolsTab === 'custom'
+                    ? 'border-b-2 border-purple-500 text-purple-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                My Custom Tools
+              </button>
+            </div>
+
+            {/* Tools list */}
+            <div className="max-h-60 overflow-y-auto">
+              {toolsTab === 'builtin' ? (
+                BUILT_IN_TOOLS.map(tool => (
+                  <button
+                    key={tool.talkrixToolId}
+                    type="button"
+                    onClick={() => toggleToolSelection(tool)}
+                    className={`w-full text-left p-3 hover:bg-gray-50 border-b last:border-b-0 flex items-center gap-3 ${
+                      isToolSelected(tool) ? 'bg-blue-50' : ''
+                    }`}
+                  >
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                      isToolSelected(tool) ? 'bg-blue-500 text-white' : 'bg-blue-100 text-blue-600'
+                    }`}>
+                      {isToolSelected(tool) ? <Check size={16} /> : builtInToolIcons[tool.name] || <Wrench size={16} />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-gray-900">{tool.name}</div>
+                      <div className="text-sm text-gray-500 truncate">{tool.definition.description}</div>
+                    </div>
+                    {isToolSelected(tool) && (
+                      <Check size={16} className="text-blue-500" />
+                    )}
+                  </button>
+                ))
+              ) : (
+                toolsLoading ? (
+                  <div className="p-4 text-center text-gray-500">Loading custom tools...</div>
+                ) : customTools.length === 0 ? (
+                  <div className="p-4 text-center text-gray-500">
+                    No custom tools created yet.
+                    <br />
+                    <span className="text-sm">Go to Tools section to create one.</span>
+                  </div>
+                ) : (
+                  customTools.map(tool => (
+                    <button
+                      key={tool._id || tool.talkrixToolId}
+                      type="button"
+                      onClick={() => toggleToolSelection(tool)}
+                      className={`w-full text-left p-3 hover:bg-gray-50 border-b last:border-b-0 flex items-center gap-3 ${
+                        isToolSelected(tool) ? 'bg-purple-50' : ''
+                      }`}
+                    >
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                        isToolSelected(tool) ? 'bg-purple-500 text-white' : 'bg-purple-100 text-purple-600'
+                      }`}>
+                        {isToolSelected(tool) ? <Check size={16} /> : <Wrench size={16} />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-gray-900">{tool.name}</div>
+                        <div className="text-sm text-gray-500 truncate">
+                          {tool.definition.description || 'No description'}
+                        </div>
+                      </div>
+                      {isToolSelected(tool) && (
+                        <Check size={16} className="text-purple-500" />
+                      )}
+                    </button>
+                  ))
+                )
+              )}
+            </div>
           </div>
         )}
       </div>

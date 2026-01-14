@@ -6,9 +6,11 @@ import {
     MessageSquare, Settings, Clock, Sparkles, 
     ChevronDown, Bot, 
     Database, Wrench, Copy, Check,
-    Phone, Plus, Trash2, Sliders, Globe, Zap, AlertCircle
+    Phone, Plus, Trash2, Sliders, Globe, Zap, AlertCircle,
+    PhoneCall, Voicemail, Music, PhoneOff, ChevronUp
 } from "lucide-react";
 import { fetchVoices } from "../../lib/agentApi";
+import { fetchUserTools, Tool } from "../../lib/toolApi";
 
 interface Voice {
     voiceId: string;
@@ -48,12 +50,82 @@ interface FormData {
     maxDuration: string;
     recordingEnabled: boolean;
     inactivityMessages: InactivityMessage[];
+    // Tools
+    selectedTools: Tool[];
     // Advanced settings
     languageHint: string;
     timeExceededMessage: string;
     initialOutputMedium: string;
     vadSettings: VADSettings;
 }
+
+// Built-in tools
+const BUILT_IN_TOOLS: Tool[] = [
+    {
+        talkrixToolId: "builtin-warm-transfer",
+        name: "warmTransfer",
+        ownership: "public",
+        definition: {
+            modelToolName: "warmTransfer",
+            description: "Transfer the call with a warm handoff.",
+        },
+    },
+    {
+        talkrixToolId: "builtin-cold-transfer",
+        name: "coldTransfer",
+        ownership: "public",
+        definition: {
+            modelToolName: "coldTransfer",
+            description: "Transfer the call immediately (cold transfer).",
+        },
+    },
+    {
+        talkrixToolId: "builtin-leave-voicemail",
+        name: "leaveVoicemail",
+        ownership: "public",
+        definition: {
+            modelToolName: "leaveVoicemail",
+            description: "Allow the caller to leave a voicemail message.",
+        },
+    },
+    {
+        talkrixToolId: "builtin-query-corpus",
+        name: "queryCorpus",
+        ownership: "public",
+        definition: {
+            modelToolName: "queryCorpus",
+            description: "Search through a knowledge base or document corpus.",
+        },
+    },
+    {
+        talkrixToolId: "builtin-play-dtmf",
+        name: "playDtmfSounds",
+        ownership: "public",
+        definition: {
+            modelToolName: "playDtmfSounds",
+            description: "Play DTMF (touch-tone) sounds during the call.",
+        },
+    },
+    {
+        talkrixToolId: "builtin-hang-up",
+        name: "hangUp",
+        ownership: "public",
+        definition: {
+            modelToolName: "hangUp",
+            description: "End the current call.",
+        },
+    },
+];
+
+// Icon mapping for built-in tools
+const builtInToolIcons: Record<string, React.ReactNode> = {
+    warmTransfer: <PhoneCall size={16} />,
+    coldTransfer: <Phone size={16} />,
+    leaveVoicemail: <Voicemail size={16} />,
+    queryCorpus: <Search size={16} />,
+    playDtmfSounds: <Music size={16} />,
+    hangUp: <PhoneOff size={16} />,
+};
 
 interface AgentBuilderProps {
     formData: FormData;
@@ -75,7 +147,7 @@ function useDebounce<T>(value: T, delay: number): T {
     return debouncedValue;
 }
 
-type TabType = 'prompt' | 'greeting' | 'inactivity' | 'settings' | 'advanced';
+type TabType = 'prompt' | 'greeting' | 'tools' | 'inactivity' | 'settings' | 'advanced';
 
 export default function AgentBuilder({ 
     formData, 
@@ -97,8 +169,91 @@ export default function AgentBuilder({
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
     const [copied, setCopied] = useState(false);
     
+    // Tools state
+    const [customTools, setCustomTools] = useState<Tool[]>([]);
+    const [toolsLoading, setToolsLoading] = useState(false);
+    const [toolsTab, setToolsTab] = useState<'builtin' | 'custom'>('builtin');
+    const [hoveredTool, setHoveredTool] = useState<string | null>(null);
+    
     const voiceDropdownRef = useRef<HTMLDivElement>(null);
     const debouncedVoiceSearch = useDebounce(voiceSearch, 300);
+
+    // Load custom tools
+    const loadCustomTools = useCallback(async () => {
+        setToolsLoading(true);
+        try {
+            const res = await fetchUserTools();
+            if (res.success && res.data) {
+                setCustomTools(res.data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch custom tools:', error);
+        } finally {
+            setToolsLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadCustomTools();
+    }, [loadCustomTools]);
+
+    // Tool selection helpers
+    const isToolSelected = (tool: Tool) => {
+        const selectedTools = formData.selectedTools || [];
+        return selectedTools.some(t => {
+            // For built-in tools, compare by talkrixToolId
+            if (tool.talkrixToolId && t.talkrixToolId) {
+                return t.talkrixToolId === tool.talkrixToolId;
+            }
+            // For custom tools, compare by _id
+            if (tool._id && t._id) {
+                return t._id === tool._id;
+            }
+            // Fallback: compare by name
+            return t.name === tool.name;
+        });
+    };
+
+    const toggleToolSelection = (tool: Tool) => {
+        const currentTools = formData.selectedTools || [];
+        if (isToolSelected(tool)) {
+            // Remove tool
+            setFormData({
+                ...formData,
+                selectedTools: currentTools.filter(t => {
+                    if (tool.talkrixToolId && t.talkrixToolId) {
+                        return t.talkrixToolId !== tool.talkrixToolId;
+                    }
+                    if (tool._id && t._id) {
+                        return t._id !== tool._id;
+                    }
+                    return t.name !== tool.name;
+                })
+            });
+        } else {
+            // Add tool
+            setFormData({
+                ...formData,
+                selectedTools: [...currentTools, tool]
+            });
+        }
+    };
+
+    const removeSelectedTool = (tool: Tool) => {
+        const currentTools = formData.selectedTools || [];
+        setFormData({
+            ...formData,
+            selectedTools: currentTools.filter(t => {
+                if (tool.talkrixToolId && t.talkrixToolId) {
+                    return t.talkrixToolId !== tool.talkrixToolId;
+                }
+                if (tool._id && t._id) {
+                    return t._id !== tool._id;
+                }
+                return t.name !== tool.name;
+            })
+        });
+    };
 
     // Load voices
     const loadVoices = useCallback(async (search?: string) => {
@@ -226,6 +381,7 @@ export default function AgentBuilder({
     const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
         { id: 'prompt', label: 'Prompt', icon: <Sparkles size={16} /> },
         { id: 'greeting', label: 'Greeting', icon: <MessageSquare size={16} /> },
+        { id: 'tools', label: 'Tools', icon: <Wrench size={16} /> },
         { id: 'inactivity', label: 'Inactivity', icon: <Clock size={16} /> },
         { id: 'settings', label: 'Settings', icon: <Settings size={16} /> },
         { id: 'advanced', label: 'Advanced', icon: <Sliders size={16} /> },
@@ -457,24 +613,6 @@ export default function AgentBuilder({
                             </div>
                         )}
                     </div>
-
-                    {/* Tools Button */}
-                    <button style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        padding: '8px 16px',
-                        background: 'transparent',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        borderRadius: '8px',
-                        color: 'rgba(255, 255, 255, 0.6)',
-                        cursor: 'pointer',
-                        fontSize: '14px',
-                    }}>
-                        <Wrench size={16} />
-                        <span>Tools (0)</span>
-                        <ChevronDown size={14} />
-                    </button>
 
                     {/* RAG Button */}
                     <button style={{
@@ -788,6 +926,304 @@ Key responsibilities:
                                         💡 <strong style={{ color: '#fbbf24' }}>Tip:</strong> {formData.firstSpeaker === 'agent' 
                                             ? 'Agent speaks first is ideal for outbound calls or when you want to immediately greet callers.'
                                             : 'User speaks first is great for inbound calls where you want to listen to the caller\'s intent first.'}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Tools Tab */}
+                        {activeTab === 'tools' && (
+                            <div>
+                                {/* Selected Tools Display */}
+                                {(formData.selectedTools || []).length > 0 && (
+                                    <div style={{ marginBottom: '20px' }}>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                            {(formData.selectedTools || []).map(tool => (
+                                                <div
+                                                    key={tool.talkrixToolId || tool._id}
+                                                    style={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '6px',
+                                                        padding: '6px 12px',
+                                                        borderRadius: '20px',
+                                                        background: tool.ownership === 'public' 
+                                                            ? 'rgba(0, 200, 255, 0.15)' 
+                                                            : 'rgba(120, 0, 255, 0.15)',
+                                                        border: `1px solid ${tool.ownership === 'public' ? 'rgba(0, 200, 255, 0.3)' : 'rgba(120, 0, 255, 0.3)'}`,
+                                                        color: tool.ownership === 'public' ? '#00C8FF' : '#a78bfa',
+                                                        fontSize: '13px',
+                                                    }}
+                                                >
+                                                    {tool.ownership === 'public' && builtInToolIcons[tool.name] && (
+                                                        <span style={{ opacity: 0.8 }}>{builtInToolIcons[tool.name]}</span>
+                                                    )}
+                                                    {tool.ownership !== 'public' && <Wrench size={14} style={{ opacity: 0.8 }} />}
+                                                    <span>{tool.name}</span>
+                                                    <button
+                                                        onClick={() => removeSelectedTool(tool)}
+                                                        style={{
+                                                            background: 'none',
+                                                            border: 'none',
+                                                            cursor: 'pointer',
+                                                            padding: '2px',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            color: 'inherit',
+                                                            opacity: 0.7,
+                                                        }}
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Tools Selection Tabs */}
+                                <div style={{ 
+                                    display: 'flex', 
+                                    borderBottom: '1px solid rgba(255, 255, 255, 0.1)', 
+                                    marginBottom: '16px' 
+                                }}>
+                                    <button
+                                        onClick={() => setToolsTab('builtin')}
+                                        style={{
+                                            flex: 1,
+                                            padding: '12px',
+                                            background: 'none',
+                                            border: 'none',
+                                            cursor: 'pointer',
+                                            fontSize: '14px',
+                                            fontWeight: '500',
+                                            color: toolsTab === 'builtin' ? '#00C8FF' : 'rgba(255, 255, 255, 0.5)',
+                                            borderBottom: toolsTab === 'builtin' ? '2px solid #00C8FF' : '2px solid transparent',
+                                            marginBottom: '-1px',
+                                            transition: 'all 0.2s',
+                                        }}
+                                    >
+                                        Built-in Tools
+                                    </button>
+                                    <button
+                                        onClick={() => setToolsTab('custom')}
+                                        style={{
+                                            flex: 1,
+                                            padding: '12px',
+                                            background: 'none',
+                                            border: 'none',
+                                            cursor: 'pointer',
+                                            fontSize: '14px',
+                                            fontWeight: '500',
+                                            color: toolsTab === 'custom' ? '#a78bfa' : 'rgba(255, 255, 255, 0.5)',
+                                            borderBottom: toolsTab === 'custom' ? '2px solid #a78bfa' : '2px solid transparent',
+                                            marginBottom: '-1px',
+                                            transition: 'all 0.2s',
+                                        }}
+                                    >
+                                        My Custom Tools
+                                    </button>
+                                </div>
+
+                                {/* Tools List */}
+                                <div style={{ 
+                                    display: 'grid', 
+                                    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
+                                    gap: '12px' 
+                                }}>
+                                    {toolsTab === 'builtin' ? (
+                                        BUILT_IN_TOOLS.map(tool => {
+                                            const selected = isToolSelected(tool);
+                                            const isHovered = hoveredTool === tool.talkrixToolId;
+                                            return (
+                                                <button
+                                                    key={tool.talkrixToolId}
+                                                    type="button"
+                                                    onClick={() => toggleToolSelection(tool)}
+                                                    onMouseEnter={() => setHoveredTool(tool.talkrixToolId || null)}
+                                                    onMouseLeave={() => setHoveredTool(null)}
+                                                    style={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '12px',
+                                                        padding: '16px',
+                                                        background: selected 
+                                                            ? 'rgba(0, 200, 255, 0.15)' 
+                                                            : isHovered 
+                                                                ? 'rgba(0, 200, 255, 0.08)' 
+                                                                : 'rgba(255, 255, 255, 0.03)',
+                                                        border: `1px solid ${selected 
+                                                            ? 'rgba(0, 200, 255, 0.5)' 
+                                                            : isHovered 
+                                                                ? 'rgba(0, 200, 255, 0.3)' 
+                                                                : 'rgba(255, 255, 255, 0.1)'}`,
+                                                        borderRadius: '12px',
+                                                        cursor: 'pointer',
+                                                        textAlign: 'left',
+                                                        transition: 'all 0.2s ease',
+                                                        transform: isHovered && !selected ? 'translateY(-2px)' : 'translateY(0)',
+                                                        boxShadow: selected 
+                                                            ? '0 0 20px rgba(0, 200, 255, 0.2)' 
+                                                            : isHovered 
+                                                                ? '0 4px 12px rgba(0, 200, 255, 0.15)' 
+                                                                : 'none',
+                                                    }}
+                                                >
+                                                    <div style={{
+                                                        width: '40px',
+                                                        height: '40px',
+                                                        borderRadius: '10px',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        background: selected 
+                                                            ? '#00C8FF' 
+                                                            : isHovered 
+                                                                ? 'rgba(0, 200, 255, 0.25)' 
+                                                                : 'rgba(0, 200, 255, 0.15)',
+                                                        color: selected ? '#000' : '#00C8FF',
+                                                        flexShrink: 0,
+                                                        transition: 'all 0.2s ease',
+                                                    }}>
+                                                        {selected ? <Check size={18} /> : (builtInToolIcons[tool.name] || <Wrench size={18} />)}
+                                                    </div>
+                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                        <div style={{ 
+                                                            fontWeight: '500', 
+                                                            color: selected || isHovered ? 'white' : 'rgba(255, 255, 255, 0.9)', 
+                                                            fontSize: '14px',
+                                                            marginBottom: '4px',
+                                                            transition: 'color 0.2s ease',
+                                                        }}>
+                                                            {tool.name}
+                                                        </div>
+                                                        <div style={{ 
+                                                            fontSize: '12px', 
+                                                            color: selected || isHovered ? 'rgba(255, 255, 255, 0.7)' : 'rgba(255, 255, 255, 0.5)',
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis',
+                                                            whiteSpace: 'nowrap',
+                                                            transition: 'color 0.2s ease',
+                                                        }}>
+                                                            {tool.definition.description}
+                                                        </div>
+                                                    </div>
+                                                    {selected && (
+                                                        <Check size={16} style={{ color: '#00C8FF', flexShrink: 0 }} />
+                                                    )}
+                                                </button>
+                                            );
+                                        })
+                                    ) : (
+                                        toolsLoading ? (
+                                            <div style={{ gridColumn: '1 / -1', padding: '40px', textAlign: 'center', color: 'rgba(255, 255, 255, 0.5)' }}>
+                                                <Loader2 size={24} style={{ animation: 'spin 1s linear infinite', marginBottom: '8px' }} />
+                                                <div>Loading custom tools...</div>
+                                            </div>
+                                        ) : customTools.length === 0 ? (
+                                            <div style={{ gridColumn: '1 / -1', padding: '40px', textAlign: 'center' }}>
+                                                <Wrench size={32} style={{ color: 'rgba(255, 255, 255, 0.3)', marginBottom: '12px' }} />
+                                                <div style={{ color: 'rgba(255, 255, 255, 0.5)', marginBottom: '4px' }}>No custom tools created yet</div>
+                                                <div style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.3)' }}>Go to Tools section to create one</div>
+                                            </div>
+                                        ) : (
+                                            customTools.map(tool => {
+                                                const selected = isToolSelected(tool);
+                                                const toolKey = tool._id || tool.talkrixToolId || '';
+                                                const isHovered = hoveredTool === toolKey;
+                                                return (
+                                                    <button
+                                                        key={toolKey}
+                                                        type="button"
+                                                        onClick={() => toggleToolSelection(tool)}
+                                                        onMouseEnter={() => setHoveredTool(toolKey)}
+                                                        onMouseLeave={() => setHoveredTool(null)}
+                                                        style={{
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '12px',
+                                                            padding: '16px',
+                                                            background: selected 
+                                                                ? 'rgba(120, 0, 255, 0.15)' 
+                                                                : isHovered 
+                                                                    ? 'rgba(120, 0, 255, 0.08)' 
+                                                                    : 'rgba(255, 255, 255, 0.03)',
+                                                            border: `1px solid ${selected 
+                                                                ? 'rgba(120, 0, 255, 0.5)' 
+                                                                : isHovered 
+                                                                    ? 'rgba(120, 0, 255, 0.3)' 
+                                                                    : 'rgba(255, 255, 255, 0.1)'}`,
+                                                            borderRadius: '12px',
+                                                            cursor: 'pointer',
+                                                            textAlign: 'left',
+                                                            transition: 'all 0.2s ease',
+                                                            transform: isHovered && !selected ? 'translateY(-2px)' : 'translateY(0)',
+                                                            boxShadow: selected 
+                                                                ? '0 0 20px rgba(120, 0, 255, 0.2)' 
+                                                                : isHovered 
+                                                                    ? '0 4px 12px rgba(120, 0, 255, 0.15)' 
+                                                                    : 'none',
+                                                        }}
+                                                    >
+                                                        <div style={{
+                                                            width: '40px',
+                                                            height: '40px',
+                                                            borderRadius: '10px',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            background: selected 
+                                                                ? '#7800FF' 
+                                                                : isHovered 
+                                                                    ? 'rgba(120, 0, 255, 0.25)' 
+                                                                    : 'rgba(120, 0, 255, 0.15)',
+                                                            color: selected ? '#fff' : '#a78bfa',
+                                                            flexShrink: 0,
+                                                            transition: 'all 0.2s ease',
+                                                        }}>
+                                                            {selected ? <Check size={18} /> : <Wrench size={18} />}
+                                                        </div>
+                                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                                            <div style={{ 
+                                                                fontWeight: '500', 
+                                                                color: selected || isHovered ? 'white' : 'rgba(255, 255, 255, 0.9)', 
+                                                                fontSize: '14px',
+                                                                marginBottom: '4px',
+                                                                transition: 'color 0.2s ease',
+                                                            }}>
+                                                                {tool.name}
+                                                            </div>
+                                                            <div style={{ 
+                                                                fontSize: '12px', 
+                                                                color: selected || isHovered ? 'rgba(255, 255, 255, 0.7)' : 'rgba(255, 255, 255, 0.5)',
+                                                                overflow: 'hidden',
+                                                                textOverflow: 'ellipsis',
+                                                                whiteSpace: 'nowrap',
+                                                                transition: 'color 0.2s ease',
+                                                            }}>
+                                                                {tool.definition?.description || 'No description'}
+                                                            </div>
+                                                        </div>
+                                                        {selected && (
+                                                            <Check size={16} style={{ color: '#a78bfa', flexShrink: 0 }} />
+                                                        )}
+                                                    </button>
+                                                );
+                                            })
+                                        )
+                                    )}
+                                </div>
+
+                                {/* Tip */}
+                                <div style={{
+                                    marginTop: '24px',
+                                    padding: '16px',
+                                    background: 'rgba(0, 200, 255, 0.05)',
+                                    borderRadius: '10px',
+                                    border: '1px solid rgba(0, 200, 255, 0.1)',
+                                }}>
+                                    <p style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.5' }}>
+                                        💡 <strong style={{ color: '#00C8FF' }}>Tip:</strong> Tools give your agent superpowers! Built-in tools include call transfer, voicemail, and more. Create custom tools to integrate with your APIs.
                                     </p>
                                 </div>
                             </div>
