@@ -2264,6 +2264,7 @@ export default function AgentsSection() {
             userFallbackDelay: agent.callTemplate?.firstSpeakerSettings?.user?.fallback?.delay || "5s",
             userFallbackText: agent.callTemplate?.firstSpeakerSettings?.user?.fallback?.text || "",
             inactivityMessages: inactivityMsgs,
+            selectedTools: agent.callTemplate?.selectedTools || [],
             // Advanced settings
             languageHint: agent.callTemplate?.languageHint || "",
             timeExceededMessage: agent.callTemplate?.timeExceededMessage || "",
