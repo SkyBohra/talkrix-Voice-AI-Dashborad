@@ -3105,10 +3105,11 @@ export default function AgentsSection() {
                                     <button
                                         type="button"
                                         onClick={() => {
-                                            const newMessages = [...formData.inactivityMessages, {
+                                            const newMessages: InactivityMessage[] = [...formData.inactivityMessages, {
+                                                id: `msg-${Date.now()}`,
                                                 duration: "30s",
                                                 text: "",
-                                                endBehavior: "hangup" as const,
+                                                endBehavior: "hangup",
                                             }];
                                             setFormData({ ...formData, inactivityMessages: newMessages });
                                         }}
