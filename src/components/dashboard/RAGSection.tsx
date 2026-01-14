@@ -12,6 +12,7 @@ import {
     listDocuments, createFileUpload, uploadFileToPresignedUrl, syncCorpora,
     Corpus, CorpusSource, QueryResult
 } from "@/lib/corpusApi";
+import { getUserInfo } from "@/lib/userApi";
 
 type ViewMode = "list" | "detail" | "sources" | "documents" | "query";
 
@@ -57,10 +58,31 @@ export default function RAGSection() {
     const [queryText, setQueryText] = useState("");
     const [uploadFile, setUploadFile] = useState<File | null>(null);
 
-    // Load corpora on mount
+    // User limit state
+    const [maxCorpusLimit, setMaxCorpusLimit] = useState<number>(1);
+    const [isLimitReached, setIsLimitReached] = useState(false);
+
+    // Load corpora and user info on mount
     useEffect(() => {
         loadCorpora();
+        loadUserInfo();
     }, []);
+
+    // Check if limit is reached whenever corpora or limit changes
+    useEffect(() => {
+        setIsLimitReached(corpora.length >= maxCorpusLimit);
+    }, [corpora, maxCorpusLimit]);
+
+    const loadUserInfo = async () => {
+        try {
+            const res = await getUserInfo();
+            if (res.success && res.data) {
+                setMaxCorpusLimit(res.data.maxCorpusLimit);
+            }
+        } catch (err: any) {
+            console.error("Failed to load user info", err);
+        }
+    };
 
     const loadCorpora = async () => {
         setLoading(true);
@@ -375,25 +397,63 @@ export default function RAGSection() {
                             <RefreshCw size={16} className={actionLoading ? "animate-spin" : ""} />
                             Sync
                         </button>
-                        <button
-                            onClick={openCreateCorpusModal}
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "8px",
-                                padding: "12px 24px",
-                                borderRadius: "12px",
-                                border: "none",
-                                background: "linear-gradient(135deg, #00C8FF 0%, #7800FF 100%)",
-                                color: "white",
-                                fontSize: "14px",
-                                fontWeight: "600",
-                                cursor: "pointer",
-                            }}
-                        >
-                            <Plus size={18} />
-                            Create Knowledge Base
-                        </button>
+                        <div style={{ position: "relative" }} className="create-kb-btn-wrapper">
+                            <button
+                                onClick={isLimitReached ? undefined : openCreateCorpusModal}
+                                disabled={isLimitReached}
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "8px",
+                                    padding: "12px 24px",
+                                    borderRadius: "12px",
+                                    border: "none",
+                                    background: isLimitReached 
+                                        ? "rgba(128, 128, 128, 0.5)" 
+                                        : "linear-gradient(135deg, #00C8FF 0%, #7800FF 100%)",
+                                    color: isLimitReached ? "rgba(255, 255, 255, 0.5)" : "white",
+                                    fontSize: "14px",
+                                    fontWeight: "600",
+                                    cursor: isLimitReached ? "not-allowed" : "pointer",
+                                    opacity: isLimitReached ? 0.7 : 1,
+                                }}
+                                title={isLimitReached ? `You have reached your limit of ${maxCorpusLimit} knowledge base(s). Contact Talkrix team to increase your limit.` : undefined}
+                            >
+                                <Plus size={18} />
+                                Create Knowledge Base
+                            </button>
+                            {isLimitReached && (
+                                <div 
+                                    className="limit-tooltip"
+                                    style={{
+                                        position: "absolute",
+                                        top: "100%",
+                                        right: 0,
+                                        marginTop: "8px",
+                                        padding: "12px 16px",
+                                        background: "rgba(30, 30, 40, 0.98)",
+                                        border: "1px solid rgba(255, 60, 100, 0.3)",
+                                        borderRadius: "8px",
+                                        fontSize: "13px",
+                                        color: "rgba(255, 255, 255, 0.9)",
+                                        whiteSpace: "nowrap",
+                                        zIndex: 100,
+                                        display: "none",
+                                        boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
+                                    }}
+                                >
+                                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                        <AlertCircle size={16} style={{ color: "#FF3C64" }} />
+                                        <span>Limit reached ({corpora.length}/{maxCorpusLimit}). <a href="mailto:support@talkrix.com" style={{ color: "#00C8FF", textDecoration: "underline" }}>Contact Talkrix team</a></span>
+                                    </div>
+                                </div>
+                            )}
+                            <style jsx>{`
+                                .create-kb-btn-wrapper:hover .limit-tooltip {
+                                    display: block !important;
+                                }
+                            `}</style>
+                        </div>
                     </>
                 )}
                 {viewMode === "sources" && (
