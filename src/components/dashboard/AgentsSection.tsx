@@ -59,6 +59,13 @@ interface InactivityMessage {
     endBehavior?: string;
 }
 
+interface VADSettings {
+    turnEndpointDelay: string;
+    minimumTurnDuration: string;
+    minimumInterruptionDuration: string;
+    frameActivationThreshold: number;
+}
+
 interface FormData {
     name: string;
     callTemplateName: string;
@@ -69,9 +76,17 @@ interface FormData {
     systemPrompt: string;
     temperature: number;
     voice: string;
+    firstSpeaker: 'agent' | 'user';
     firstSpeakerText: string;
     firstSpeakerUninterruptible: boolean;
+    firstSpeakerDelay: string;
+    userFallbackDelay: string;
+    userFallbackText: string;
     inactivityMessages: InactivityMessage[];
+    // Advanced settings
+    languageHint: string;
+    timeExceededMessage: string;
+    vadSettings: VADSettings;
 }
 
 const defaultFormData: FormData = {
@@ -84,13 +99,26 @@ const defaultFormData: FormData = {
     systemPrompt: "You are a helpful assistant",
     temperature: 0,
     voice: "Crhysa",
+    firstSpeaker: "agent",
     firstSpeakerText: "Hello, how can I help you today?",
     firstSpeakerUninterruptible: true,
+    firstSpeakerDelay: "",
+    userFallbackDelay: "5s",
+    userFallbackText: "Hello? Are you there? How can I help you?",
     inactivityMessages: [
         { id: '1', duration: '30s', text: 'Are you still there?' },
         { id: '2', duration: '15s', text: 'If there\'s nothing else, may I end the call?' },
         { id: '3', duration: '10s', text: 'Thank you for calling. Have a great day. Goodbye.', endBehavior: 'END_BEHAVIOR_HANG_UP_SOFT' },
     ],
+    // Advanced settings
+    languageHint: "",
+    timeExceededMessage: "",
+    vadSettings: {
+        turnEndpointDelay: "",
+        minimumTurnDuration: "",
+        minimumInterruptionDuration: "",
+        frameActivationThreshold: 0,
+    },
 };
 
 // Agent Templates
@@ -2178,6 +2206,13 @@ export default function AgentsSection() {
             text: msg.message || '',
             endBehavior: msg.endBehavior,
         })) || defaultFormData.inactivityMessages;
+
+        // Extract VAD settings
+        const vadSettings = agent.callTemplate?.vadSettings || defaultFormData.vadSettings;
+        
+        // Determine who speaks first
+        const hasUserSpeaksFirst = !!agent.callTemplate?.firstSpeakerSettings?.user;
+        const firstSpeaker = hasUserSpeaksFirst ? 'user' : 'agent';
         
         setFormData({
             name: agent.name,
@@ -2189,9 +2224,22 @@ export default function AgentsSection() {
             systemPrompt: agent.callTemplate?.systemPrompt || "",
             temperature: agent.callTemplate?.temperature ?? 0,
             voice: agent.callTemplate?.voice || "Crhysa",
+            firstSpeaker,
             firstSpeakerText: agent.callTemplate?.firstSpeakerSettings?.agent?.text || "",
             firstSpeakerUninterruptible: agent.callTemplate?.firstSpeakerSettings?.agent?.uninterruptible ?? true,
+            firstSpeakerDelay: agent.callTemplate?.firstSpeakerSettings?.agent?.delay || "",
+            userFallbackDelay: agent.callTemplate?.firstSpeakerSettings?.user?.fallback?.delay || "5s",
+            userFallbackText: agent.callTemplate?.firstSpeakerSettings?.user?.fallback?.text || "",
             inactivityMessages: inactivityMsgs,
+            // Advanced settings
+            languageHint: agent.callTemplate?.languageHint || "",
+            timeExceededMessage: agent.callTemplate?.timeExceededMessage || "",
+            vadSettings: {
+                turnEndpointDelay: vadSettings?.turnEndpointDelay || "",
+                minimumTurnDuration: vadSettings?.minimumTurnDuration || "",
+                minimumInterruptionDuration: vadSettings?.minimumInterruptionDuration || "",
+                frameActivationThreshold: vadSettings?.frameActivationThreshold || 0,
+            },
         });
         
         // Try to find the existing voice
@@ -2224,30 +2272,75 @@ export default function AgentsSection() {
     };
 
     const buildAgentPayload = () => {
+        // Build VAD settings if any are provided
+        const vadSettings: Record<string, any> = {};
+        if (formData.vadSettings?.turnEndpointDelay) {
+            vadSettings.turnEndpointDelay = formData.vadSettings.turnEndpointDelay;
+        }
+        if (formData.vadSettings?.minimumTurnDuration) {
+            vadSettings.minimumTurnDuration = formData.vadSettings.minimumTurnDuration;
+        }
+        if (formData.vadSettings?.minimumInterruptionDuration) {
+            vadSettings.minimumInterruptionDuration = formData.vadSettings.minimumInterruptionDuration;
+        }
+        if (formData.vadSettings?.frameActivationThreshold) {
+            vadSettings.frameActivationThreshold = formData.vadSettings.frameActivationThreshold;
+        }
+
+        // Build first speaker settings based on who speaks first
+        const firstSpeakerSettings: Record<string, any> = {};
+        
+        if (formData.firstSpeaker === 'agent') {
+            firstSpeakerSettings.agent = {
+                uninterruptible: formData.firstSpeakerUninterruptible,
+                text: formData.firstSpeakerText,
+            };
+            if (formData.firstSpeakerDelay) {
+                firstSpeakerSettings.agent.delay = formData.firstSpeakerDelay;
+            }
+        } else {
+            // User speaks first
+            firstSpeakerSettings.user = {
+                fallback: {
+                    delay: formData.userFallbackDelay || '5s',
+                    text: formData.userFallbackText || '',
+                },
+            };
+        }
+
+        // Build the call template
+        const callTemplate: Record<string, any> = {
+            name: formData.callTemplateName || formData.name,
+            initialOutputMedium: formData.initialOutputMedium,
+            joinTimeout: formData.joinTimeout,
+            maxDuration: formData.maxDuration,
+            model: "fixie-ai/ultravox-70B", // Hidden from UI - internal setting
+            recordingEnabled: formData.recordingEnabled,
+            firstSpeakerSettings,
+            systemPrompt: formData.systemPrompt,
+            temperature: formData.temperature,
+            voice: formData.voice,
+            inactivityMessages: formData.inactivityMessages.map((msg) => ({
+                duration: msg.duration,
+                message: msg.text,
+                ...(msg.endBehavior ? { endBehavior: msg.endBehavior } : {}),
+            })),
+        };
+
+        // Add optional fields only if they have values
+        if (formData.languageHint) {
+            callTemplate.languageHint = formData.languageHint;
+        }
+        if (formData.timeExceededMessage) {
+            callTemplate.timeExceededMessage = formData.timeExceededMessage;
+        }
+        if (Object.keys(vadSettings).length > 0) {
+            callTemplate.vadSettings = vadSettings;
+        }
+
         return {
             name: formData.name,
-            callTemplate: {
-                name: formData.callTemplateName || formData.name,
-                initialOutputMedium: formData.initialOutputMedium,
-                joinTimeout: formData.joinTimeout,
-                maxDuration: formData.maxDuration,
-                model: "fixie-ai/ultravox-70B", // Hidden from UI
-                recordingEnabled: formData.recordingEnabled,
-                firstSpeakerSettings: {
-                    agent: {
-                        uninterruptible: formData.firstSpeakerUninterruptible,
-                        text: formData.firstSpeakerText,
-                    },
-                },
-                systemPrompt: formData.systemPrompt,
-                temperature: formData.temperature,
-                voice: formData.voice,
-                inactivityMessages: formData.inactivityMessages.map((msg, index) => ({
-                    duration: msg.duration,
-                    message: msg.text,
-                    ...(msg.endBehavior ? { endBehavior: msg.endBehavior } : {}),
-                })),
-            },
+            callTemplate,
         };
     };
 
@@ -2377,118 +2470,201 @@ export default function AgentsSection() {
                 <div
                     style={{
                         display: "grid",
-                        gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))",
-                        gap: "20px",
+                        gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))",
+                        gap: "24px",
                     }}
                 >
-                    {agents.map(agent => (
-                        <div
-                            key={agent._id}
-                            style={{
-                                background: "linear-gradient(135deg, rgba(5, 15, 30, 0.8) 0%, rgba(10, 20, 40, 0.7) 100%)",
-                                backdropFilter: "blur(16px)",
-                                border: "1px solid rgba(0, 200, 255, 0.15)",
-                                borderRadius: "16px",
-                                padding: "24px",
-                                transition: "all 0.3s ease",
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.borderColor = "rgba(0, 200, 255, 0.3)";
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.08)";
-                            }}
-                        >
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
-                                <div
-                                    style={{
-                                        width: "48px",
-                                        height: "48px",
-                                        borderRadius: "12px",
-                                        background: "linear-gradient(135deg, rgba(0, 200, 255, 0.2) 0%, rgba(120, 0, 255, 0.2) 100%)",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        color: "#00C8FF",
-                                    }}
-                                >
-                                    <Bot size={24} />
+                    {agents.map((agent, index) => {
+                        const cardGradients = [
+                            "linear-gradient(135deg, rgba(0, 200, 255, 0.1) 0%, rgba(120, 0, 255, 0.05) 100%)",
+                            "linear-gradient(135deg, rgba(120, 0, 255, 0.1) 0%, rgba(255, 60, 100, 0.05) 100%)",
+                            "linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(0, 200, 255, 0.05) 100%)",
+                            "linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(120, 0, 255, 0.05) 100%)",
+                        ];
+                        const iconGradients = [
+                            "linear-gradient(135deg, #00C8FF 0%, #7800FF 100%)",
+                            "linear-gradient(135deg, #7800FF 0%, #FF3C64 100%)",
+                            "linear-gradient(135deg, #22c55e 0%, #00C8FF 100%)",
+                            "linear-gradient(135deg, #f59e0b 0%, #7800FF 100%)",
+                        ];
+                        
+                        return (
+                            <div
+                                key={agent._id}
+                                style={{
+                                    background: cardGradients[index % 4],
+                                    backdropFilter: "blur(20px)",
+                                    border: "1px solid rgba(0, 200, 255, 0.12)",
+                                    borderRadius: "20px",
+                                    padding: "28px",
+                                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                                    position: "relative",
+                                    overflow: "hidden",
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.borderColor = "rgba(0, 200, 255, 0.4)";
+                                    e.currentTarget.style.transform = "translateY(-4px)";
+                                    e.currentTarget.style.boxShadow = "0 20px 40px rgba(0, 200, 255, 0.15)";
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.borderColor = "rgba(0, 200, 255, 0.12)";
+                                    e.currentTarget.style.transform = "translateY(0)";
+                                    e.currentTarget.style.boxShadow = "none";
+                                }}
+                            >
+                                {/* Decorative background element */}
+                                <div style={{
+                                    position: "absolute",
+                                    top: "-50px",
+                                    right: "-50px",
+                                    width: "150px",
+                                    height: "150px",
+                                    borderRadius: "50%",
+                                    background: iconGradients[index % 4],
+                                    opacity: 0.05,
+                                    pointerEvents: "none",
+                                }} />
+
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
+                                    <div
+                                        style={{
+                                            width: "56px",
+                                            height: "56px",
+                                            borderRadius: "16px",
+                                            background: iconGradients[index % 4],
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            color: "white",
+                                            boxShadow: "0 8px 24px rgba(0, 200, 255, 0.25)",
+                                        }}
+                                    >
+                                        <Bot size={28} />
+                                    </div>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                        <div
+                                            style={{
+                                                padding: "6px 14px",
+                                                borderRadius: "20px",
+                                                fontSize: "12px",
+                                                fontWeight: "600",
+                                                background: "rgba(34, 197, 94, 0.15)",
+                                                color: "#22c55e",
+                                                border: "1px solid rgba(34, 197, 94, 0.25)",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: "6px",
+                                            }}
+                                        >
+                                            <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#22c55e" }} />
+                                            Active
+                                        </div>
+                                    </div>
                                 </div>
-                                <div
-                                    style={{
-                                        padding: "4px 12px",
-                                        borderRadius: "20px",
-                                        fontSize: "12px",
-                                        fontWeight: "500",
-                                        background: statusColors.active.bg,
-                                        color: statusColors.active.color,
-                                        border: `1px solid ${statusColors.active.border}`,
-                                    }}
-                                >
-                                    Active
+
+                                <h3 style={{ fontSize: "20px", fontWeight: "700", color: "white", marginBottom: "10px", letterSpacing: "-0.02em" }}>
+                                    {agent.name}
+                                </h3>
+                                <p style={{ 
+                                    fontSize: "14px", 
+                                    color: "rgba(255, 255, 255, 0.55)", 
+                                    marginBottom: "20px", 
+                                    lineHeight: "1.6",
+                                    display: "-webkit-box",
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: "vertical",
+                                    overflow: "hidden",
+                                }}>
+                                    {agent.callTemplate?.systemPrompt?.substring(0, 100) || "No description available"}...
+                                </p>
+
+                                {/* Stats Row */}
+                                <div style={{ 
+                                    display: "grid", 
+                                    gridTemplateColumns: "1fr 1fr 1fr", 
+                                    gap: "12px", 
+                                    marginBottom: "24px",
+                                    padding: "16px",
+                                    background: "rgba(0, 0, 0, 0.2)",
+                                    borderRadius: "12px",
+                                }}>
+                                    <div>
+                                        <p style={{ fontSize: "10px", color: "rgba(255, 255, 255, 0.4)", marginBottom: "4px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Voice</p>
+                                        <p style={{ fontSize: "13px", color: "#00C8FF", fontWeight: "600" }}>{agent.callTemplate?.voice || "Default"}</p>
+                                    </div>
+                                    <div>
+                                        <p style={{ fontSize: "10px", color: "rgba(255, 255, 255, 0.4)", marginBottom: "4px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Duration</p>
+                                        <p style={{ fontSize: "13px", color: "white", fontWeight: "500" }}>{agent.callTemplate?.maxDuration || "N/A"}</p>
+                                    </div>
+                                    <div>
+                                        <p style={{ fontSize: "10px", color: "rgba(255, 255, 255, 0.4)", marginBottom: "4px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Recording</p>
+                                        <p style={{ fontSize: "13px", color: agent.callTemplate?.recordingEnabled ? "#22c55e" : "rgba(255,255,255,0.5)", fontWeight: "500" }}>
+                                            {agent.callTemplate?.recordingEnabled ? "On" : "Off"}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div style={{ display: "flex", gap: "10px" }}>
+                                    <button
+                                        onClick={() => openEditModal(agent)}
+                                        style={{
+                                            flex: 1,
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            gap: "8px",
+                                            padding: "12px",
+                                            borderRadius: "10px",
+                                            border: "none",
+                                            background: "linear-gradient(135deg, #00C8FF 0%, #7800FF 100%)",
+                                            color: "white",
+                                            fontSize: "14px",
+                                            fontWeight: "600",
+                                            cursor: "pointer",
+                                            transition: "all 0.2s ease",
+                                            boxShadow: "0 4px 16px rgba(0, 200, 255, 0.25)",
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.transform = "scale(1.02)";
+                                            e.currentTarget.style.boxShadow = "0 6px 20px rgba(0, 200, 255, 0.35)";
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.transform = "scale(1)";
+                                            e.currentTarget.style.boxShadow = "0 4px 16px rgba(0, 200, 255, 0.25)";
+                                        }}
+                                    >
+                                        <Pencil size={15} />
+                                        Configure
+                                    </button>
+                                    <button
+                                        onClick={() => handleDelete(agent._id)}
+                                        style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            padding: "12px 14px",
+                                            borderRadius: "10px",
+                                            border: "1px solid rgba(255, 60, 100, 0.25)",
+                                            background: "rgba(255, 60, 100, 0.1)",
+                                            color: "#FF3C64",
+                                            cursor: "pointer",
+                                            transition: "all 0.2s ease",
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.background = "rgba(255, 60, 100, 0.2)";
+                                            e.currentTarget.style.borderColor = "rgba(255, 60, 100, 0.4)";
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.background = "rgba(255, 60, 100, 0.1)";
+                                            e.currentTarget.style.borderColor = "rgba(255, 60, 100, 0.25)";
+                                        }}
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
                                 </div>
                             </div>
-
-                            <h3 style={{ fontSize: "18px", fontWeight: "600", color: "white", marginBottom: "8px" }}>
-                                {agent.name}
-                            </h3>
-                            <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.5)", marginBottom: "16px", lineHeight: "1.5" }}>
-                                {agent.callTemplate?.systemPrompt?.substring(0, 80) || "No description"}...
-                            </p>
-
-                            <div style={{ display: "flex", gap: "16px", marginBottom: "20px" }}>
-                                <div>
-                                    <p style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.4)", marginBottom: "4px" }}>Voice</p>
-                                    <p style={{ fontSize: "13px", color: "white" }}>{agent.callTemplate?.voice || "Default"}</p>
-                                </div>
-                                <div>
-                                    <p style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.4)", marginBottom: "4px" }}>Max Duration</p>
-                                    <p style={{ fontSize: "13px", color: "white" }}>{agent.callTemplate?.maxDuration || "N/A"}</p>
-                                </div>
-                            </div>
-
-                            <div style={{ display: "flex", gap: "8px" }}>
-                                <button
-                                    onClick={() => openEditModal(agent)}
-                                    style={{
-                                        flex: 1,
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        gap: "6px",
-                                        padding: "10px",
-                                        borderRadius: "8px",
-                                        border: "1px solid rgba(0, 200, 255, 0.3)",
-                                        background: "rgba(0, 200, 255, 0.1)",
-                                        color: "#00C8FF",
-                                        fontSize: "13px",
-                                        cursor: "pointer",
-                                        transition: "all 0.2s ease",
-                                    }}
-                                >
-                                    <Pencil size={14} />
-                                    Edit
-                                </button>
-                                <button
-                                    onClick={() => handleDelete(agent._id)}
-                                    style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        padding: "10px",
-                                        borderRadius: "8px",
-                                        border: "1px solid rgba(255, 60, 100, 0.3)",
-                                        background: "rgba(255, 60, 100, 0.1)",
-                                        color: "#FF3C64",
-                                        cursor: "pointer",
-                                        transition: "all 0.2s ease",
-                                    }}
-                                >
-                                    <Trash2 size={14} />
-                                </button>
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
 
@@ -3256,12 +3432,20 @@ export default function AgentsSection() {
                         systemPrompt: formData.systemPrompt,
                         temperature: formData.temperature,
                         voice: formData.voice,
+                        firstSpeaker: formData.firstSpeaker,
                         firstSpeakerText: formData.firstSpeakerText,
                         firstSpeakerUninterruptible: formData.firstSpeakerUninterruptible,
+                        firstSpeakerDelay: formData.firstSpeakerDelay,
+                        userFallbackDelay: formData.userFallbackDelay,
+                        userFallbackText: formData.userFallbackText,
                         joinTimeout: formData.joinTimeout,
                         maxDuration: formData.maxDuration,
                         recordingEnabled: formData.recordingEnabled,
                         inactivityMessages: formData.inactivityMessages,
+                        languageHint: formData.languageHint,
+                        timeExceededMessage: formData.timeExceededMessage,
+                        initialOutputMedium: formData.initialOutputMedium,
+                        vadSettings: formData.vadSettings,
                     }}
                     setFormData={(data) => setFormData({
                         ...formData,
@@ -3269,12 +3453,20 @@ export default function AgentsSection() {
                         systemPrompt: data.systemPrompt,
                         temperature: data.temperature,
                         voice: data.voice,
+                        firstSpeaker: data.firstSpeaker,
                         firstSpeakerText: data.firstSpeakerText,
                         firstSpeakerUninterruptible: data.firstSpeakerUninterruptible,
+                        firstSpeakerDelay: data.firstSpeakerDelay,
+                        userFallbackDelay: data.userFallbackDelay,
+                        userFallbackText: data.userFallbackText,
                         joinTimeout: data.joinTimeout,
                         maxDuration: data.maxDuration,
                         recordingEnabled: data.recordingEnabled,
                         inactivityMessages: data.inactivityMessages,
+                        languageHint: data.languageHint,
+                        timeExceededMessage: data.timeExceededMessage,
+                        initialOutputMedium: data.initialOutputMedium,
+                        vadSettings: data.vadSettings,
                     })}
                     onSave={handleSave}
                     onClose={handleCloseBuilder}

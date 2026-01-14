@@ -6,7 +6,7 @@ import {
     MessageSquare, Settings, Clock, Sparkles, 
     ChevronDown, Volume2, Bot, 
     Wand2, Database, Wrench, Copy, Check,
-    Phone, Plus, Trash2
+    Phone, Plus, Trash2, Sliders, Globe, Zap, AlertCircle
 } from "lucide-react";
 import { fetchVoices } from "../../lib/agentApi";
 
@@ -26,17 +26,33 @@ interface InactivityMessage {
     endBehavior?: string;
 }
 
+interface VADSettings {
+    turnEndpointDelay: string;
+    minimumTurnDuration: string;
+    minimumInterruptionDuration: string;
+    frameActivationThreshold: number;
+}
+
 interface FormData {
     name: string;
     systemPrompt: string;
     temperature: number;
     voice: string;
+    firstSpeaker: 'agent' | 'user';
     firstSpeakerText: string;
     firstSpeakerUninterruptible: boolean;
+    firstSpeakerDelay: string;
+    userFallbackDelay: string;
+    userFallbackText: string;
     joinTimeout: string;
     maxDuration: string;
     recordingEnabled: boolean;
     inactivityMessages: InactivityMessage[];
+    // Advanced settings
+    languageHint: string;
+    timeExceededMessage: string;
+    initialOutputMedium: string;
+    vadSettings: VADSettings;
 }
 
 interface AgentBuilderProps {
@@ -59,7 +75,7 @@ function useDebounce<T>(value: T, delay: number): T {
     return debouncedValue;
 }
 
-type TabType = 'prompt' | 'greeting' | 'inactivity' | 'settings';
+type TabType = 'prompt' | 'greeting' | 'inactivity' | 'settings' | 'advanced';
 
 export default function AgentBuilder({ 
     formData, 
@@ -229,8 +245,9 @@ export default function AgentBuilder({
     const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
         { id: 'prompt', label: 'Prompt', icon: <Sparkles size={16} /> },
         { id: 'greeting', label: 'Greeting', icon: <MessageSquare size={16} /> },
-        { id: 'inactivity', label: 'Inactivity Messages', icon: <Clock size={16} /> },
+        { id: 'inactivity', label: 'Inactivity', icon: <Clock size={16} /> },
         { id: 'settings', label: 'Settings', icon: <Settings size={16} /> },
+        { id: 'advanced', label: 'Advanced', icon: <Sliders size={16} /> },
     ];
 
     const getMessageGradient = (index: number, isLast: boolean) => {
@@ -609,46 +626,188 @@ Key responsibilities:
 
                         {activeTab === 'greeting' && (
                             <div>
+                                {/* First Speaker Toggle */}
                                 <div style={{ marginBottom: '24px' }}>
                                     <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'white', marginBottom: '8px' }}>
-                                        First Message
+                                        Who Speaks First?
                                     </h3>
                                     <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.5)', marginBottom: '16px' }}>
-                                        This is what your agent will say when the call starts.
+                                        Choose whether the agent or user initiates the conversation.
                                     </p>
-                                    <textarea
-                                        value={formData.firstSpeakerText}
-                                        onChange={(e) => setFormData({ ...formData, firstSpeakerText: e.target.value })}
-                                        placeholder="Hello! Thank you for calling. How can I help you today?"
-                                        rows={4}
-                                        style={{
-                                            width: '100%',
-                                            padding: '16px',
-                                            background: 'rgba(5, 10, 20, 0.5)',
-                                            border: '1px solid rgba(0, 200, 255, 0.1)',
-                                            borderRadius: '12px',
-                                            color: 'white',
-                                            fontSize: '14px',
-                                            lineHeight: '1.6',
-                                            outline: 'none',
-                                            resize: 'vertical',
-                                            fontFamily: 'inherit',
-                                            boxSizing: 'border-box',
-                                        }}
-                                    />
+                                    <div style={{ display: 'flex', gap: '12px' }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData({ ...formData, firstSpeaker: 'agent' })}
+                                            style={{
+                                                flex: 1,
+                                                padding: '16px 20px',
+                                                borderRadius: '12px',
+                                                border: formData.firstSpeaker === 'agent' ? '2px solid #00C8FF' : '1px solid rgba(255, 255, 255, 0.1)',
+                                                background: formData.firstSpeaker === 'agent' ? 'rgba(0, 200, 255, 0.15)' : 'rgba(5, 10, 20, 0.5)',
+                                                color: formData.firstSpeaker === 'agent' ? '#00C8FF' : 'rgba(255, 255, 255, 0.6)',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                gap: '8px',
+                                                transition: 'all 0.2s',
+                                            }}
+                                        >
+                                            <Bot size={24} />
+                                            <span style={{ fontWeight: '600', fontSize: '14px' }}>Agent Speaks First</span>
+                                            <span style={{ fontSize: '11px', opacity: 0.7 }}>Agent greets the user</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData({ ...formData, firstSpeaker: 'user' })}
+                                            style={{
+                                                flex: 1,
+                                                padding: '16px 20px',
+                                                borderRadius: '12px',
+                                                border: formData.firstSpeaker === 'user' ? '2px solid #7800FF' : '1px solid rgba(255, 255, 255, 0.1)',
+                                                background: formData.firstSpeaker === 'user' ? 'rgba(120, 0, 255, 0.15)' : 'rgba(5, 10, 20, 0.5)',
+                                                color: formData.firstSpeaker === 'user' ? '#a78bfa' : 'rgba(255, 255, 255, 0.6)',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                gap: '8px',
+                                                transition: 'all 0.2s',
+                                            }}
+                                        >
+                                            <MessageSquare size={24} />
+                                            <span style={{ fontWeight: '600', fontSize: '14px' }}>User Speaks First</span>
+                                            <span style={{ fontSize: '11px', opacity: 0.7 }}>Wait for user to speak</span>
+                                        </button>
+                                    </div>
                                 </div>
 
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', background: 'rgba(0, 200, 255, 0.05)', borderRadius: '12px', border: '1px solid rgba(0, 200, 255, 0.1)' }}>
-                                    <input
-                                        type="checkbox"
-                                        id="uninterruptible"
-                                        checked={formData.firstSpeakerUninterruptible}
-                                        onChange={(e) => setFormData({ ...formData, firstSpeakerUninterruptible: e.target.checked })}
-                                        style={{ width: '18px', height: '18px', accentColor: '#00C8FF' }}
-                                    />
-                                    <label htmlFor="uninterruptible" style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.8)' }}>
-                                        Make greeting uninterruptible (user cannot speak over it)
-                                    </label>
+                                {/* Agent Speaks First Settings */}
+                                {formData.firstSpeaker === 'agent' && (
+                                    <div style={{ 
+                                        padding: '20px', 
+                                        background: 'linear-gradient(135deg, rgba(0, 200, 255, 0.08), rgba(0, 200, 255, 0.02))', 
+                                        borderRadius: '12px', 
+                                        border: '1px solid rgba(0, 200, 255, 0.15)',
+                                        marginBottom: '16px',
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                                            <Bot size={18} color="#00C8FF" />
+                                            <h4 style={{ fontSize: '14px', fontWeight: '600', color: 'white' }}>Agent Greeting Message</h4>
+                                        </div>
+                                        <textarea
+                                            value={formData.firstSpeakerText}
+                                            onChange={(e) => setFormData({ ...formData, firstSpeakerText: e.target.value })}
+                                            placeholder="Hello! Thank you for calling. How can I help you today?"
+                                            rows={3}
+                                            style={{
+                                                width: '100%',
+                                                padding: '14px',
+                                                background: 'rgba(0, 0, 0, 0.3)',
+                                                border: '1px solid rgba(0, 200, 255, 0.1)',
+                                                borderRadius: '10px',
+                                                color: 'white',
+                                                fontSize: '14px',
+                                                lineHeight: '1.6',
+                                                outline: 'none',
+                                                resize: 'vertical',
+                                                fontFamily: 'inherit',
+                                                boxSizing: 'border-box',
+                                                marginBottom: '12px',
+                                            }}
+                                        />
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                            <input
+                                                type="checkbox"
+                                                id="agentUninterruptible"
+                                                checked={formData.firstSpeakerUninterruptible}
+                                                onChange={(e) => setFormData({ ...formData, firstSpeakerUninterruptible: e.target.checked })}
+                                                style={{ width: '16px', height: '16px', accentColor: '#00C8FF' }}
+                                            />
+                                            <label htmlFor="agentUninterruptible" style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.7)' }}>
+                                                Make greeting uninterruptible
+                                            </label>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* User Speaks First Settings */}
+                                {formData.firstSpeaker === 'user' && (
+                                    <div style={{ 
+                                        padding: '20px', 
+                                        background: 'linear-gradient(135deg, rgba(120, 0, 255, 0.08), rgba(120, 0, 255, 0.02))', 
+                                        borderRadius: '12px', 
+                                        border: '1px solid rgba(120, 0, 255, 0.15)',
+                                        marginBottom: '16px',
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                                            <MessageSquare size={18} color="#a78bfa" />
+                                            <h4 style={{ fontSize: '14px', fontWeight: '600', color: 'white' }}>Fallback Message</h4>
+                                        </div>
+                                        <p style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.5)', marginBottom: '12px' }}>
+                                            If the user doesn't speak within the delay time, the agent will say this message.
+                                        </p>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '12px', marginBottom: '12px' }}>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)', marginBottom: '6px' }}>
+                                                    Wait Time
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.userFallbackDelay || '5s'}
+                                                    onChange={(e) => setFormData({ ...formData, userFallbackDelay: e.target.value })}
+                                                    placeholder="5s"
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '10px 12px',
+                                                        background: 'rgba(0, 0, 0, 0.3)',
+                                                        border: '1px solid rgba(120, 0, 255, 0.1)',
+                                                        borderRadius: '8px',
+                                                        color: 'white',
+                                                        fontSize: '13px',
+                                                        outline: 'none',
+                                                        boxSizing: 'border-box',
+                                                    }}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)', marginBottom: '6px' }}>
+                                                    Fallback Message
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.userFallbackText || ''}
+                                                    onChange={(e) => setFormData({ ...formData, userFallbackText: e.target.value })}
+                                                    placeholder="Hello? Are you there? How can I help you?"
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '10px 12px',
+                                                        background: 'rgba(0, 0, 0, 0.3)',
+                                                        border: '1px solid rgba(120, 0, 255, 0.1)',
+                                                        borderRadius: '8px',
+                                                        color: 'white',
+                                                        fontSize: '13px',
+                                                        outline: 'none',
+                                                        boxSizing: 'border-box',
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Info Box */}
+                                <div style={{ 
+                                    padding: '14px 16px', 
+                                    background: 'rgba(245, 158, 11, 0.1)', 
+                                    borderRadius: '10px',
+                                    border: '1px solid rgba(245, 158, 11, 0.2)',
+                                }}>
+                                    <p style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.5' }}>
+                                        💡 <strong style={{ color: '#fbbf24' }}>Tip:</strong> {formData.firstSpeaker === 'agent' 
+                                            ? 'Agent speaks first is ideal for outbound calls or when you want to immediately greet callers.'
+                                            : 'User speaks first is great for inbound calls where you want to listen to the caller\'s intent first.'}
+                                    </p>
                                 </div>
                             </div>
                         )}
@@ -960,6 +1119,307 @@ Key responsibilities:
                                             </button>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'advanced' && (
+                            <div>
+                                <div style={{ marginBottom: '24px' }}>
+                                    <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'white', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <Sliders size={18} color="#00C8FF" />
+                                        Advanced Settings
+                                    </h3>
+                                    <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.5)' }}>
+                                        Fine-tune your agent's behavior with advanced configuration options.
+                                    </p>
+                                </div>
+
+                                {/* Language & Output Section */}
+                                <div style={{ marginBottom: '24px' }}>
+                                    <h4 style={{ fontSize: '14px', fontWeight: '500', color: '#00C8FF', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <Globe size={14} />
+                                        Language & Output
+                                    </h4>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                        <div style={{ padding: '16px', background: 'rgba(5, 10, 20, 0.5)', borderRadius: '12px', border: '1px solid rgba(0, 200, 255, 0.1)' }}>
+                                            <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '8px' }}>
+                                                Language Hint
+                                            </label>
+                                            <select
+                                                value={formData.languageHint || ''}
+                                                onChange={(e) => setFormData({ ...formData, languageHint: e.target.value })}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '10px 12px',
+                                                    background: 'rgba(0,0,0,0.3)',
+                                                    border: '1px solid rgba(0, 200, 255, 0.1)',
+                                                    borderRadius: '8px',
+                                                    color: 'white',
+                                                    fontSize: '13px',
+                                                    outline: 'none',
+                                                    cursor: 'pointer',
+                                                }}
+                                            >
+                                                <option value="">Auto Detect</option>
+                                                <option value="en">English</option>
+                                                <option value="es">Spanish</option>
+                                                <option value="fr">French</option>
+                                                <option value="de">German</option>
+                                                <option value="it">Italian</option>
+                                                <option value="pt">Portuguese</option>
+                                                <option value="zh">Chinese</option>
+                                                <option value="ja">Japanese</option>
+                                                <option value="ko">Korean</option>
+                                                <option value="hi">Hindi</option>
+                                                <option value="ar">Arabic</option>
+                                            </select>
+                                            <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '6px' }}>
+                                                Hint for speech recognition language
+                                            </p>
+                                        </div>
+                                        <div style={{ padding: '16px', background: 'rgba(5, 10, 20, 0.5)', borderRadius: '12px', border: '1px solid rgba(0, 200, 255, 0.1)' }}>
+                                            <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '8px' }}>
+                                                Initial Output Medium
+                                            </label>
+                                            <select
+                                                value={formData.initialOutputMedium || 'MESSAGE_MEDIUM_VOICE'}
+                                                onChange={(e) => setFormData({ ...formData, initialOutputMedium: e.target.value })}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '10px 12px',
+                                                    background: 'rgba(0,0,0,0.3)',
+                                                    border: '1px solid rgba(0, 200, 255, 0.1)',
+                                                    borderRadius: '8px',
+                                                    color: 'white',
+                                                    fontSize: '13px',
+                                                    outline: 'none',
+                                                    cursor: 'pointer',
+                                                }}
+                                            >
+                                                <option value="MESSAGE_MEDIUM_VOICE">Voice</option>
+                                                <option value="MESSAGE_MEDIUM_TEXT">Text</option>
+                                                <option value="MESSAGE_MEDIUM_UNSPECIFIED">Unspecified</option>
+                                            </select>
+                                            <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '6px' }}>
+                                                How the agent initially communicates
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Time Exceeded Message */}
+                                <div style={{ marginBottom: '24px' }}>
+                                    <h4 style={{ fontSize: '14px', fontWeight: '500', color: '#00C8FF', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <AlertCircle size={14} />
+                                        Time Limit Message
+                                    </h4>
+                                    <div style={{ padding: '16px', background: 'rgba(5, 10, 20, 0.5)', borderRadius: '12px', border: '1px solid rgba(0, 200, 255, 0.1)' }}>
+                                        <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '8px' }}>
+                                            Time Exceeded Message
+                                        </label>
+                                        <textarea
+                                            value={formData.timeExceededMessage || ''}
+                                            onChange={(e) => setFormData({ ...formData, timeExceededMessage: e.target.value })}
+                                            placeholder="I apologize, but we've reached our time limit. Thank you for your call. Goodbye!"
+                                            rows={2}
+                                            style={{
+                                                width: '100%',
+                                                padding: '10px 12px',
+                                                background: 'rgba(0,0,0,0.3)',
+                                                border: '1px solid rgba(0, 200, 255, 0.1)',
+                                                borderRadius: '8px',
+                                                color: 'white',
+                                                fontSize: '13px',
+                                                outline: 'none',
+                                                resize: 'vertical',
+                                                fontFamily: 'inherit',
+                                                boxSizing: 'border-box',
+                                            }}
+                                        />
+                                        <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '6px' }}>
+                                            Message spoken when max call duration is reached
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* VAD Settings Section */}
+                                <div style={{ marginBottom: '24px' }}>
+                                    <h4 style={{ fontSize: '14px', fontWeight: '500', color: '#00C8FF', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <Zap size={14} />
+                                        Voice Activity Detection (VAD)
+                                    </h4>
+                                    <div style={{ 
+                                        padding: '20px', 
+                                        background: 'linear-gradient(135deg, rgba(0, 200, 255, 0.05), rgba(120, 0, 255, 0.05))', 
+                                        borderRadius: '12px', 
+                                        border: '1px solid rgba(0, 200, 255, 0.15)' 
+                                    }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '8px' }}>
+                                                    Turn Endpoint Delay
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.vadSettings?.turnEndpointDelay || ''}
+                                                    onChange={(e) => setFormData({ 
+                                                        ...formData, 
+                                                        vadSettings: { ...formData.vadSettings, turnEndpointDelay: e.target.value } 
+                                                    })}
+                                                    placeholder="0.5s"
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '10px 12px',
+                                                        background: 'rgba(0,0,0,0.3)',
+                                                        border: '1px solid rgba(0, 200, 255, 0.1)',
+                                                        borderRadius: '8px',
+                                                        color: 'white',
+                                                        fontSize: '13px',
+                                                        outline: 'none',
+                                                        boxSizing: 'border-box',
+                                                    }}
+                                                />
+                                                <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>
+                                                    Delay before considering speech ended
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '8px' }}>
+                                                    Minimum Turn Duration
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.vadSettings?.minimumTurnDuration || ''}
+                                                    onChange={(e) => setFormData({ 
+                                                        ...formData, 
+                                                        vadSettings: { ...formData.vadSettings, minimumTurnDuration: e.target.value } 
+                                                    })}
+                                                    placeholder="0.3s"
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '10px 12px',
+                                                        background: 'rgba(0,0,0,0.3)',
+                                                        border: '1px solid rgba(0, 200, 255, 0.1)',
+                                                        borderRadius: '8px',
+                                                        color: 'white',
+                                                        fontSize: '13px',
+                                                        outline: 'none',
+                                                        boxSizing: 'border-box',
+                                                    }}
+                                                />
+                                                <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>
+                                                    Minimum speech duration to register
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '8px' }}>
+                                                    Min Interruption Duration
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.vadSettings?.minimumInterruptionDuration || ''}
+                                                    onChange={(e) => setFormData({ 
+                                                        ...formData, 
+                                                        vadSettings: { ...formData.vadSettings, minimumInterruptionDuration: e.target.value } 
+                                                    })}
+                                                    placeholder="0.2s"
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '10px 12px',
+                                                        background: 'rgba(0,0,0,0.3)',
+                                                        border: '1px solid rgba(0, 200, 255, 0.1)',
+                                                        borderRadius: '8px',
+                                                        color: 'white',
+                                                        fontSize: '13px',
+                                                        outline: 'none',
+                                                        boxSizing: 'border-box',
+                                                    }}
+                                                />
+                                                <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>
+                                                    Min duration to interrupt agent
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '8px' }}>
+                                                    Activation Threshold
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    max="100"
+                                                    step="1"
+                                                    value={formData.vadSettings?.frameActivationThreshold || ''}
+                                                    onChange={(e) => setFormData({ 
+                                                        ...formData, 
+                                                        vadSettings: { ...formData.vadSettings, frameActivationThreshold: parseInt(e.target.value) || 0 } 
+                                                    })}
+                                                    placeholder="50"
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '10px 12px',
+                                                        background: 'rgba(0,0,0,0.3)',
+                                                        border: '1px solid rgba(0, 200, 255, 0.1)',
+                                                        borderRadius: '8px',
+                                                        color: 'white',
+                                                        fontSize: '13px',
+                                                        outline: 'none',
+                                                        boxSizing: 'border-box',
+                                                    }}
+                                                />
+                                                <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>
+                                                    Frame activation threshold (0-100)
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* First Speaker Delay */}
+                                <div style={{ marginBottom: '24px' }}>
+                                    <h4 style={{ fontSize: '14px', fontWeight: '500', color: '#00C8FF', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <Clock size={14} />
+                                        Greeting Timing
+                                    </h4>
+                                    <div style={{ padding: '16px', background: 'rgba(5, 10, 20, 0.5)', borderRadius: '12px', border: '1px solid rgba(0, 200, 255, 0.1)' }}>
+                                        <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '8px' }}>
+                                            First Speaker Delay
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={formData.firstSpeakerDelay || ''}
+                                            onChange={(e) => setFormData({ ...formData, firstSpeakerDelay: e.target.value })}
+                                            placeholder="0s"
+                                            style={{
+                                                width: '100%',
+                                                padding: '10px 12px',
+                                                background: 'rgba(0,0,0,0.3)',
+                                                border: '1px solid rgba(0, 200, 255, 0.1)',
+                                                borderRadius: '8px',
+                                                color: 'white',
+                                                fontSize: '13px',
+                                                outline: 'none',
+                                                boxSizing: 'border-box',
+                                            }}
+                                        />
+                                        <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '6px' }}>
+                                            Delay before agent speaks the greeting message
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Info Box */}
+                                <div style={{ 
+                                    padding: '16px', 
+                                    background: 'rgba(120, 0, 255, 0.1)', 
+                                    borderRadius: '12px',
+                                    border: '1px solid rgba(120, 0, 255, 0.2)',
+                                }}>
+                                    <p style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.6' }}>
+                                        💡 <strong style={{ color: 'white' }}>Pro Tips:</strong> Lower VAD thresholds make the agent more sensitive to speech. 
+                                        Adjust turn endpoint delay to control how quickly the agent responds after you stop speaking. 
+                                        Use language hints to improve transcription accuracy for non-English conversations.
+                                    </p>
                                 </div>
                             </div>
                         )}
