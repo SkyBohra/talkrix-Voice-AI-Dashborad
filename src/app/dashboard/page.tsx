@@ -75,11 +75,13 @@ export default function Dashboard() {
                     flex: 1,
                     position: "relative",
                     zIndex: 1,
-                    overflowY: "auto",
-                    maxHeight: "100vh",
+                    overflow: "hidden",
+                    height: "100vh",
                 }}
             >
-                {renderSection()}
+                <div style={{ height: "100%", overflowY: "auto", position: "relative" }}>
+                    {renderSection()}
+                </div>
             </main>
         </div>
     );
