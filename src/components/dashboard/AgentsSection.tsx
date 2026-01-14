@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Bot, Plus, Pencil, Trash2, X, Save, Play, Pause, Loader2, Search, Mic, Phone, PhoneOff, MicOff } from "lucide-react";
+import { Bot, Plus, Pencil, Trash2, X, Save, Play, Pause, Loader2, Search, Mic, Phone, PhoneOff, MicOff, Copy, Check } from "lucide-react";
 import { createAgent, fetchAgentsByUser, updateAgent, deleteAgent, fetchVoices, createAgentCall } from "../../lib/agentApi";
 import AgentBuilder from "./AgentBuilder";
 
@@ -2072,6 +2072,7 @@ export default function AgentsSection() {
     const [transcript, setTranscript] = useState<Array<{ role: string; text: string }>>([]);
     const [isMuted, setIsMuted] = useState(false);
     const [agentStatus, setAgentStatus] = useState<string>('');
+    const [copiedAgentId, setCopiedAgentId] = useState<string | null>(null);
     const ultravoxSessionRef = useRef<any>(null);
     const transcriptEndRef = useRef<HTMLDivElement>(null);
 
@@ -2691,13 +2692,41 @@ export default function AgentsSection() {
                                                 }}>
                                                     {agent.name}
                                                 </h3>
-                                                <p style={{ 
-                                                    fontSize: "12px", 
-                                                    color: "rgba(255, 255, 255, 0.4)", 
-                                                    margin: "2px 0 0 0",
+                                                <div style={{ 
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: "4px",
+                                                    marginTop: "2px",
                                                 }}>
-                                                    ID: {agent.talkrixAgentId?.slice(0, 8)}...
-                                                </p>
+                                                    <p style={{ 
+                                                        fontSize: "12px", 
+                                                        color: "rgba(255, 255, 255, 0.4)", 
+                                                        margin: 0,
+                                                    }}>
+                                                        ID: {agent.talkrixAgentId?.slice(0, 8)}...
+                                                    </p>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            navigator.clipboard.writeText(agent.talkrixAgentId);
+                                                            setCopiedAgentId(agent._id);
+                                                            setTimeout(() => setCopiedAgentId(null), 2000);
+                                                        }}
+                                                        style={{
+                                                            background: "transparent",
+                                                            border: "none",
+                                                            cursor: "pointer",
+                                                            padding: "2px",
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            color: copiedAgentId === agent._id ? "#22c55e" : "rgba(255, 255, 255, 0.4)",
+                                                            transition: "color 0.2s",
+                                                        }}
+                                                        title="Copy Agent ID"
+                                                    >
+                                                        {copiedAgentId === agent._id ? <Check size={12} /> : <Copy size={12} />}
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                         <div
@@ -3019,9 +3048,43 @@ export default function AgentsSection() {
                                                 </svg>
                                             </button>
                                         )}
-                                        <h2 style={{ fontSize: "20px", fontWeight: "600", color: "white" }}>
-                                            {editingAgent ? "Edit Agent" : `Create ${agentTemplates.find(t => t.id === selectedTemplate)?.name || 'New'} Agent`}
-                                        </h2>
+                                        <div>
+                                            <h2 style={{ fontSize: "20px", fontWeight: "600", color: "white", margin: 0 }}>
+                                                {editingAgent ? "Edit Agent" : `Create ${agentTemplates.find(t => t.id === selectedTemplate)?.name || 'New'} Agent`}
+                                            </h2>
+                                            {editingAgent && (
+                                                <div style={{ 
+                                                    display: "flex", 
+                                                    alignItems: "center", 
+                                                    gap: "6px", 
+                                                    marginTop: "4px",
+                                                }}>
+                                                    <span style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.4)" }}>
+                                                        ID: {editingAgent.talkrixAgentId}
+                                                    </span>
+                                                    <button
+                                                        onClick={() => {
+                                                            navigator.clipboard.writeText(editingAgent.talkrixAgentId);
+                                                            setCopiedAgentId('modal');
+                                                            setTimeout(() => setCopiedAgentId(null), 2000);
+                                                        }}
+                                                        style={{
+                                                            background: "transparent",
+                                                            border: "none",
+                                                            cursor: "pointer",
+                                                            padding: "2px",
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            color: copiedAgentId === 'modal' ? "#22c55e" : "rgba(255, 255, 255, 0.4)",
+                                                            transition: "color 0.2s",
+                                                        }}
+                                                        title="Copy Agent ID"
+                                                    >
+                                                        {copiedAgentId === 'modal' ? <Check size={12} /> : <Copy size={12} />}
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                     <button
                                         onClick={() => setIsModalOpen(false)}
