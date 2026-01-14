@@ -45,6 +45,7 @@ interface Agent {
         systemPrompt: string;
         temperature: number;
         voice: string;
+        corpusId?: string;
         languageHint?: string;
         timeExceededMessage?: string;
         firstSpeakerSettings?: {
