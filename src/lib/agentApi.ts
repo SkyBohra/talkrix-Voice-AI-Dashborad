@@ -65,7 +65,7 @@ export const fetchVoices = async (search?: string) => {
 
 /**
  * Create a call to test an agent
- * Returns joinUrl that can be used with Ultravox Client SDK
+ * Returns joinUrl that can be used with the Voice Client SDK
  */
 export const createAgentCall = async (agentId: string, options?: {
   maxDuration?: string;
