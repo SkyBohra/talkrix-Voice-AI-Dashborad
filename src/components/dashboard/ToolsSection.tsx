@@ -363,7 +363,17 @@ export default function ToolsSection() {
     }
 
     return (
-        <div style={{ padding: "32px", maxWidth: "1400px" }}>
+        <div 
+            style={{ 
+                padding: "32px 40px", 
+                maxWidth: "1400px", 
+                margin: "0 auto",
+                height: "100vh",
+                overflowY: "auto",
+                overflowX: "hidden",
+                boxSizing: "border-box",
+            }}
+        >
             {/* Header */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
                 <div>

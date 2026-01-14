@@ -2685,7 +2685,16 @@ export default function AgentsSection() {
     };
 
     return (
-        <div style={{ padding: "32px", position: "relative", minHeight: "100%" }}>
+        <div style={{ 
+            padding: "32px 40px", 
+            maxWidth: "1400px", 
+            margin: "0 auto",
+            height: "100vh",
+            overflowY: "auto",
+            overflowX: "hidden",
+            boxSizing: "border-box",
+            position: "relative",
+        }}>
             {/* Header */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
                 <div>

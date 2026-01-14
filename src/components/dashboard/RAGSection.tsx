@@ -1239,7 +1239,15 @@ export default function RAGSection() {
     }
 
     return (
-        <div style={{ padding: "32px", maxWidth: "1400px" }}>
+        <div style={{ 
+            padding: "32px 40px", 
+            maxWidth: "1400px", 
+            margin: "0 auto",
+            height: "100vh",
+            overflowY: "auto",
+            overflowX: "hidden",
+            boxSizing: "border-box",
+        }}>
             {error && (
                 <div
                     style={{

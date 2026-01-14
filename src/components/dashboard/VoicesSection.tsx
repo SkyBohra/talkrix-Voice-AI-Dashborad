@@ -169,13 +169,14 @@ export default function VoicesSection() {
 
     return (
         <div 
-            className="voices-scroll-container"
             style={{ 
                 padding: "32px 40px", 
                 maxWidth: "1400px", 
                 margin: "0 auto",
-                height: "100%",
-                overflow: "auto",
+                height: "100vh",
+                overflowY: "auto",
+                overflowX: "hidden",
+                boxSizing: "border-box",
             }}
         >
             {/* Header */}
