@@ -146,18 +146,23 @@ export default function RAGSection() {
                     <div
                         key={kb.id}
                         style={{
-                            background: "linear-gradient(135deg, rgba(5, 15, 30, 0.8) 0%, rgba(10, 20, 40, 0.7) 100%)",
-                            backdropFilter: "blur(16px)",
+                            background: "rgba(255, 255, 255, 0.03)",
                             border: "1px solid rgba(0, 200, 255, 0.15)",
-                            borderRadius: "16px",
+                            borderRadius: "12px",
                             padding: "24px",
-                            transition: "all 0.3s ease",
+                            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                         }}
                         onMouseEnter={(e) => {
+                            e.currentTarget.style.background = "rgba(0, 200, 255, 0.15)";
                             e.currentTarget.style.borderColor = "rgba(0, 200, 255, 0.3)";
+                            e.currentTarget.style.transform = "translateY(-4px) scale(1.01)";
+                            e.currentTarget.style.boxShadow = "0 12px 24px rgba(0, 0, 0, 0.3)";
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.08)";
+                            e.currentTarget.style.background = "rgba(255, 255, 255, 0.03)";
+                            e.currentTarget.style.borderColor = "rgba(0, 200, 255, 0.15)";
+                            e.currentTarget.style.transform = "scale(1)";
+                            e.currentTarget.style.boxShadow = "none";
                         }}
                     >
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>

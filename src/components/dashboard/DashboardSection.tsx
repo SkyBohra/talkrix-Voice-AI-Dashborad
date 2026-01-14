@@ -14,26 +14,26 @@ function StatCard({ title, value, icon, trend, trendUp }: StatCardProps) {
     return (
         <div
             style={{
-                background: "linear-gradient(135deg, rgba(5, 15, 30, 0.8) 0%, rgba(10, 20, 40, 0.7) 100%)",
-                backdropFilter: "blur(20px)",
+                background: "rgba(255, 255, 255, 0.03)",
                 border: "1px solid rgba(0, 200, 255, 0.15)",
-                borderRadius: "16px",
+                borderRadius: "12px",
                 padding: "24px",
                 display: "flex",
                 flexDirection: "column",
                 gap: "16px",
-                transition: "all 0.3s ease",
-                boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3), 0 0 30px rgba(0, 200, 255, 0.05)",
+                transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
             }}
             onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = "rgba(0, 200, 255, 0.4)";
-                e.currentTarget.style.transform = "translateY(-2px)";
-                e.currentTarget.style.boxShadow = "0 8px 30px rgba(0, 0, 0, 0.4), 0 0 40px rgba(0, 200, 255, 0.1)";
+                e.currentTarget.style.background = "rgba(0, 200, 255, 0.15)";
+                e.currentTarget.style.borderColor = "rgba(0, 200, 255, 0.3)";
+                e.currentTarget.style.transform = "translateY(-4px) scale(1.01)";
+                e.currentTarget.style.boxShadow = "0 12px 24px rgba(0, 0, 0, 0.3)";
             }}
             onMouseLeave={(e) => {
+                e.currentTarget.style.background = "rgba(255, 255, 255, 0.03)";
                 e.currentTarget.style.borderColor = "rgba(0, 200, 255, 0.15)";
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "0 4px 20px rgba(0, 0, 0, 0.3), 0 0 30px rgba(0, 200, 255, 0.05)";
+                e.currentTarget.style.transform = "scale(1)";
+                e.currentTarget.style.boxShadow = "none";
             }}
         >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -198,12 +198,10 @@ export default function DashboardSection() {
             {/* Recent Calls Section */}
             <div
                 style={{
-                    background: "linear-gradient(135deg, rgba(5, 15, 30, 0.8) 0%, rgba(10, 20, 40, 0.7) 100%)",
-                    backdropFilter: "blur(20px)",
+                    background: "rgba(255, 255, 255, 0.03)",
                     border: "1px solid rgba(0, 200, 255, 0.15)",
-                    borderRadius: "16px",
+                    borderRadius: "12px",
                     padding: "24px",
-                    boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3), 0 0 30px rgba(0, 200, 255, 0.05)",
                 }}
             >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>

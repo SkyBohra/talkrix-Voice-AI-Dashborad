@@ -150,9 +150,18 @@ export default function SettingsSection() {
                         alignItems: "center",
                         justifyContent: "space-between",
                         padding: "16px 20px",
-                        background: "rgba(255, 255, 255, 0.02)",
-                        border: "1px solid rgba(255, 255, 255, 0.05)",
+                        background: "rgba(255, 255, 255, 0.03)",
+                        border: "1px solid rgba(0, 200, 255, 0.15)",
                         borderRadius: "12px",
+                        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.background = "rgba(0, 200, 255, 0.1)";
+                        e.currentTarget.style.borderColor = "rgba(0, 200, 255, 0.25)";
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "rgba(255, 255, 255, 0.03)";
+                        e.currentTarget.style.borderColor = "rgba(0, 200, 255, 0.15)";
                     }}
                 >
                     <div>
@@ -206,9 +215,18 @@ export default function SettingsSection() {
                     alignItems: "center",
                     justifyContent: "space-between",
                     padding: "20px",
-                    background: "rgba(255, 255, 255, 0.02)",
-                    border: "1px solid rgba(255, 255, 255, 0.05)",
+                    background: "rgba(255, 255, 255, 0.03)",
+                    border: "1px solid rgba(0, 200, 255, 0.15)",
                     borderRadius: "12px",
+                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                }}
+                onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "rgba(0, 200, 255, 0.1)";
+                    e.currentTarget.style.borderColor = "rgba(0, 200, 255, 0.25)";
+                }}
+                onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.03)";
+                    e.currentTarget.style.borderColor = "rgba(0, 200, 255, 0.15)";
                 }}
             >
                 <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
@@ -443,10 +461,9 @@ export default function SettingsSection() {
                 <div
                     style={{
                         flex: 1,
-                        background: "linear-gradient(135deg, rgba(5, 15, 30, 0.8) 0%, rgba(10, 20, 40, 0.7) 100%)",
-                        backdropFilter: "blur(16px)",
+                        background: "rgba(255, 255, 255, 0.03)",
                         border: "1px solid rgba(0, 200, 255, 0.15)",
-                        borderRadius: "16px",
+                        borderRadius: "12px",
                         padding: "32px",
                     }}
                 >

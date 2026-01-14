@@ -2636,21 +2636,22 @@ export default function AgentsSection() {
                             <div
                                 key={agent._id}
                                 style={{
-                                    background: "rgba(20, 20, 28, 0.9)",
-                                    backdropFilter: "blur(20px)",
-                                    border: "1px solid rgba(255, 255, 255, 0.08)",
-                                    borderRadius: "16px",
+                                    background: "rgba(255, 255, 255, 0.03)",
+                                    border: "1px solid rgba(0, 200, 255, 0.15)",
+                                    borderRadius: "12px",
                                     overflow: "hidden",
                                     transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                                 }}
                                 onMouseEnter={(e) => {
-                                    e.currentTarget.style.borderColor = `${accent.primary}40`;
-                                    e.currentTarget.style.transform = "translateY(-2px)";
-                                    e.currentTarget.style.boxShadow = `0 12px 32px ${accent.glow}`;
+                                    e.currentTarget.style.background = "rgba(0, 200, 255, 0.15)";
+                                    e.currentTarget.style.borderColor = "rgba(0, 200, 255, 0.3)";
+                                    e.currentTarget.style.transform = "translateY(-4px) scale(1.01)";
+                                    e.currentTarget.style.boxShadow = "0 12px 24px rgba(0, 0, 0, 0.3)";
                                 }}
                                 onMouseLeave={(e) => {
-                                    e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.08)";
-                                    e.currentTarget.style.transform = "translateY(0)";
+                                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.03)";
+                                    e.currentTarget.style.borderColor = "rgba(0, 200, 255, 0.15)";
+                                    e.currentTarget.style.transform = "scale(1)";
                                     e.currentTarget.style.boxShadow = "none";
                                 }}
                             >
@@ -2976,24 +2977,26 @@ export default function AgentsSection() {
                                                 onClick={() => handleTemplateSelect(template)}
                                                 style={{
                                                     padding: "20px",
-                                                    borderRadius: "16px",
-                                                    border: "1px solid rgba(0, 200, 255, 0.1)",
+                                                    borderRadius: "12px",
+                                                    border: "1px solid rgba(0, 200, 255, 0.15)",
                                                     background: "rgba(255, 255, 255, 0.03)",
                                                     cursor: "pointer",
-                                                    transition: "all 0.2s ease",
+                                                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                                                     display: "flex",
                                                     flexDirection: "column",
                                                     gap: "12px",
                                                 }}
                                                 onMouseEnter={(e) => {
-                                                    e.currentTarget.style.borderColor = "rgba(0, 200, 255, 0.5)";
-                                                    e.currentTarget.style.background = "rgba(0, 200, 255, 0.08)";
-                                                    e.currentTarget.style.transform = "translateY(-2px)";
+                                                    e.currentTarget.style.background = "rgba(0, 200, 255, 0.15)";
+                                                    e.currentTarget.style.borderColor = "rgba(0, 200, 255, 0.3)";
+                                                    e.currentTarget.style.transform = "translateY(-4px) scale(1.01)";
+                                                    e.currentTarget.style.boxShadow = "0 12px 24px rgba(0, 0, 0, 0.3)";
                                                 }}
                                                 onMouseLeave={(e) => {
-                                                    e.currentTarget.style.borderColor = "rgba(0, 200, 255, 0.1)";
                                                     e.currentTarget.style.background = "rgba(255, 255, 255, 0.03)";
-                                                    e.currentTarget.style.transform = "translateY(0)";
+                                                    e.currentTarget.style.borderColor = "rgba(0, 200, 255, 0.15)";
+                                                    e.currentTarget.style.transform = "scale(1)";
+                                                    e.currentTarget.style.boxShadow = "none";
                                                 }}
                                             >
                                                 <div
