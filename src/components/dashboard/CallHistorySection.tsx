@@ -103,6 +103,45 @@ export default function CallHistorySection() {
         }
     };
 
+    const getBillingStatusLabel = (billingStatus?: string) => {
+        if (!billingStatus) return "—";
+        switch (billingStatus) {
+            case "BILLING_STATUS_FREE_MINUTES": return "Free Minutes";
+            case "BILLING_STATUS_BILLED": return "Billed";
+            case "BILLING_STATUS_PENDING": return "Pending";
+            case "BILLING_STATUS_FAILED": return "Failed";
+            case "billed": return "Billed";
+            case "free": return "Free";
+            case "pending": return "Pending";
+            default:
+                // Handle any other format - convert BILLING_STATUS_X to readable format
+                if (billingStatus.startsWith("BILLING_STATUS_")) {
+                    return billingStatus.replace("BILLING_STATUS_", "").replace(/_/g, " ").toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+                }
+                return billingStatus;
+        }
+    };
+
+    const getBillingStatusColor = (billingStatus?: string) => {
+        if (!billingStatus) return "rgba(255, 255, 255, 0.7)";
+        switch (billingStatus) {
+            case "BILLING_STATUS_FREE_MINUTES":
+            case "free":
+                return "rgba(59, 130, 246, 0.9)"; // Blue for free
+            case "BILLING_STATUS_BILLED":
+            case "billed":
+                return "rgba(34, 197, 94, 0.9)"; // Green for billed
+            case "BILLING_STATUS_PENDING":
+            case "pending":
+                return "rgba(251, 191, 36, 0.9)"; // Yellow for pending
+            case "BILLING_STATUS_FAILED":
+            case "failed":
+                return "rgba(239, 68, 68, 0.9)"; // Red for failed
+            default:
+                return "rgba(255, 255, 255, 0.7)";
+        }
+    };
+
     const handleExport = () => {
         // Export calls as CSV
         const headers = ["Date", "Customer Name", "Phone", "Agent", "Type", "Status", "Duration", "Billed Duration", "End Reason", "Short Summary", "Summary"];
@@ -576,6 +615,7 @@ export default function CallHistorySection() {
                                                     <span style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.7)" }}>{getEndReasonLabel(call.endReason)}</span>
                                                 </div>
                                             )}
+                                            {/* Hidden for now - uncomment to show billing info
                                             {call.billedDuration && (
                                                 <div style={{ display: "flex", gap: "8px" }}>
                                                     <span style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.4)", minWidth: "100px" }}>Billed Duration:</span>
@@ -587,13 +627,13 @@ export default function CallHistorySection() {
                                                     <span style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.4)", minWidth: "100px" }}>Billing Status:</span>
                                                     <span style={{ 
                                                         fontSize: "12px", 
-                                                        color: call.billingStatus === "billed" ? "rgba(34, 197, 94, 0.9)" : "rgba(255, 255, 255, 0.7)",
-                                                        textTransform: "capitalize"
+                                                        color: getBillingStatusColor(call.billingStatus),
                                                     }}>
-                                                        {call.billingStatus}
+                                                        {getBillingStatusLabel(call.billingStatus)}
                                                     </span>
                                                 </div>
                                             )}
+                                            */}
                                             {call.talkrixCallId && (
                                                 <div style={{ display: "flex", gap: "8px" }}>
                                                     <span style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.4)", minWidth: "100px" }}>Call ID:</span>
