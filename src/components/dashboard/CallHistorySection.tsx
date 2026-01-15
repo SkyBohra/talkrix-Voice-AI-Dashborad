@@ -10,6 +10,7 @@ import {
     formatDuration, 
     formatCallDate 
 } from "@/lib/callHistoryApi";
+import Pagination from "@/components/ui/Pagination";
 
 export default function CallHistorySection() {
     const [searchQuery, setSearchQuery] = useState("");
@@ -22,6 +23,8 @@ export default function CallHistorySection() {
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
+    const [totalItems, setTotalItems] = useState(0);
+    const itemsPerPage = 20;
 
     const loadData = useCallback(async () => {
         setLoading(true);
@@ -29,7 +32,7 @@ export default function CallHistorySection() {
             const [callsRes, statsRes] = await Promise.all([
                 fetchCallHistory({
                     page,
-                    limit: 20,
+                    limit: itemsPerPage,
                     status: filterStatus !== "all" ? filterStatus : undefined,
                     callType: filterCallType !== "all" ? filterCallType : undefined,
                 }),
@@ -39,6 +42,7 @@ export default function CallHistorySection() {
             if (callsRes.success && callsRes.data) {
                 setCalls(callsRes.data.calls || []);
                 setTotalPages(callsRes.data.pages || 1);
+                setTotalItems(callsRes.data.total || 0);
             }
 
             if (statsRes.success && statsRes.data) {
@@ -659,49 +663,14 @@ export default function CallHistorySection() {
             </div>
 
             {/* Pagination */}
-            {totalPages > 1 && (
-                <div
-                    style={{
-                        display: "flex",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        gap: "16px",
-                        marginTop: "24px",
-                    }}
-                >
-                    <button
-                        onClick={() => setPage(p => Math.max(1, p - 1))}
-                        disabled={page === 1}
-                        style={{
-                            padding: "8px 16px",
-                            borderRadius: "8px",
-                            border: "1px solid rgba(0, 200, 255, 0.3)",
-                            background: "transparent",
-                            color: page === 1 ? "rgba(255, 255, 255, 0.3)" : "#00C8FF",
-                            cursor: page === 1 ? "not-allowed" : "pointer",
-                        }}
-                    >
-                        Previous
-                    </button>
-                    <span style={{ color: "rgba(255, 255, 255, 0.6)" }}>
-                        Page {page} of {totalPages}
-                    </span>
-                    <button
-                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                        disabled={page === totalPages}
-                        style={{
-                            padding: "8px 16px",
-                            borderRadius: "8px",
-                            border: "1px solid rgba(0, 200, 255, 0.3)",
-                            background: "transparent",
-                            color: page === totalPages ? "rgba(255, 255, 255, 0.3)" : "#00C8FF",
-                            cursor: page === totalPages ? "not-allowed" : "pointer",
-                        }}
-                    >
-                        Next
-                    </button>
-                </div>
-            )}
+            <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setPage}
+                itemLabel="calls"
+            />
         </div>
     );
 }

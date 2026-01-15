@@ -5,6 +5,7 @@ import { Bot, Plus, Pencil, Trash2, X, Save, Play, Pause, Loader2, Search, Mic, 
 import { createAgent, fetchAgentsByUser, updateAgent, deleteAgent, fetchVoices, createAgentCall, endAgentCall } from "../../lib/agentApi";
 import { fetchUserTools, Tool } from "../../lib/toolApi";
 import AgentBuilder from "./AgentBuilder";
+import Pagination from "@/components/ui/Pagination";
 
 interface Voice {
     voiceId: string;
@@ -2148,6 +2149,12 @@ export default function AgentsSection() {
     const [fetchLoading, setFetchLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    // Pagination state
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalItems, setTotalItems] = useState(0);
+    const itemsPerPage = 12;
+
     // Voice selector state
     const [voices, setVoices] = useState<Voice[]>([]);
     const [voicesLoading, setVoicesLoading] = useState(false);
@@ -2188,7 +2195,7 @@ export default function AgentsSection() {
         draft: { bg: "rgba(251, 191, 36, 0.1)", color: "#fbbf24", border: "rgba(251, 191, 36, 0.3)" },
     };
 
-    // Fetch agents on mount
+    // Fetch agents on mount and page change
     useEffect(() => {
         const loadAgents = async () => {
             const userId = getUserId();
@@ -2197,9 +2204,20 @@ export default function AgentsSection() {
                 return;
             }
             try {
-                const response = await fetchAgentsByUser(userId);
+                setFetchLoading(true);
+                const response = await fetchAgentsByUser(userId, { page, limit: itemsPerPage });
                 if (response.success && response.data) {
-                    setAgents(response.data);
+                    // Check if response has pagination structure
+                    if (response.data.agents) {
+                        setAgents(response.data.agents);
+                        setTotalPages(response.data.pages || 1);
+                        setTotalItems(response.data.total || 0);
+                    } else {
+                        // Fallback for non-paginated response
+                        setAgents(response.data);
+                        setTotalItems(response.data.length || 0);
+                        setTotalPages(1);
+                    }
                 } else {
                     console.error("Failed to fetch agents:", response.message);
                 }
@@ -2210,7 +2228,7 @@ export default function AgentsSection() {
             }
         };
         loadAgents();
-    }, []);
+    }, [page]);
 
     // Voice loading function
     const loadVoices = useCallback(async (search?: string) => {
@@ -3062,6 +3080,18 @@ export default function AgentsSection() {
                         );
                     })}
                 </div>
+            )}
+
+            {/* Pagination */}
+            {!fetchLoading && agents.length > 0 && (
+                <Pagination
+                    currentPage={page}
+                    totalPages={totalPages}
+                    totalItems={totalItems}
+                    itemsPerPage={itemsPerPage}
+                    onPageChange={setPage}
+                    itemLabel="agents"
+                />
             )}
 
             {/* Modal */}

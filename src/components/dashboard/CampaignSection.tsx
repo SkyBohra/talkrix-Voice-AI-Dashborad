@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Upload, Calendar, Clock, Globe, Users, Phone, ChevronRight, X, Loader2 } from 'lucide-react';
 import {
@@ -11,6 +11,7 @@ import {
   uploadCampaignContacts
 } from '@/lib/campaignApi';
 import { fetchAgentsByUser } from '@/lib/agentApi';
+import Pagination from '@/components/ui/Pagination';
 
 // Type alias for campaign types
 type CampaignType = 'outbound' | 'inbound' | 'ondemand';
@@ -50,6 +51,12 @@ export default function CampaignSection() {
   const [creating, setCreating] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
 
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const itemsPerPage = 10;
+
   // Form state
   const [formData, setFormData] = useState<{
     name: string;
@@ -70,10 +77,6 @@ export default function CampaignSection() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
   const getUserId = () => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('userId') || '';
@@ -81,18 +84,20 @@ export default function CampaignSection() {
     return '';
   };
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const userId = getUserId();
       
       const [campaignsRes, agentsRes] = await Promise.all([
-        fetchCampaigns(),
+        fetchCampaigns({ page, limit: itemsPerPage }),
         fetchAgentsByUser(userId)
       ]);
       
-      if (campaignsRes.success) {
-        setCampaigns(campaignsRes.data || []);
+      if (campaignsRes.success && campaignsRes.data) {
+        setCampaigns(campaignsRes.data.campaigns || []);
+        setTotalPages(campaignsRes.data.pages || 1);
+        setTotalItems(campaignsRes.data.total || 0);
       }
       if (agentsRes.success) {
         setAgents(agentsRes.data || []);
@@ -103,7 +108,11 @@ export default function CampaignSection() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleCreateCampaign = async () => {
     if (!formData.name.trim()) {
@@ -400,6 +409,16 @@ export default function CampaignSection() {
           ))
         )}
       </div>
+
+      {/* Pagination */}
+      <Pagination
+        currentPage={page}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        itemsPerPage={itemsPerPage}
+        onPageChange={setPage}
+        itemLabel="campaigns"
+      />
 
       {/* Create Campaign Modal */}
       {showCreateModal && (

@@ -23,8 +23,24 @@ const normalizeResponse = (response: any) => {
   };
 };
 
-export const fetchAgentsByUser = async (userId: string) => {
-  const res = await axios.get(`${API_BASE}/user/${userId}`, {
+export interface PaginatedAgents {
+  agents: any[];
+  total: number;
+  page: number;
+  pages: number;
+  limit: number;
+}
+
+export const fetchAgentsByUser = async (userId: string, options?: {
+  page?: number;
+  limit?: number;
+}) => {
+  const params = new URLSearchParams();
+  if (options?.page) params.append('page', String(options.page));
+  if (options?.limit) params.append('limit', String(options.limit));
+
+  const url = `${API_BASE}/user/${userId}${params.toString() ? '?' + params.toString() : ''}`;
+  const res = await axios.get(url, {
     headers: getAuthHeaders(),
   });
   return normalizeResponse(res);

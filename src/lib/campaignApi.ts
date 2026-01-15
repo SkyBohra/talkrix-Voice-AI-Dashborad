@@ -73,17 +73,41 @@ export interface CreateCampaignData {
   contacts?: { name: string; phoneNumber: string }[];
 }
 
-// Fetch all campaigns for current user
-export const fetchCampaigns = async () => {
-  const res = await axios.get(API_BASE, {
+export interface PaginatedCampaigns {
+  campaigns: Campaign[];
+  total: number;
+  page: number;
+  pages: number;
+  limit: number;
+}
+
+// Fetch all campaigns for current user with pagination
+export const fetchCampaigns = async (options?: {
+  page?: number;
+  limit?: number;
+}) => {
+  const params = new URLSearchParams();
+  if (options?.page) params.append('page', String(options.page));
+  if (options?.limit) params.append('limit', String(options.limit));
+
+  const url = `${API_BASE}${params.toString() ? '?' + params.toString() : ''}`;
+  const res = await axios.get(url, {
     headers: getAuthHeaders(),
   });
   return normalizeResponse(res);
 };
 
-// Fetch campaigns by user ID
-export const fetchCampaignsByUser = async (userId: string) => {
-  const res = await axios.get(`${API_BASE}/user/${userId}`, {
+// Fetch campaigns by user ID with pagination
+export const fetchCampaignsByUser = async (userId: string, options?: {
+  page?: number;
+  limit?: number;
+}) => {
+  const params = new URLSearchParams();
+  if (options?.page) params.append('page', String(options.page));
+  if (options?.limit) params.append('limit', String(options.limit));
+
+  const url = `${API_BASE}/user/${userId}${params.toString() ? '?' + params.toString() : ''}`;
+  const res = await axios.get(url, {
     headers: getAuthHeaders(),
   });
   return normalizeResponse(res);
