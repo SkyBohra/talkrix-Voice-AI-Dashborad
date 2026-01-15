@@ -36,9 +36,13 @@ export interface CallHistoryRecord {
   startedAt?: string;
   endedAt?: string;
   durationSeconds: number;
+  billedDuration?: string;
+  billingStatus?: string;
+  summary?: string;
+  shortSummary?: string;
+  endReason?: 'unjoined' | 'hangup' | 'agent_hangup' | 'timeout' | 'connection_error' | 'system_error';
   recordingEnabled: boolean;
   recordingUrl?: string;
-  joinUrl?: string;
   createdAt: string;
   updatedAt: string;
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, Clock, Search, Download, Play, Pause, RefreshCw, User, TestTube } from "lucide-react";
+import { Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, Clock, Search, Download, Play, Pause, RefreshCw, User, TestTube, ChevronDown, ChevronUp, FileText } from "lucide-react";
 import { 
     fetchCallHistory, 
     fetchCallStats, 
@@ -16,6 +16,7 @@ export default function CallHistorySection() {
     const [filterStatus, setFilterStatus] = useState<string>("all");
     const [filterCallType, setFilterCallType] = useState<string>("all");
     const [playingId, setPlayingId] = useState<string | null>(null);
+    const [expandedId, setExpandedId] = useState<string | null>(null);
     const [calls, setCalls] = useState<CallHistoryRecord[]>([]);
     const [stats, setStats] = useState<CallStats | null>(null);
     const [loading, setLoading] = useState(true);
@@ -90,9 +91,21 @@ export default function CallHistorySection() {
         }
     };
 
+    const getEndReasonLabel = (endReason?: string) => {
+        switch (endReason) {
+            case "hangup": return "User hung up";
+            case "agent_hangup": return "Agent hung up";
+            case "timeout": return "Call timed out";
+            case "connection_error": return "Connection error";
+            case "system_error": return "System error";
+            case "unjoined": return "Never joined";
+            default: return endReason || "—";
+        }
+    };
+
     const handleExport = () => {
         // Export calls as CSV
-        const headers = ["Date", "Customer Name", "Phone", "Agent", "Type", "Status", "Duration"];
+        const headers = ["Date", "Customer Name", "Phone", "Agent", "Type", "Status", "Duration", "Billed Duration", "End Reason", "Short Summary", "Summary"];
         const rows = filteredCalls.map(call => [
             formatCallDate(call.createdAt),
             call.customerName || "-",
@@ -101,11 +114,15 @@ export default function CallHistorySection() {
             getCallTypeLabel(call.callType),
             call.status,
             formatDuration(call.durationSeconds),
+            call.billedDuration || "-",
+            call.endReason ? getEndReasonLabel(call.endReason) : "-",
+            call.shortSummary || "-",
+            call.summary || "-",
         ]);
 
         const csvContent = [
             headers.join(","),
-            ...rows.map(row => row.map(cell => `"${cell}"`).join(",")),
+            ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(",")),
         ].join("\n");
 
         const blob = new Blob([csvContent], { type: "text/csv" });
@@ -383,115 +400,204 @@ export default function CallHistorySection() {
                 {/* Table Body */}
                 {!loading && filteredCalls.map((call) => {
                     const statusStyle = getStatusColor(call.status);
+                    const isExpanded = expandedId === call._id;
+                    const hasSummary = call.summary || call.shortSummary;
                     return (
-                        <div
-                            key={call._id}
-                            style={{
-                                display: "grid",
-                                gridTemplateColumns: "1fr 1fr 1fr 100px 100px 150px 80px",
-                                padding: "16px 24px",
-                                borderBottom: "1px solid rgba(0, 200, 255, 0.08)",
-                                alignItems: "center",
-                                gap: "16px",
-                                transition: "background 0.2s ease",
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.background = "rgba(0, 200, 255, 0.05)";
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.background = "transparent";
-                            }}
-                        >
-                            {/* Customer Name */}
-                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                <div
-                                    style={{
-                                        width: "36px",
-                                        height: "36px",
-                                        borderRadius: "8px",
-                                        background: statusStyle.bg,
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        color: statusStyle.color,
-                                    }}
-                                >
-                                    {call.customerName ? <User size={18} /> : getStatusIcon(call.callType, call.status)}
-                                </div>
-                                <span style={{ color: "white", fontWeight: "500" }}>
-                                    {call.customerName || (call.callType === "test" ? "Test Call" : "Unknown")}
-                                </span>
-                            </div>
-
-                            {/* Phone Number / Call Type */}
-                            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                                <span style={{ color: "rgba(255, 255, 255, 0.7)" }}>
-                                    {call.customerPhone || "—"}
-                                </span>
-                                <span
-                                    style={{
-                                        fontSize: "11px",
-                                        color: "rgba(255, 255, 255, 0.4)",
-                                        textTransform: "uppercase",
-                                    }}
-                                >
-                                    {getCallTypeLabel(call.callType)}
-                                </span>
-                            </div>
-
-                            {/* Agent Name */}
-                            <span style={{ color: "rgba(255, 255, 255, 0.7)" }}>{call.agentName}</span>
-
-                            {/* Status Badge */}
-                            <span
+                        <div key={call._id}>
+                            <div
                                 style={{
-                                    padding: "6px 12px",
-                                    borderRadius: "20px",
-                                    fontSize: "12px",
-                                    fontWeight: "500",
-                                    background: statusStyle.bg,
-                                    color: statusStyle.color,
-                                    border: `1px solid ${statusStyle.border}`,
-                                    textTransform: "capitalize",
-                                    width: "fit-content",
+                                    display: "grid",
+                                    gridTemplateColumns: "1fr 1fr 1fr 100px 100px 150px 80px",
+                                    padding: "16px 24px",
+                                    borderBottom: isExpanded ? "none" : "1px solid rgba(0, 200, 255, 0.08)",
+                                    alignItems: "center",
+                                    gap: "16px",
+                                    transition: "background 0.2s ease",
+                                    cursor: hasSummary ? "pointer" : "default",
+                                    background: isExpanded ? "rgba(0, 200, 255, 0.05)" : "transparent",
+                                }}
+                                onClick={() => hasSummary && setExpandedId(isExpanded ? null : call._id)}
+                                onMouseEnter={(e) => {
+                                    if (!isExpanded) e.currentTarget.style.background = "rgba(0, 200, 255, 0.05)";
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (!isExpanded) e.currentTarget.style.background = "transparent";
                                 }}
                             >
-                                {call.status}
-                            </span>
+                                {/* Customer Name */}
+                                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                    <div
+                                        style={{
+                                            width: "36px",
+                                            height: "36px",
+                                            borderRadius: "8px",
+                                            background: statusStyle.bg,
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            color: statusStyle.color,
+                                        }}
+                                    >
+                                        {call.customerName ? <User size={18} /> : getStatusIcon(call.callType, call.status)}
+                                    </div>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                                        <span style={{ color: "white", fontWeight: "500" }}>
+                                            {call.customerName || (call.callType === "test" ? "Test Call" : "Unknown")}
+                                        </span>
+                                        {hasSummary && (
+                                            <span style={{ fontSize: "11px", color: "rgba(0, 200, 255, 0.6)", display: "flex", alignItems: "center", gap: "4px" }}>
+                                                <FileText size={10} />
+                                                {isExpanded ? "Hide summary" : "View summary"}
+                                                {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
 
-                            {/* Duration */}
-                            <span style={{ color: "rgba(255, 255, 255, 0.7)", display: "flex", alignItems: "center", gap: "6px" }}>
-                                <Clock size={14} style={{ opacity: 0.5 }} />
-                                {formatDuration(call.durationSeconds)}
-                            </span>
+                                {/* Phone Number / Call Type */}
+                                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                    <span style={{ color: "rgba(255, 255, 255, 0.7)" }}>
+                                        {call.customerPhone || "—"}
+                                    </span>
+                                    <span
+                                        style={{
+                                            fontSize: "11px",
+                                            color: "rgba(255, 255, 255, 0.4)",
+                                            textTransform: "uppercase",
+                                        }}
+                                    >
+                                        {getCallTypeLabel(call.callType)}
+                                    </span>
+                                </div>
 
-                            {/* Timestamp */}
-                            <span style={{ color: "rgba(255, 255, 255, 0.5)", fontSize: "13px" }}>
-                                {formatCallDate(call.createdAt)}
-                            </span>
+                                {/* Agent Name */}
+                                <span style={{ color: "rgba(255, 255, 255, 0.7)" }}>{call.agentName}</span>
 
-                            {/* Audio Control */}
-                            {call.status === "completed" && call.recordingUrl ? (
-                                <button
-                                    onClick={() => setPlayingId(playingId === call._id ? null : call._id)}
+                                {/* Status Badge */}
+                                <span
                                     style={{
-                                        width: "36px",
-                                        height: "36px",
-                                        borderRadius: "50%",
-                                        border: "1px solid rgba(0, 200, 255, 0.3)",
-                                        background: playingId === call._id ? "rgba(0, 200, 255, 0.2)" : "transparent",
-                                        color: "#00C8FF",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        cursor: "pointer",
-                                        transition: "all 0.2s ease",
+                                        padding: "6px 12px",
+                                        borderRadius: "20px",
+                                        fontSize: "12px",
+                                        fontWeight: "500",
+                                        background: statusStyle.bg,
+                                        color: statusStyle.color,
+                                        border: `1px solid ${statusStyle.border}`,
+                                        textTransform: "capitalize",
+                                        width: "fit-content",
                                     }}
                                 >
-                                    {playingId === call._id ? <Pause size={16} /> : <Play size={16} />}
-                                </button>
-                            ) : (
-                                <span style={{ color: "rgba(255, 255, 255, 0.3)", fontSize: "12px" }}>—</span>
+                                    {call.status}
+                                </span>
+
+                                {/* Duration */}
+                                <span style={{ color: "rgba(255, 255, 255, 0.7)", display: "flex", alignItems: "center", gap: "6px" }}>
+                                    <Clock size={14} style={{ opacity: 0.5 }} />
+                                    {formatDuration(call.durationSeconds)}
+                                </span>
+
+                                {/* Timestamp */}
+                                <span style={{ color: "rgba(255, 255, 255, 0.5)", fontSize: "13px" }}>
+                                    {formatCallDate(call.createdAt)}
+                                </span>
+
+                                {/* Audio Control */}
+                                {call.status === "completed" && call.recordingUrl ? (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setPlayingId(playingId === call._id ? null : call._id);
+                                        }}
+                                        style={{
+                                            width: "36px",
+                                            height: "36px",
+                                            borderRadius: "50%",
+                                            border: "1px solid rgba(0, 200, 255, 0.3)",
+                                            background: playingId === call._id ? "rgba(0, 200, 255, 0.2)" : "transparent",
+                                            color: "#00C8FF",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            cursor: "pointer",
+                                            transition: "all 0.2s ease",
+                                        }}
+                                    >
+                                        {playingId === call._id ? <Pause size={16} /> : <Play size={16} />}
+                                    </button>
+                                ) : (
+                                    <span style={{ color: "rgba(255, 255, 255, 0.3)", fontSize: "12px" }}>—</span>
+                                )}
+                            </div>
+
+                            {/* Expanded Summary Section */}
+                            {isExpanded && (
+                                <div
+                                    style={{
+                                        padding: "16px 24px 20px 72px",
+                                        background: "rgba(0, 200, 255, 0.03)",
+                                        borderBottom: "1px solid rgba(0, 200, 255, 0.08)",
+                                    }}
+                                >
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+                                        {/* Left Column - Summary */}
+                                        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                                            {call.shortSummary && (
+                                                <div>
+                                                    <div style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.4)", textTransform: "uppercase", marginBottom: "4px" }}>
+                                                        Short Summary
+                                                    </div>
+                                                    <div style={{ color: "rgba(255, 255, 255, 0.9)", fontSize: "14px", lineHeight: "1.5" }}>
+                                                        {call.shortSummary}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {call.summary && (
+                                                <div>
+                                                    <div style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.4)", textTransform: "uppercase", marginBottom: "4px" }}>
+                                                        Full Summary
+                                                    </div>
+                                                    <div style={{ color: "rgba(255, 255, 255, 0.7)", fontSize: "13px", lineHeight: "1.6" }}>
+                                                        {call.summary}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Right Column - Billing & Technical Details */}
+                                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                                            {call.endReason && (
+                                                <div style={{ display: "flex", gap: "8px" }}>
+                                                    <span style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.4)", minWidth: "100px" }}>End Reason:</span>
+                                                    <span style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.7)" }}>{getEndReasonLabel(call.endReason)}</span>
+                                                </div>
+                                            )}
+                                            {call.billedDuration && (
+                                                <div style={{ display: "flex", gap: "8px" }}>
+                                                    <span style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.4)", minWidth: "100px" }}>Billed Duration:</span>
+                                                    <span style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.7)" }}>{call.billedDuration}</span>
+                                                </div>
+                                            )}
+                                            {call.billingStatus && (
+                                                <div style={{ display: "flex", gap: "8px" }}>
+                                                    <span style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.4)", minWidth: "100px" }}>Billing Status:</span>
+                                                    <span style={{ 
+                                                        fontSize: "12px", 
+                                                        color: call.billingStatus === "billed" ? "rgba(34, 197, 94, 0.9)" : "rgba(255, 255, 255, 0.7)",
+                                                        textTransform: "capitalize"
+                                                    }}>
+                                                        {call.billingStatus}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            {call.talkrixCallId && (
+                                                <div style={{ display: "flex", gap: "8px" }}>
+                                                    <span style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.4)", minWidth: "100px" }}>Call ID:</span>
+                                                    <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.5)", fontFamily: "monospace" }}>{call.talkrixCallId}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
                             )}
                         </div>
                     );
