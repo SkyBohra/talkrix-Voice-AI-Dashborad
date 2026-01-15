@@ -8,8 +8,6 @@ import {
     Database,
     Settings,
     LogOut,
-    ChevronLeft,
-    ChevronRight,
     Mic,
     Phone,
     Megaphone,
@@ -99,29 +97,70 @@ export default function Sidebar({ activeSection, onSectionChange, onLogout }: Si
                 )}
             </div>
 
-            {/* Collapse Button */}
+            {/* Collapse Toggle - Animated Arrow Pill */}
             <button
                 onClick={() => setCollapsed(!collapsed)}
                 style={{
                     position: "absolute",
-                    right: "-14px",
-                    top: "40px",
-                    width: "28px",
-                    height: "28px",
-                    borderRadius: "50%",
-                    background: "rgba(0, 200, 255, 0.15)",
-                    border: "1px solid rgba(0, 200, 255, 0.4)",
-                    color: "#00C8FF",
+                    right: "-16px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    width: "32px",
+                    height: "64px",
+                    borderRadius: "0 16px 16px 0",
+                    background: "linear-gradient(180deg, rgba(0, 200, 255, 0.15) 0%, rgba(120, 0, 255, 0.12) 100%)",
+                    border: "1px solid rgba(0, 200, 255, 0.3)",
+                    borderLeft: "none",
                     display: "flex",
+                    flexDirection: "column",
                     alignItems: "center",
                     justifyContent: "center",
+                    gap: "6px",
                     cursor: "pointer",
-                    transition: "all 0.2s ease",
+                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                     zIndex: 10,
-                    boxShadow: "0 0 15px rgba(0, 200, 255, 0.2)",
+                    backdropFilter: "blur(12px)",
+                    boxShadow: "4px 0 20px rgba(0, 200, 255, 0.15)",
+                }}
+                onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "linear-gradient(180deg, rgba(0, 200, 255, 0.28) 0%, rgba(120, 0, 255, 0.22) 100%)";
+                    e.currentTarget.style.borderColor = "rgba(0, 200, 255, 0.5)";
+                    e.currentTarget.style.boxShadow = "4px 0 30px rgba(0, 200, 255, 0.35)";
+                    e.currentTarget.style.width = "36px";
+                }}
+                onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "linear-gradient(180deg, rgba(0, 200, 255, 0.15) 0%, rgba(120, 0, 255, 0.12) 100%)";
+                    e.currentTarget.style.borderColor = "rgba(0, 200, 255, 0.3)";
+                    e.currentTarget.style.boxShadow = "4px 0 20px rgba(0, 200, 255, 0.15)";
+                    e.currentTarget.style.width = "32px";
                 }}
             >
-                {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+                {/* Top chevron line */}
+                <div
+                    style={{
+                        width: "10px",
+                        height: "2.5px",
+                        background: "linear-gradient(90deg, #00C8FF, #7800FF)",
+                        borderRadius: "2px",
+                        transform: collapsed ? "rotate(45deg) translateX(2px)" : "rotate(-45deg) translateX(-2px)",
+                        transformOrigin: "center",
+                        transition: "all 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+                        boxShadow: "0 0 8px rgba(0, 200, 255, 0.5)",
+                    }}
+                />
+                {/* Bottom chevron line */}
+                <div
+                    style={{
+                        width: "10px",
+                        height: "2.5px",
+                        background: "linear-gradient(90deg, #00C8FF, #7800FF)",
+                        borderRadius: "2px",
+                        transform: collapsed ? "rotate(-45deg) translateX(2px)" : "rotate(45deg) translateX(-2px)",
+                        transformOrigin: "center",
+                        transition: "all 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+                        boxShadow: "0 0 8px rgba(0, 200, 255, 0.5)",
+                    }}
+                />
             </button>
 
             {/* Navigation Items */}
