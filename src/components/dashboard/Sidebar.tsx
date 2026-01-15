@@ -11,6 +11,8 @@ import {
     ChevronLeft,
     ChevronRight,
     Mic,
+    Phone,
+    Megaphone,
 } from "lucide-react";
 
 type SidebarItem = {
@@ -21,6 +23,8 @@ type SidebarItem = {
 
 const sidebarItems: SidebarItem[] = [
     { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard size={20} /> },
+    { id: "campaign", label: "Campaign", icon: <Megaphone size={20} /> },
+    { id: "call-history", label: "Call History", icon: <Phone size={20} /> },
     { id: "agents", label: "Agents", icon: <Bot size={20} /> },
     { id: "voices", label: "Voices", icon: <Mic size={20} /> },
     { id: "tools", label: "Tools", icon: <Wrench size={20} /> },
@@ -50,6 +54,7 @@ export default function Sidebar({ activeSection, onSectionChange, onLogout }: Si
                 padding: "24px 16px",
                 transition: "width 0.3s ease",
                 position: "relative",
+                zIndex: 10,
                 backdropFilter: "blur(20px)",
             }}
         >
