@@ -70,8 +70,52 @@ export const fetchVoices = async (search?: string) => {
 export const createAgentCall = async (agentId: string, options?: {
   maxDuration?: string;
   recordingEnabled?: boolean;
+  callType?: 'test' | 'inbound' | 'outbound';
+  customerName?: string;
+  customerPhone?: string;
 }) => {
   const res = await axios.post(`${API_BASE}/${agentId}/call`, options || {}, {
+    headers: getAuthHeaders(),
+  });
+  return normalizeResponse(res);
+};
+
+/**
+ * End a call and update its status
+ */
+export const endAgentCall = async (
+  agentId: string,
+  callHistoryId: string,
+  data: {
+    status?: 'completed' | 'missed' | 'failed';
+    durationSeconds?: number;
+    recordingUrl?: string;
+  }
+) => {
+  const res = await axios.put(
+    `${API_BASE}/${agentId}/call/${callHistoryId}/end`,
+    data,
+    {
+      headers: getAuthHeaders(),
+    }
+  );
+  return normalizeResponse(res);
+};
+
+/**
+ * Create an outbound call with customer information
+ */
+export const createOutboundCall = async (
+  agentId: string,
+  data: {
+    customerName?: string;
+    customerPhone: string;
+    maxDuration?: string;
+    recordingEnabled?: boolean;
+    metadata?: Record<string, any>;
+  }
+) => {
+  const res = await axios.post(`${API_BASE}/${agentId}/outbound-call`, data, {
     headers: getAuthHeaders(),
   });
   return normalizeResponse(res);

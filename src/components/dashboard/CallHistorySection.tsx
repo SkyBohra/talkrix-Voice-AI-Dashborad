@@ -1,52 +1,120 @@
 "use client";
 
-import { useState } from "react";
-import { Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, Clock, Calendar, Search, Filter, Download, Play, Pause } from "lucide-react";
-
-interface CallRecord {
-    id: string;
-    phoneNumber: string;
-    direction: "inbound" | "outbound";
-    status: "completed" | "missed" | "failed";
-    duration: string;
-    agentName: string;
-    timestamp: string;
-    recording?: string;
-}
-
-// Mock data for demonstration
-const mockCalls: CallRecord[] = [
-    { id: "1", phoneNumber: "+1 (555) 123-4567", direction: "inbound", status: "completed", duration: "5:32", agentName: "Sales Agent", timestamp: "2026-01-15 10:30 AM" },
-    { id: "2", phoneNumber: "+1 (555) 987-6543", direction: "outbound", status: "completed", duration: "3:15", agentName: "Support Bot", timestamp: "2026-01-15 10:15 AM" },
-    { id: "3", phoneNumber: "+1 (555) 456-7890", direction: "inbound", status: "missed", duration: "0:00", agentName: "Sales Agent", timestamp: "2026-01-15 09:45 AM" },
-    { id: "4", phoneNumber: "+1 (555) 321-6547", direction: "outbound", status: "failed", duration: "0:00", agentName: "Booking Assistant", timestamp: "2026-01-15 09:30 AM" },
-    { id: "5", phoneNumber: "+1 (555) 789-0123", direction: "inbound", status: "completed", duration: "8:47", agentName: "Support Bot", timestamp: "2026-01-15 09:00 AM" },
-];
+import { useState, useEffect, useCallback } from "react";
+import { Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, Clock, Search, Download, Play, Pause, RefreshCw, User, TestTube } from "lucide-react";
+import { 
+    fetchCallHistory, 
+    fetchCallStats, 
+    CallHistoryRecord, 
+    CallStats, 
+    formatDuration, 
+    formatCallDate 
+} from "@/lib/callHistoryApi";
 
 export default function CallHistorySection() {
     const [searchQuery, setSearchQuery] = useState("");
     const [filterStatus, setFilterStatus] = useState<string>("all");
+    const [filterCallType, setFilterCallType] = useState<string>("all");
     const [playingId, setPlayingId] = useState<string | null>(null);
+    const [calls, setCalls] = useState<CallHistoryRecord[]>([]);
+    const [stats, setStats] = useState<CallStats | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
 
-    const filteredCalls = mockCalls.filter((call) => {
-        const matchesSearch = call.phoneNumber.includes(searchQuery) || call.agentName.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesFilter = filterStatus === "all" || call.status === filterStatus;
-        return matchesSearch && matchesFilter;
+    const loadData = useCallback(async () => {
+        setLoading(true);
+        try {
+            const [callsRes, statsRes] = await Promise.all([
+                fetchCallHistory({
+                    page,
+                    limit: 20,
+                    status: filterStatus !== "all" ? filterStatus : undefined,
+                    callType: filterCallType !== "all" ? filterCallType : undefined,
+                }),
+                fetchCallStats(),
+            ]);
+
+            if (callsRes.success && callsRes.data) {
+                setCalls(callsRes.data.calls || []);
+                setTotalPages(callsRes.data.pages || 1);
+            }
+
+            if (statsRes.success && statsRes.data) {
+                setStats(statsRes.data);
+            }
+        } catch (err) {
+            console.error("Error loading call history:", err);
+        } finally {
+            setLoading(false);
+        }
+    }, [page, filterStatus, filterCallType]);
+
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
+
+    // Filter calls by search query (client-side for quick filtering)
+    const filteredCalls = calls.filter((call) => {
+        const searchLower = searchQuery.toLowerCase();
+        const matchesPhone = call.customerPhone?.includes(searchQuery);
+        const matchesName = call.customerName?.toLowerCase().includes(searchLower);
+        const matchesAgent = call.agentName?.toLowerCase().includes(searchLower);
+        return !searchQuery || matchesPhone || matchesName || matchesAgent;
     });
 
-    const getStatusIcon = (direction: string, status: string) => {
+    const getStatusIcon = (callType: string, status: string) => {
         if (status === "missed") return <PhoneMissed size={18} />;
-        if (direction === "inbound") return <PhoneIncoming size={18} />;
+        if (callType === "test") return <TestTube size={18} />;
+        if (callType === "inbound") return <PhoneIncoming size={18} />;
         return <PhoneOutgoing size={18} />;
     };
 
     const getStatusColor = (status: string) => {
         switch (status) {
             case "completed": return { bg: "rgba(34, 197, 94, 0.15)", color: "#22c55e", border: "rgba(34, 197, 94, 0.3)" };
+            case "in-progress": return { bg: "rgba(59, 130, 246, 0.15)", color: "#3b82f6", border: "rgba(59, 130, 246, 0.3)" };
+            case "initiated": return { bg: "rgba(234, 179, 8, 0.15)", color: "#eab308", border: "rgba(234, 179, 8, 0.3)" };
             case "missed": return { bg: "rgba(255, 60, 100, 0.15)", color: "#FF3C64", border: "rgba(255, 60, 100, 0.3)" };
             case "failed": return { bg: "rgba(239, 68, 68, 0.15)", color: "#ef4444", border: "rgba(239, 68, 68, 0.3)" };
             default: return { bg: "rgba(0, 200, 255, 0.15)", color: "#00C8FF", border: "rgba(0, 200, 255, 0.3)" };
         }
+    };
+
+    const getCallTypeLabel = (callType: string) => {
+        switch (callType) {
+            case "test": return "Test Call";
+            case "inbound": return "Inbound";
+            case "outbound": return "Outbound";
+            default: return callType;
+        }
+    };
+
+    const handleExport = () => {
+        // Export calls as CSV
+        const headers = ["Date", "Customer Name", "Phone", "Agent", "Type", "Status", "Duration"];
+        const rows = filteredCalls.map(call => [
+            formatCallDate(call.createdAt),
+            call.customerName || "-",
+            call.customerPhone || "-",
+            call.agentName,
+            getCallTypeLabel(call.callType),
+            call.status,
+            formatDuration(call.durationSeconds),
+        ]);
+
+        const csvContent = [
+            headers.join(","),
+            ...rows.map(row => row.map(cell => `"${cell}"`).join(",")),
+        ].join("\n");
+
+        const blob = new Blob([csvContent], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `call-history-${new Date().toISOString().split("T")[0]}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
     };
 
     return (
@@ -58,22 +126,44 @@ export default function CallHistorySection() {
             }}
         >
             {/* Header */}
-            <div style={{ marginBottom: "32px" }}>
-                <h1
+            <div style={{ marginBottom: "32px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div>
+                    <h1
+                        style={{
+                            fontSize: "28px",
+                            fontWeight: "700",
+                            background: "linear-gradient(135deg, #00C8FF 0%, #7800FF 100%)",
+                            WebkitBackgroundClip: "text",
+                            WebkitTextFillColor: "transparent",
+                            marginBottom: "8px",
+                        }}
+                    >
+                        Call History
+                    </h1>
+                    <p style={{ color: "rgba(255, 255, 255, 0.6)", fontSize: "14px" }}>
+                        View and manage all your voice AI call records
+                    </p>
+                </div>
+                <button
+                    onClick={loadData}
+                    disabled={loading}
                     style={{
-                        fontSize: "28px",
-                        fontWeight: "700",
-                        background: "linear-gradient(135deg, #00C8FF 0%, #7800FF 100%)",
-                        WebkitBackgroundClip: "text",
-                        WebkitTextFillColor: "transparent",
-                        marginBottom: "8px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        padding: "10px 16px",
+                        borderRadius: "8px",
+                        border: "1px solid rgba(0, 200, 255, 0.3)",
+                        background: "transparent",
+                        color: "#00C8FF",
+                        fontSize: "14px",
+                        cursor: "pointer",
+                        opacity: loading ? 0.5 : 1,
                     }}
                 >
-                    Call History
-                </h1>
-                <p style={{ color: "rgba(255, 255, 255, 0.6)", fontSize: "14px" }}>
-                    View and manage all your voice AI call records
-                </p>
+                    <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+                    Refresh
+                </button>
             </div>
 
             {/* Stats Cards */}
@@ -86,10 +176,10 @@ export default function CallHistorySection() {
                 }}
             >
                 {[
-                    { label: "Total Calls", value: "1,234", icon: <Phone size={20} /> },
-                    { label: "Completed", value: "1,089", icon: <PhoneIncoming size={20} /> },
-                    { label: "Missed", value: "98", icon: <PhoneMissed size={20} /> },
-                    { label: "Avg Duration", value: "4:32", icon: <Clock size={20} /> },
+                    { label: "Total Calls", value: stats?.totalCalls?.toLocaleString() || "0", icon: <Phone size={20} /> },
+                    { label: "Completed", value: stats?.completedCalls?.toLocaleString() || "0", icon: <PhoneIncoming size={20} /> },
+                    { label: "Missed", value: stats?.missedCalls?.toLocaleString() || "0", icon: <PhoneMissed size={20} /> },
+                    { label: "Avg Duration", value: stats ? formatDuration(stats.averageDurationSeconds) : "0:00", icon: <Clock size={20} /> },
                 ].map((stat, index) => (
                     <div
                         key={index}
@@ -160,7 +250,7 @@ export default function CallHistorySection() {
                     />
                     <input
                         type="text"
-                        placeholder="Search by phone number or agent..."
+                        placeholder="Search by phone, customer name, or agent..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         style={{
@@ -176,10 +266,13 @@ export default function CallHistorySection() {
                     />
                 </div>
 
-                {/* Filter Dropdown */}
+                {/* Status Filter */}
                 <select
                     value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value)}
+                    onChange={(e) => {
+                        setFilterStatus(e.target.value);
+                        setPage(1);
+                    }}
                     style={{
                         padding: "12px 16px",
                         borderRadius: "10px",
@@ -194,12 +287,39 @@ export default function CallHistorySection() {
                 >
                     <option value="all">All Status</option>
                     <option value="completed">Completed</option>
+                    <option value="in-progress">In Progress</option>
                     <option value="missed">Missed</option>
                     <option value="failed">Failed</option>
                 </select>
 
+                {/* Call Type Filter */}
+                <select
+                    value={filterCallType}
+                    onChange={(e) => {
+                        setFilterCallType(e.target.value);
+                        setPage(1);
+                    }}
+                    style={{
+                        padding: "12px 16px",
+                        borderRadius: "10px",
+                        border: "1px solid rgba(0, 200, 255, 0.2)",
+                        background: "rgba(5, 15, 30, 0.8)",
+                        color: "white",
+                        fontSize: "14px",
+                        cursor: "pointer",
+                        outline: "none",
+                        minWidth: "150px",
+                    }}
+                >
+                    <option value="all">All Types</option>
+                    <option value="test">Test Calls</option>
+                    <option value="inbound">Inbound</option>
+                    <option value="outbound">Outbound</option>
+                </select>
+
                 {/* Export Button */}
                 <button
+                    onClick={handleExport}
                     style={{
                         display: "flex",
                         alignItems: "center",
@@ -239,29 +359,36 @@ export default function CallHistorySection() {
                 <div
                     style={{
                         display: "grid",
-                        gridTemplateColumns: "1fr 1fr 120px 100px 150px 80px",
+                        gridTemplateColumns: "1fr 1fr 1fr 100px 100px 150px 80px",
                         padding: "16px 24px",
                         background: "rgba(0, 200, 255, 0.05)",
                         borderBottom: "1px solid rgba(0, 200, 255, 0.1)",
                         gap: "16px",
                     }}
                 >
-                    {["Phone Number", "Agent", "Status", "Duration", "Date & Time", "Audio"].map((header) => (
+                    {["Customer", "Phone / Type", "Agent", "Status", "Duration", "Date & Time", "Audio"].map((header) => (
                         <span key={header} style={{ fontSize: "12px", fontWeight: "600", color: "rgba(255, 255, 255, 0.5)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
                             {header}
                         </span>
                     ))}
                 </div>
 
+                {/* Loading State */}
+                {loading && (
+                    <div style={{ padding: "48px", textAlign: "center", color: "rgba(255, 255, 255, 0.5)" }}>
+                        Loading call history...
+                    </div>
+                )}
+
                 {/* Table Body */}
-                {filteredCalls.map((call) => {
+                {!loading && filteredCalls.map((call) => {
                     const statusStyle = getStatusColor(call.status);
                     return (
                         <div
-                            key={call.id}
+                            key={call._id}
                             style={{
                                 display: "grid",
-                                gridTemplateColumns: "1fr 1fr 120px 100px 150px 80px",
+                                gridTemplateColumns: "1fr 1fr 1fr 100px 100px 150px 80px",
                                 padding: "16px 24px",
                                 borderBottom: "1px solid rgba(0, 200, 255, 0.08)",
                                 alignItems: "center",
@@ -275,7 +402,7 @@ export default function CallHistorySection() {
                                 e.currentTarget.style.background = "transparent";
                             }}
                         >
-                            {/* Phone Number */}
+                            {/* Customer Name */}
                             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                                 <div
                                     style={{
@@ -289,9 +416,27 @@ export default function CallHistorySection() {
                                         color: statusStyle.color,
                                     }}
                                 >
-                                    {getStatusIcon(call.direction, call.status)}
+                                    {call.customerName ? <User size={18} /> : getStatusIcon(call.callType, call.status)}
                                 </div>
-                                <span style={{ color: "white", fontWeight: "500" }}>{call.phoneNumber}</span>
+                                <span style={{ color: "white", fontWeight: "500" }}>
+                                    {call.customerName || (call.callType === "test" ? "Test Call" : "Unknown")}
+                                </span>
+                            </div>
+
+                            {/* Phone Number / Call Type */}
+                            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                <span style={{ color: "rgba(255, 255, 255, 0.7)" }}>
+                                    {call.customerPhone || "—"}
+                                </span>
+                                <span
+                                    style={{
+                                        fontSize: "11px",
+                                        color: "rgba(255, 255, 255, 0.4)",
+                                        textTransform: "uppercase",
+                                    }}
+                                >
+                                    {getCallTypeLabel(call.callType)}
+                                </span>
                             </div>
 
                             {/* Agent Name */}
@@ -317,22 +462,24 @@ export default function CallHistorySection() {
                             {/* Duration */}
                             <span style={{ color: "rgba(255, 255, 255, 0.7)", display: "flex", alignItems: "center", gap: "6px" }}>
                                 <Clock size={14} style={{ opacity: 0.5 }} />
-                                {call.duration}
+                                {formatDuration(call.durationSeconds)}
                             </span>
 
                             {/* Timestamp */}
-                            <span style={{ color: "rgba(255, 255, 255, 0.5)", fontSize: "13px" }}>{call.timestamp}</span>
+                            <span style={{ color: "rgba(255, 255, 255, 0.5)", fontSize: "13px" }}>
+                                {formatCallDate(call.createdAt)}
+                            </span>
 
                             {/* Audio Control */}
-                            {call.status === "completed" ? (
+                            {call.status === "completed" && call.recordingUrl ? (
                                 <button
-                                    onClick={() => setPlayingId(playingId === call.id ? null : call.id)}
+                                    onClick={() => setPlayingId(playingId === call._id ? null : call._id)}
                                     style={{
                                         width: "36px",
                                         height: "36px",
                                         borderRadius: "50%",
                                         border: "1px solid rgba(0, 200, 255, 0.3)",
-                                        background: playingId === call.id ? "rgba(0, 200, 255, 0.2)" : "transparent",
+                                        background: playingId === call._id ? "rgba(0, 200, 255, 0.2)" : "transparent",
                                         color: "#00C8FF",
                                         display: "flex",
                                         alignItems: "center",
@@ -341,7 +488,7 @@ export default function CallHistorySection() {
                                         transition: "all 0.2s ease",
                                     }}
                                 >
-                                    {playingId === call.id ? <Pause size={16} /> : <Play size={16} />}
+                                    {playingId === call._id ? <Pause size={16} /> : <Play size={16} />}
                                 </button>
                             ) : (
                                 <span style={{ color: "rgba(255, 255, 255, 0.3)", fontSize: "12px" }}>—</span>
@@ -350,12 +497,60 @@ export default function CallHistorySection() {
                     );
                 })}
 
-                {filteredCalls.length === 0 && (
+                {/* Empty State */}
+                {!loading && filteredCalls.length === 0 && (
                     <div style={{ padding: "48px", textAlign: "center", color: "rgba(255, 255, 255, 0.5)" }}>
-                        No calls found matching your criteria.
+                        {calls.length === 0 
+                            ? "No calls yet. Test your agents to see call history here."
+                            : "No calls found matching your criteria."}
                     </div>
                 )}
             </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+                <div
+                    style={{
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        gap: "16px",
+                        marginTop: "24px",
+                    }}
+                >
+                    <button
+                        onClick={() => setPage(p => Math.max(1, p - 1))}
+                        disabled={page === 1}
+                        style={{
+                            padding: "8px 16px",
+                            borderRadius: "8px",
+                            border: "1px solid rgba(0, 200, 255, 0.3)",
+                            background: "transparent",
+                            color: page === 1 ? "rgba(255, 255, 255, 0.3)" : "#00C8FF",
+                            cursor: page === 1 ? "not-allowed" : "pointer",
+                        }}
+                    >
+                        Previous
+                    </button>
+                    <span style={{ color: "rgba(255, 255, 255, 0.6)" }}>
+                        Page {page} of {totalPages}
+                    </span>
+                    <button
+                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                        disabled={page === totalPages}
+                        style={{
+                            padding: "8px 16px",
+                            borderRadius: "8px",
+                            border: "1px solid rgba(0, 200, 255, 0.3)",
+                            background: "transparent",
+                            color: page === totalPages ? "rgba(255, 255, 255, 0.3)" : "#00C8FF",
+                            cursor: page === totalPages ? "not-allowed" : "pointer",
+                        }}
+                    >
+                        Next
+                    </button>
+                </div>
+            )}
         </div>
     );
 }

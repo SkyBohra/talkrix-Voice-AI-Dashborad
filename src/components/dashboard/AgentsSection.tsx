@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Bot, Plus, Pencil, Trash2, X, Save, Play, Pause, Loader2, Search, Mic, Phone, PhoneOff, MicOff, Copy, Check } from "lucide-react";
-import { createAgent, fetchAgentsByUser, updateAgent, deleteAgent, fetchVoices, createAgentCall } from "../../lib/agentApi";
+import { createAgent, fetchAgentsByUser, updateAgent, deleteAgent, fetchVoices, createAgentCall, endAgentCall } from "../../lib/agentApi";
 import { fetchUserTools, Tool } from "../../lib/toolApi";
 import AgentBuilder from "./AgentBuilder";
 
@@ -2164,6 +2164,8 @@ export default function AgentsSection() {
     const [isTestModalOpen, setIsTestModalOpen] = useState(false);
     const [callStatus, setCallStatus] = useState<'idle' | 'connecting' | 'connected' | 'ended'>('idle');
     const [joinUrl, setJoinUrl] = useState<string | null>(null);
+    const [callHistoryId, setCallHistoryId] = useState<string | null>(null);
+    const [callStartTime, setCallStartTime] = useState<Date | null>(null);
     const [callError, setCallError] = useState<string | null>(null);
     const [transcript, setTranscript] = useState<Array<{ role: string; text: string }>>([]);
     const [isMuted, setIsMuted] = useState(false);
@@ -2562,6 +2564,8 @@ export default function AgentsSection() {
         setIsTestModalOpen(true);
         setCallStatus('idle');
         setJoinUrl(null);
+        setCallHistoryId(null);
+        setCallStartTime(null);
         setCallError(null);
         setTranscript([]);
         setAgentStatus('');
@@ -2590,6 +2594,12 @@ export default function AgentsSection() {
 
             const callJoinUrl = response.data.joinUrl;
             setJoinUrl(callJoinUrl);
+            
+            // Store call history ID for updating when call ends
+            if (response.data.callHistoryId) {
+                setCallHistoryId(response.data.callHistoryId);
+            }
+            setCallStartTime(new Date());
 
             // Dynamically import the Ultravox client
             const { UltravoxSession } = await import('ultravox-client');
@@ -2640,6 +2650,19 @@ export default function AgentsSection() {
                 await ultravoxSessionRef.current.leaveCall();
                 ultravoxSessionRef.current = null;
             }
+            
+            // Update call history with completed status and duration
+            if (testingAgent && callHistoryId && callStartTime) {
+                const durationSeconds = Math.round((new Date().getTime() - callStartTime.getTime()) / 1000);
+                try {
+                    await endAgentCall(testingAgent._id, callHistoryId, {
+                        status: 'completed',
+                        durationSeconds,
+                    });
+                } catch (err) {
+                    console.error('Error updating call history:', err);
+                }
+            }
         } catch (err) {
             console.error('Error ending call:', err);
         }
@@ -2666,11 +2689,26 @@ export default function AgentsSection() {
                 console.error('Error leaving call:', err);
             }
             ultravoxSessionRef.current = null;
+            
+            // Update call history with completed status and duration
+            if (testingAgent && callHistoryId && callStartTime) {
+                const durationSeconds = Math.round((new Date().getTime() - callStartTime.getTime()) / 1000);
+                try {
+                    await endAgentCall(testingAgent._id, callHistoryId, {
+                        status: 'completed',
+                        durationSeconds,
+                    });
+                } catch (err) {
+                    console.error('Error updating call history:', err);
+                }
+            }
         }
         setIsTestModalOpen(false);
         setTestingAgent(null);
         setCallStatus('idle');
         setJoinUrl(null);
+        setCallHistoryId(null);
+        setCallStartTime(null);
         setCallError(null);
         setTranscript([]);
         setAgentStatus('');
