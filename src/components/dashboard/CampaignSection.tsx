@@ -52,8 +52,7 @@ export default function CampaignSection() {
         <div
             style={{
                 padding: "32px",
-                height: "100%",
-                overflowY: "auto",
+                boxSizing: "border-box",
             }}
         >
             {/* Header */}

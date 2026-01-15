@@ -170,7 +170,11 @@ export default function DashboardSection() {
     ];
 
     return (
-        <div style={{ padding: "32px", maxWidth: "1400px" }}>
+        <div style={{ 
+            padding: "32px", 
+            maxWidth: "1400px",
+            boxSizing: "border-box",
+        }}>
             {/* Header */}
             <div style={{ marginBottom: "32px" }}>
                 <h1 style={{ fontSize: "28px", fontWeight: "700", color: "white", marginBottom: "8px" }}>

@@ -2736,9 +2736,6 @@ export default function AgentsSection() {
             padding: "32px 40px", 
             maxWidth: "1400px", 
             margin: "0 auto",
-            height: "100vh",
-            overflowY: "auto",
-            overflowX: "hidden",
             boxSizing: "border-box",
             position: "relative",
         }}>

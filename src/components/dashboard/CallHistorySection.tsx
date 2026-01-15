@@ -138,8 +138,7 @@ export default function CallHistorySection() {
         <div
             style={{
                 padding: "32px",
-                height: "100%",
-                overflowY: "auto",
+                boxSizing: "border-box",
             }}
         >
             {/* Header */}
@@ -187,24 +186,24 @@ export default function CallHistorySection() {
             <div
                 style={{
                     display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                    gap: "20px",
-                    marginBottom: "32px",
+                    gridTemplateColumns: "repeat(4, 1fr)",
+                    gap: "16px",
+                    marginBottom: "24px",
                 }}
             >
                 {[
-                    { label: "Total Calls", value: stats?.totalCalls?.toLocaleString() || "0", icon: <Phone size={20} /> },
-                    { label: "Completed", value: stats?.completedCalls?.toLocaleString() || "0", icon: <PhoneIncoming size={20} /> },
-                    { label: "Missed", value: stats?.missedCalls?.toLocaleString() || "0", icon: <PhoneMissed size={20} /> },
-                    { label: "Avg Duration", value: stats ? formatDuration(stats.averageDurationSeconds) : "0:00", icon: <Clock size={20} /> },
+                    { label: "Total Calls", value: stats?.totalCalls?.toLocaleString() || "0", icon: <Phone size={18} /> },
+                    { label: "Completed", value: stats?.completedCalls?.toLocaleString() || "0", icon: <PhoneIncoming size={18} /> },
+                    { label: "Missed", value: stats?.missedCalls?.toLocaleString() || "0", icon: <PhoneMissed size={18} /> },
+                    { label: "Avg Duration", value: stats ? formatDuration(stats.averageDurationSeconds) : "0:00", icon: <Clock size={18} /> },
                 ].map((stat, index) => (
                     <div
                         key={index}
                         style={{
                             background: "rgba(255, 255, 255, 0.03)",
                             border: "1px solid rgba(0, 200, 255, 0.15)",
-                            borderRadius: "12px",
-                            padding: "20px",
+                            borderRadius: "10px",
+                            padding: "16px",
                             transition: "all 0.3s ease",
                         }}
                         onMouseEnter={(e) => {
@@ -216,12 +215,12 @@ export default function CallHistorySection() {
                             e.currentTarget.style.borderColor = "rgba(0, 200, 255, 0.15)";
                         }}
                     >
-                        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
                             <div
                                 style={{
-                                    width: "40px",
-                                    height: "40px",
-                                    borderRadius: "10px",
+                                    width: "32px",
+                                    height: "32px",
+                                    borderRadius: "8px",
                                     background: "linear-gradient(135deg, rgba(0, 200, 255, 0.2) 0%, rgba(120, 0, 255, 0.15) 100%)",
                                     display: "flex",
                                     alignItems: "center",
@@ -231,9 +230,9 @@ export default function CallHistorySection() {
                             >
                                 {stat.icon}
                             </div>
+                            <p style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.5)", margin: 0 }}>{stat.label}</p>
                         </div>
-                        <p style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.5)", marginBottom: "4px" }}>{stat.label}</p>
-                        <p style={{ fontSize: "24px", fontWeight: "700", color: "white" }}>{stat.value}</p>
+                        <p style={{ fontSize: "20px", fontWeight: "700", color: "white", margin: 0 }}>{stat.value}</p>
                     </div>
                 ))}
             </div>
@@ -242,24 +241,26 @@ export default function CallHistorySection() {
             <div
                 style={{
                     display: "flex",
-                    gap: "16px",
-                    marginBottom: "24px",
+                    gap: "12px",
+                    marginBottom: "20px",
+                    alignItems: "center",
                     flexWrap: "wrap",
                 }}
             >
                 {/* Search */}
                 <div
                     style={{
-                        flex: "1",
-                        minWidth: "250px",
+                        flex: "1 1 300px",
+                        minWidth: "200px",
+                        maxWidth: "400px",
                         position: "relative",
                     }}
                 >
                     <Search
-                        size={18}
+                        size={16}
                         style={{
                             position: "absolute",
-                            left: "14px",
+                            left: "12px",
                             top: "50%",
                             transform: "translateY(-50%)",
                             color: "rgba(255, 255, 255, 0.4)",
@@ -272,13 +273,14 @@ export default function CallHistorySection() {
                         onChange={(e) => setSearchQuery(e.target.value)}
                         style={{
                             width: "100%",
-                            padding: "12px 16px 12px 44px",
-                            borderRadius: "10px",
+                            padding: "10px 14px 10px 38px",
+                            borderRadius: "8px",
                             border: "1px solid rgba(0, 200, 255, 0.2)",
                             background: "rgba(5, 15, 30, 0.8)",
                             color: "white",
-                            fontSize: "14px",
+                            fontSize: "13px",
                             outline: "none",
+                            boxSizing: "border-box",
                         }}
                     />
                 </div>
@@ -291,15 +293,16 @@ export default function CallHistorySection() {
                         setPage(1);
                     }}
                     style={{
-                        padding: "12px 16px",
-                        borderRadius: "10px",
+                        padding: "10px 14px",
+                        borderRadius: "8px",
                         border: "1px solid rgba(0, 200, 255, 0.2)",
                         background: "rgba(5, 15, 30, 0.8)",
                         color: "white",
-                        fontSize: "14px",
+                        fontSize: "13px",
                         cursor: "pointer",
                         outline: "none",
-                        minWidth: "150px",
+                        minWidth: "120px",
+                        flexShrink: 0,
                     }}
                 >
                     <option value="all">All Status</option>
@@ -317,15 +320,16 @@ export default function CallHistorySection() {
                         setPage(1);
                     }}
                     style={{
-                        padding: "12px 16px",
-                        borderRadius: "10px",
+                        padding: "10px 14px",
+                        borderRadius: "8px",
                         border: "1px solid rgba(0, 200, 255, 0.2)",
                         background: "rgba(5, 15, 30, 0.8)",
                         color: "white",
-                        fontSize: "14px",
+                        fontSize: "13px",
                         cursor: "pointer",
                         outline: "none",
-                        minWidth: "150px",
+                        minWidth: "120px",
+                        flexShrink: 0,
                     }}
                 >
                     <option value="all">All Types</option>
@@ -340,16 +344,17 @@ export default function CallHistorySection() {
                     style={{
                         display: "flex",
                         alignItems: "center",
-                        gap: "8px",
-                        padding: "12px 20px",
-                        borderRadius: "10px",
+                        gap: "6px",
+                        padding: "10px 16px",
+                        borderRadius: "8px",
                         border: "1px solid rgba(0, 200, 255, 0.3)",
                         background: "linear-gradient(135deg, rgba(0, 200, 255, 0.15) 0%, rgba(120, 0, 255, 0.1) 100%)",
                         color: "#00C8FF",
-                        fontSize: "14px",
+                        fontSize: "13px",
                         fontWeight: "500",
                         cursor: "pointer",
                         transition: "all 0.2s ease",
+                        flexShrink: 0,
                     }}
                     onMouseEnter={(e) => {
                         e.currentTarget.style.background = "linear-gradient(135deg, rgba(0, 200, 255, 0.25) 0%, rgba(120, 0, 255, 0.2) 100%)";

@@ -24,16 +24,16 @@ export default function VoicesPage() {
     };
 
     return (
-        <div style={{ minHeight: "100vh", display: "flex", position: "relative" }}>
+        <div className="dashboard-container">
             {/* Dot Pattern Overlay */}
             <div
                 style={{
                     position: "fixed",
                     inset: 0,
-                    backgroundImage: "radial-gradient(rgba(255,255,255,0.15) 1px, transparent 1px)",
+                    backgroundImage: "radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)",
                     backgroundSize: "24px 24px",
                     pointerEvents: "none",
-                    zIndex: 0,
+                    zIndex: 1,
                 }}
             />
 
@@ -51,15 +51,7 @@ export default function VoicesPage() {
             />
 
             {/* Main Content */}
-            <main
-                style={{
-                    flex: 1,
-                    position: "relative",
-                    zIndex: 1,
-                    overflow: "hidden",
-                    height: "100vh",
-                }}
-            >
+            <main className="dashboard-main">
                 <VoicesSection />
             </main>
         </div>

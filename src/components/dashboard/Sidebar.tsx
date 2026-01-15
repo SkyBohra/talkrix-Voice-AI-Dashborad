@@ -43,7 +43,7 @@ export default function Sidebar({ activeSection, onSectionChange, onLogout }: Si
         <aside
             style={{
                 width: collapsed ? "80px" : "260px",
-                minHeight: "100vh",
+                height: "100vh",
                 background: "linear-gradient(180deg, rgba(5, 15, 30, 0.95) 0%, rgba(10, 20, 40, 0.9) 50%, rgba(5, 15, 35, 0.95) 100%)",
                 borderRight: "1px solid rgba(0, 200, 255, 0.15)",
                 boxShadow: "4px 0 30px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 200, 255, 0.05)",
@@ -164,7 +164,7 @@ export default function Sidebar({ activeSection, onSectionChange, onLogout }: Si
             </button>
 
             {/* Navigation Items */}
-            <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: "8px" }}>
+            <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: "8px", overflowY: "auto", overflowX: "hidden", minHeight: 0 }}>
                 {sidebarItems.map((item) => (
                     <button
                         key={item.id}
@@ -240,7 +240,8 @@ export default function Sidebar({ activeSection, onSectionChange, onLogout }: Si
                     cursor: "pointer",
                     transition: "all 0.2s ease",
                     justifyContent: collapsed ? "center" : "flex-start",
-                    marginTop: "auto",
+                    marginTop: "16px",
+                    flexShrink: 0,
                     boxShadow: "0 0 15px rgba(255, 60, 100, 0.1)",
                 }}
                 onMouseEnter={(e) => {
