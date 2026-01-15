@@ -32,6 +32,8 @@ export default function CampaignDetailPage() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [uploading, setUploading] = useState(false);
     const [stats, setStats] = useState<any>(null);
+    const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
+    const [triggeringCalls, setTriggeringCalls] = useState(false);
 
     useEffect(() => {
         const token = localStorage.getItem("token");
@@ -104,6 +106,57 @@ export default function CampaignDetailPage() {
         contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         contact.phoneNumber.includes(searchQuery)
     ) || [];
+
+    // Selection helpers for ondemand campaigns
+    const isAllSelected = filteredContacts.length > 0 && filteredContacts.every(c => selectedContacts.has(c._id || ''));
+    const isSomeSelected = selectedContacts.size > 0;
+
+    const toggleSelectAll = () => {
+        if (isAllSelected) {
+            setSelectedContacts(new Set());
+        } else {
+            const newSelected = new Set<string>();
+            filteredContacts.forEach(c => {
+                if (c._id) newSelected.add(c._id);
+            });
+            setSelectedContacts(newSelected);
+        }
+    };
+
+    const toggleSelectContact = (contactId: string) => {
+        const newSelected = new Set(selectedContacts);
+        if (newSelected.has(contactId)) {
+            newSelected.delete(contactId);
+        } else {
+            newSelected.add(contactId);
+        }
+        setSelectedContacts(newSelected);
+    };
+
+    const handleTriggerCalls = async () => {
+        if (selectedContacts.size === 0) {
+            alert('Please select at least one contact');
+            return;
+        }
+
+        setTriggeringCalls(true);
+        try {
+            // TODO: Implement actual call triggering API
+            const contactIds = Array.from(selectedContacts);
+            console.log('Triggering calls for contacts:', contactIds);
+            
+            // For now, show a placeholder alert
+            alert(`Triggering calls for ${selectedContacts.size} contact(s)...`);
+            
+            // Clear selection after triggering
+            setSelectedContacts(new Set());
+        } catch (error) {
+            console.error('Error triggering calls:', error);
+            alert('Failed to trigger calls. Please try again.');
+        } finally {
+            setTriggeringCalls(false);
+        }
+    };
 
     const handleAddContact = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -281,12 +334,25 @@ export default function CampaignDetailPage() {
                     {/* Contacts Section */}
                     <div style={{ background: "rgba(255, 255, 255, 0.02)", border: "1px solid rgba(0, 200, 255, 0.15)", borderRadius: "16px", padding: "24px" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-                            <h2 style={{ fontSize: "18px", fontWeight: "600", color: "white" }}>Contacts ({campaign.contacts?.length || 0})</h2>
+                            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                                <h2 style={{ fontSize: "18px", fontWeight: "600", color: "white" }}>Contacts ({campaign.contacts?.length || 0})</h2>
+                                {campaign.type === "ondemand" && selectedContacts.size > 0 && (
+                                    <span style={{ fontSize: "13px", color: "#00C8FF", background: "rgba(0, 200, 255, 0.1)", padding: "4px 12px", borderRadius: "20px" }}>
+                                        {selectedContacts.size} selected
+                                    </span>
+                                )}
+                            </div>
                             <div style={{ display: "flex", gap: "12px" }}>
                                 <div style={{ position: "relative" }}>
                                     <Search size={18} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "rgba(255, 255, 255, 0.4)" }} />
                                     <input type="text" placeholder="Search contacts..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ padding: "10px 12px 10px 40px", borderRadius: "8px", border: "1px solid rgba(0, 200, 255, 0.2)", background: "rgba(255, 255, 255, 0.05)", color: "white", fontSize: "14px", outline: "none", width: "200px" }} />
                                 </div>
+                                {campaign.type === "ondemand" && (
+                                    <button onClick={handleTriggerCalls} disabled={triggeringCalls || selectedContacts.size === 0} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 16px", borderRadius: "8px", border: "none", background: selectedContacts.size === 0 ? "rgba(251, 191, 36, 0.3)" : "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)", color: selectedContacts.size === 0 ? "rgba(255, 255, 255, 0.5)" : "#000", cursor: selectedContacts.size === 0 ? "not-allowed" : "pointer", fontWeight: "600" }}>
+                                        {triggeringCalls ? <Loader size={16} style={{ animation: "spin 1s linear infinite" }} /> : <Zap size={16} />}
+                                        Trigger Call{selectedContacts.size > 1 ? 's' : ''}
+                                    </button>
+                                )}
                                 <button onClick={() => fileInputRef.current?.click()} disabled={uploading} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 16px", borderRadius: "8px", border: "1px solid rgba(0, 200, 255, 0.3)", background: "transparent", color: "#00C8FF", cursor: "pointer" }}>
                                     {uploading ? <Loader size={16} style={{ animation: "spin 1s linear infinite" }} /> : <Upload size={16} />}
                                     Upload Excel
@@ -304,6 +370,16 @@ export default function CampaignDetailPage() {
                                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                                     <thead>
                                         <tr style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.1)" }}>
+                                            {campaign.type === "ondemand" && (
+                                                <th style={{ width: "48px", padding: "12px 16px", textAlign: "center" }}>
+                                                    <input 
+                                                        type="checkbox" 
+                                                        checked={isAllSelected} 
+                                                        onChange={toggleSelectAll}
+                                                        style={{ width: "18px", height: "18px", cursor: "pointer", accentColor: "#00C8FF" }}
+                                                    />
+                                                </th>
+                                            )}
                                             <th style={{ textAlign: "left", padding: "12px 16px", fontSize: "12px", fontWeight: "600", color: "rgba(255, 255, 255, 0.5)", textTransform: "uppercase" }}>Name</th>
                                             <th style={{ textAlign: "left", padding: "12px 16px", fontSize: "12px", fontWeight: "600", color: "rgba(255, 255, 255, 0.5)", textTransform: "uppercase" }}>Phone Number</th>
                                             <th style={{ textAlign: "left", padding: "12px 16px", fontSize: "12px", fontWeight: "600", color: "rgba(255, 255, 255, 0.5)", textTransform: "uppercase" }}>Status</th>
@@ -316,7 +392,17 @@ export default function CampaignDetailPage() {
                                         {filteredContacts.map((contact) => {
                                             const statusStyle = getStatusStyle(contact.callStatus);
                                             return (
-                                                <tr key={contact._id} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}>
+                                                <tr key={contact._id} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)", background: selectedContacts.has(contact._id || '') ? "rgba(0, 200, 255, 0.05)" : "transparent" }}>
+                                                    {campaign.type === "ondemand" && (
+                                                        <td style={{ width: "48px", padding: "16px", textAlign: "center" }}>
+                                                            <input 
+                                                                type="checkbox" 
+                                                                checked={selectedContacts.has(contact._id || '')} 
+                                                                onChange={() => toggleSelectContact(contact._id || '')}
+                                                                style={{ width: "18px", height: "18px", cursor: "pointer", accentColor: "#00C8FF" }}
+                                                            />
+                                                        </td>
+                                                    )}
                                                     <td style={{ padding: "16px", color: "white", fontWeight: "500" }}>{contact.name}</td>
                                                     <td style={{ padding: "16px", color: "rgba(255, 255, 255, 0.7)" }}>{contact.phoneNumber}</td>
                                                     <td style={{ padding: "16px" }}>
