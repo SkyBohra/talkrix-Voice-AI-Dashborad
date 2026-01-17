@@ -42,6 +42,7 @@ interface FormData {
   timezone: string;
   outboundProvider: TelephonyProvider | '';
   outboundPhoneNumber: string;
+  concurrency: number; // Number of concurrent calls (1-10)
 }
 
 interface CreateCampaignWizardProps {
@@ -1219,6 +1220,98 @@ export default function CreateCampaignWizard({
                         </select>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* Concurrency Setting - Only for outbound campaigns */}
+                {formData.type === 'outbound' && (
+                  <div style={{
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    borderRadius: '16px',
+                    padding: '24px',
+                    border: '1px solid rgba(255, 255, 255, 0.05)'
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      marginBottom: '20px'
+                    }}>
+                      <div style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '10px',
+                        background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <Zap size={18} color="white" />
+                      </div>
+                      <div>
+                        <h4 style={{ color: 'white', fontSize: '15px', fontWeight: '600', margin: 0 }}>
+                          Call Concurrency
+                        </h4>
+                        <p style={{ color: '#6B7280', fontSize: '12px', margin: 0, marginTop: '2px' }}>
+                          How many calls to make simultaneously
+                        </p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '6px',
+                        color: '#9CA3AF', 
+                        fontSize: '12px', 
+                        marginBottom: '8px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        <Zap size={12} color="#f59e0b" />
+                        Concurrent Calls (1-10)
+                      </label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <input
+                          type="range"
+                          min="1"
+                          max="10"
+                          value={formData.concurrency}
+                          onChange={(e) => setFormData({ ...formData, concurrency: parseInt(e.target.value) })}
+                          style={{
+                            flex: 1,
+                            height: '8px',
+                            appearance: 'none',
+                            background: `linear-gradient(to right, #f59e0b 0%, #f59e0b ${(formData.concurrency - 1) * 100 / 9}%, rgba(255,255,255,0.1) ${(formData.concurrency - 1) * 100 / 9}%, rgba(255,255,255,0.1) 100%)`,
+                            borderRadius: '4px',
+                            cursor: 'pointer'
+                          }}
+                        />
+                        <div style={{
+                          padding: '10px 16px',
+                          background: 'rgba(245, 158, 11, 0.15)',
+                          border: '1px solid rgba(245, 158, 11, 0.3)',
+                          borderRadius: '10px',
+                          color: '#f59e0b',
+                          fontSize: '16px',
+                          fontWeight: '700',
+                          minWidth: '50px',
+                          textAlign: 'center'
+                        }}>
+                          {formData.concurrency}
+                        </div>
+                      </div>
+                      <p style={{ 
+                        color: '#6B7280', 
+                        fontSize: '12px', 
+                        margin: '12px 0 0 0',
+                        lineHeight: '1.5'
+                      }}>
+                        AI will make up to {formData.concurrency} call{formData.concurrency > 1 ? 's' : ''} at the same time. 
+                        When a call ends, the next contact will be called automatically.
+                      </p>
+                    </div>
                   </div>
                 )}
 

@@ -76,6 +76,7 @@ export default function CampaignSection() {
     timezone: string;
     outboundProvider: TelephonyProvider | '';
     outboundPhoneNumber: string;
+    concurrency: number;
   }>({
     name: '',
     type: 'outbound',
@@ -84,7 +85,8 @@ export default function CampaignSection() {
     scheduledTime: '',
     timezone: 'Asia/Kolkata',
     outboundProvider: '',
-    outboundPhoneNumber: ''
+    outboundPhoneNumber: '',
+    concurrency: 1
   });
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -242,6 +244,7 @@ export default function CampaignSection() {
           scheduledTime: formData.scheduledTime,
           timezone: formData.timezone
         };
+        createData.concurrency = formData.concurrency;
       }
 
       // Add outbound phone number if selected
@@ -277,7 +280,8 @@ export default function CampaignSection() {
         scheduledTime: '',
         timezone: 'UTC',
         outboundProvider: '',
-        outboundPhoneNumber: ''
+        outboundPhoneNumber: '',
+        concurrency: 1
       });
       setSelectedFile(null);
       setShowCreateModal(false);

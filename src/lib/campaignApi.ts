@@ -36,6 +36,7 @@ export interface Campaign {
   completedCalls: number;
   successfulCalls: number;
   failedCalls: number;
+  concurrency: number; // Number of concurrent calls (1-10)
   startedAt?: string;
   completedAt?: string;
   inboundPhoneNumber?: string;
@@ -55,6 +56,7 @@ export interface CreateCampaignData {
   contacts?: { name: string; phoneNumber: string }[];
   outboundProvider?: 'twilio' | 'plivo' | 'telnyx';
   outboundPhoneNumber?: string;
+  concurrency?: number; // Number of concurrent calls (1-10)
 }
 
 export interface PaginatedCampaigns {
@@ -232,5 +234,50 @@ export const triggerCampaignCalls = async (
 ): Promise<ApiResponse<TriggerCallsResponse>> => {
   return safeApiCall(() => 
     axios.post(`${API_BASE}/${campaignId}/trigger-calls`, { contactIds }, { headers: getAuthHeaders() })
+  );
+};
+
+// Campaign state interface for real-time tracking
+export interface CampaignState {
+  campaignId: string;
+  status: Campaign['status'];
+  concurrency: number;
+  activeCalls: number;
+  maxConcurrency: number;
+  isProcessing: boolean;
+  contactStats: {
+    total: number;
+    pending: number;
+    inProgress: number;
+    completed: number;
+    failed: number;
+  };
+}
+
+// Start a scheduled/draft outbound campaign immediately
+export const startCampaign = async (campaignId: string): Promise<ApiResponse> => {
+  return safeApiCall(() => 
+    axios.post(`${API_BASE}/${campaignId}/start`, {}, { headers: getAuthHeaders() })
+  );
+};
+
+// Pause an active campaign
+export const pauseCampaign = async (campaignId: string): Promise<ApiResponse> => {
+  return safeApiCall(() => 
+    axios.post(`${API_BASE}/${campaignId}/pause`, {}, { headers: getAuthHeaders() })
+  );
+};
+
+// Resume a paused campaign
+export const resumeCampaign = async (campaignId: string): Promise<ApiResponse> => {
+  return safeApiCall(() => 
+    axios.post(`${API_BASE}/${campaignId}/resume`, {}, { headers: getAuthHeaders() })
+  );
+};
+
+// Get real-time campaign state (active calls, etc.)
+export const fetchCampaignState = async (campaignId: string): Promise<ApiResponse<CampaignState>> => {
+  return safeApiCall(() => 
+    axios.get(`${API_BASE}/${campaignId}/state`, { headers: getAuthHeaders() })
   );
 };
