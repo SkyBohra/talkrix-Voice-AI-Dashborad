@@ -301,8 +301,8 @@ export default function CampaignSection() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (!file.name.match(/\.(xlsx|xls)$/)) {
-        setError('Please upload an Excel file (.xlsx or .xls)');
+      if (!file.name.match(/\.(csv|xlsx|xls)$/i)) {
+        setError('Please upload a CSV or Excel file (.csv, .xlsx or .xls)');
         return;
       }
       setSelectedFile(file);

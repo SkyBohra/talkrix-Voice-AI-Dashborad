@@ -197,6 +197,10 @@ export default function CreateCampaignWizard({
         }
         return true;
       case 5:
+        // File upload is required for outbound campaigns
+        if (formData.type === 'outbound') {
+          return selectedFile !== null;
+        }
         return true;
       default:
         return true;
@@ -1306,38 +1310,45 @@ export default function CreateCampaignWizard({
                   marginBottom: '8px'
                 }}>
                   {selectedFile ? selectedFile.name : 'Upload Contact List'}
+                  {formData.type === 'outbound' && !selectedFile && (
+                    <span style={{ color: '#EF4444', marginLeft: '4px' }}>*</span>
+                  )}
                 </h4>
                 <p style={{ color: '#6B7280', fontSize: '14px', margin: 0 }}>
                   {selectedFile 
                     ? 'Click to replace file'
-                    : 'Click or drag & drop your Excel file here'
+                    : 'Click or drag & drop your file here'
                   }
                 </p>
                 <p style={{ color: '#4B5563', fontSize: '12px', margin: '12px 0 0' }}>
-                  Supports .xlsx and .xls files with name and phone number columns
+                  Supports .csv, .xlsx and .xls files with name and phone number columns
                 </p>
               </div>
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".xlsx,.xls"
+                accept=".csv,.xlsx,.xls"
                 onChange={onFileChange}
                 style={{ display: 'none' }}
               />
 
               <p style={{ 
-                color: '#6B7280', 
+                color: formData.type === 'outbound' ? '#fbbf24' : '#6B7280', 
                 fontSize: '13px', 
                 marginTop: '20px',
                 padding: '16px',
-                background: 'rgba(255, 255, 255, 0.02)',
+                background: formData.type === 'outbound' ? 'rgba(251, 191, 36, 0.1)' : 'rgba(255, 255, 255, 0.02)',
+                border: formData.type === 'outbound' ? '1px solid rgba(251, 191, 36, 0.2)' : 'none',
                 borderRadius: '10px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '10px'
               }}>
-                <Sparkles size={16} color="#00C8FF" />
-                This step is optional. You can always add contacts later from the campaign details page.
+                <Sparkles size={16} color={formData.type === 'outbound' ? '#fbbf24' : '#00C8FF'} />
+                {formData.type === 'outbound' 
+                  ? 'Contact list is required for outbound campaigns to start calling.'
+                  : 'This step is optional. You can always add contacts later from the campaign details page.'
+                }
               </p>
             </div>
           )}
