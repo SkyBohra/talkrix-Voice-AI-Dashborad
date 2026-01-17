@@ -37,7 +37,19 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ activeSection, onSectionChange, onLogout }: SidebarProps) {
-    const [collapsed, setCollapsed] = useState(false);
+    const [collapsed, setCollapsed] = useState(() => {
+        // Initialize from localStorage if available
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('sidebarCollapsed');
+            return saved === 'true';
+        }
+        return false;
+    });
+
+    // Persist collapsed state to localStorage
+    useEffect(() => {
+        localStorage.setItem('sidebarCollapsed', String(collapsed));
+    }, [collapsed]);
 
     // Set CSS variable for sidebar width so other components can use it
     useEffect(() => {

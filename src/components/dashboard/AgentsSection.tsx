@@ -248,6 +248,204 @@ interface AgentTemplate {
 
 const agentTemplates: AgentTemplate[] = [
     {
+        id: 'scratch',
+        name: 'Start from Scratch',
+        description: 'Create a custom agent with your own system prompt and configuration.',
+        icon: '✨',
+        systemPrompt: `# Voice AI Agent - Prompt Writing Guide
+
+## 🎯 How to Write Professional Voice AI Prompts
+
+This guide will help you create effective, professional-grade system prompts for your voice AI agents.
+
+---
+
+## 📋 PROMPT STRUCTURE TEMPLATE
+
+### 1. Role & Identity (Required)
+Define WHO your agent is:
+\`\`\`
+You are [role title] at [company name]. Your name is [agent name].
+You specialize in [area of expertise].
+Your personality is [2-3 key traits].
+\`\`\`
+
+**Example:**
+"You are a Senior Customer Success Manager at TechCorp. Your name is Sarah. You specialize in helping customers optimize their software usage. Your personality is warm, patient, and solution-oriented."
+
+---
+
+### 2. Primary Objectives (Required)
+List 3-5 main goals:
+- What should the agent accomplish?
+- What outcomes matter most?
+- What actions should it take?
+
+**Example:**
+1. Resolve customer issues on the first call
+2. Collect feedback to improve services
+3. Identify upsell opportunities when appropriate
+4. Ensure customer satisfaction
+
+---
+
+### 3. Communication Guidelines (Required)
+
+#### Tone & Style
+- Conversational vs Formal
+- Empathetic vs Direct
+- Technical vs Simple language
+
+#### Key Rules
+- Use customer's name (1-2 times per conversation)
+- Keep responses concise (voice = short sentences)
+- Avoid jargon unless customer uses it first
+- Mirror customer's energy level
+- Use verbal affirmations: "I understand", "Great question"
+
+#### Voice-Specific Tips
+- Use contractions (I'm, we'll, you're)
+- Break complex info into steps
+- Ask confirmation questions
+- Pause naturally with "..." or short sentences
+
+---
+
+### 4. Conversation Flow (Recommended)
+
+**Phase 1: Opening**
+- Greet warmly
+- Introduce yourself
+- State purpose or ask how to help
+
+**Phase 2: Discovery**
+- Ask open-ended questions
+- Listen actively
+- Clarify understanding
+
+**Phase 3: Action**
+- Provide solution/information
+- Guide through process
+- Confirm next steps
+
+**Phase 4: Closing**
+- Summarize what was accomplished
+- Ask if anything else needed
+- Thank and end professionally
+
+---
+
+### 5. Handling Edge Cases (Recommended)
+
+Include scenarios like:
+- Angry/frustrated customers
+- Off-topic requests
+- Questions you can't answer
+- Technical difficulties
+- Request for human agent
+
+**Example format:**
+"If the customer asks about [scenario], respond with: [specific response]"
+
+---
+
+### 6. Information to Collect (If Applicable)
+
+Create a checklist:
+| Field | Required | How to Ask |
+|-------|----------|------------|
+| Name | Yes | "May I have your name?" |
+| Email | Yes | "What's your email?" |
+| Issue | Yes | "How can I help today?" |
+
+---
+
+### 7. Boundaries & Limitations (Required)
+
+Specify what the agent should NOT do:
+- Topics to avoid
+- Actions requiring human approval
+- Sensitive information handling
+- When to escalate
+
+**Example:**
+"Never provide specific pricing without confirmation. Always offer to transfer for billing disputes."
+
+---
+
+## ✅ BEST PRACTICES CHECKLIST
+
+☐ Keep sentences short (under 20 words for voice)
+☐ Use natural, conversational language
+☐ Include specific example responses
+☐ Define escalation triggers
+☐ Add fallback responses for confusion
+☐ Test with edge cases
+☐ Include personality traits
+☐ Specify information to collect
+☐ Define success criteria
+
+---
+
+## 🚀 QUICK START TEMPLATE
+
+Copy and customize this:
+
+\`\`\`
+# [Agent Role] AI Agent
+
+## Role & Identity
+You are [role] at [company]. Your name is [name].
+Personality: [friendly/professional/casual], [helpful/direct/consultative], [patient/energetic]
+
+## Primary Objectives
+1. [Main goal]
+2. [Secondary goal]
+3. [Additional goal]
+
+## Communication Style
+- Tone: [warm and professional]
+- Language: [simple, avoid jargon]
+- Pace: [match customer's energy]
+
+## Conversation Flow
+1. Greeting: "[Your greeting]"
+2. Discovery: Ask about [their needs]
+3. Solution: Provide [help/information]
+4. Close: Confirm [satisfaction/next steps]
+
+## Key Responses
+- If asked about [topic]: "[Response]"
+- If customer is frustrated: "[Empathetic response]"
+- If you don't know: "Let me connect you with someone who can help with that."
+
+## Information to Collect
+- Name
+- [Other required info]
+
+## Boundaries
+- Never [limitation]
+- Always [requirement]
+- Escalate if [trigger]
+\`\`\`
+
+---
+
+## 💡 PRO TIPS
+
+1. **Be Specific**: Vague instructions = inconsistent responses
+2. **Use Examples**: Show don't just tell
+3. **Test Thoroughly**: Try breaking your prompts
+4. **Iterate**: Refine based on real conversations
+5. **Keep Updated**: Adjust as needs change
+
+---
+
+Delete this guide and write your own prompt below:
+`,
+        greeting: 'Hello, how can I help you today?',
+    },
+    {
         id: 'lead-generation',
         name: 'Lead Generation',
         description: 'Qualify leads, collect contact information, and schedule follow-ups with potential customers.',
@@ -2128,14 +2326,6 @@ Remember: Patients may be anxious about their health. Your calm, professional de
 Remember: Technical issues can be frustrating. Your patience and clarity can turn a negative experience into a positive one.`,
         greeting: "Hello! What issue are you experiencing today?",
     },
-    {
-        id: 'scratch',
-        name: 'Start from Scratch',
-        description: 'Create a custom agent with your own system prompt and configuration.',
-        icon: '✨',
-        systemPrompt: 'You are a helpful assistant.',
-        greeting: 'Hello, how can I help you today?',
-    },
 ];
 
 export default function AgentsSection() {
@@ -2771,8 +2961,7 @@ export default function AgentsSection() {
     return (
         <div style={{ 
             padding: "32px 40px", 
-            maxWidth: "1400px", 
-            margin: "0 auto",
+            width: "100%",
             boxSizing: "border-box",
             position: "relative",
         }}>
@@ -3123,31 +3312,32 @@ export default function AgentsSection() {
                     style={{
                         position: "fixed",
                         top: 0,
-                        left: 0,
+                        left: "var(--sidebar-width, 260px)",
                         right: 0,
                         bottom: 0,
-                        background: "rgba(3, 7, 18, 0.9)",
-                        backdropFilter: "blur(8px)",
+                        background: "rgba(3, 7, 18, 0.95)",
+                        backdropFilter: "blur(12px)",
                         display: "flex",
                         alignItems: "flex-start",
                         justifyContent: "center",
                         zIndex: 1000,
                         overflow: "auto",
                         padding: "40px 20px",
+                        transition: "left 0.3s ease",
                     }}
                     onClick={() => setIsModalOpen(false)}
                 >
                     <div
                         style={{
-                            background: "linear-gradient(180deg, rgba(10, 15, 30, 0.98) 0%, rgba(5, 10, 20, 0.98) 100%)",
+                            background: "linear-gradient(180deg, rgba(15, 20, 35, 0.99) 0%, rgba(10, 15, 25, 0.99) 100%)",
                             backdropFilter: "blur(20px)",
-                            border: "1px solid rgba(0, 200, 255, 0.2)",
+                            border: "1px solid rgba(0, 200, 255, 0.15)",
                             borderRadius: "20px",
                             padding: "32px",
                             width: "100%",
                             maxWidth: showTemplateSelection && !editingAgent ? "900px" : "640px",
                             margin: "auto",
-                            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 200, 255, 0.1)",
+                            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 60px rgba(0, 200, 255, 0.08)",
                         }}
                         onClick={(e) => e.stopPropagation()}
                     >
@@ -3176,7 +3366,7 @@ export default function AgentsSection() {
                                     </button>
                                 </div>
 
-                                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "16px", maxHeight: "60vh", overflowY: "auto", paddingRight: "8px" }}>
+                                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px", maxHeight: "60vh", overflowY: "auto", paddingRight: "4px" }} className="template-grid-scroll">
                                     {agentTemplates.map((template) => {
                                         const getTemplateGradient = (id: TemplateType) => {
                                             switch(id) {
@@ -3975,7 +4165,7 @@ export default function AgentsSection() {
                     style={{
                         position: "fixed",
                         top: 0,
-                        left: 0,
+                        left: "var(--sidebar-width, 260px)",
                         right: 0,
                         bottom: 0,
                         background: "rgba(3, 7, 18, 0.95)",
@@ -3985,6 +4175,7 @@ export default function AgentsSection() {
                         justifyContent: "center",
                         zIndex: 1000,
                         padding: "20px",
+                        transition: "left 0.3s ease",
                     }}
                     onClick={closeTestModal}
                 >

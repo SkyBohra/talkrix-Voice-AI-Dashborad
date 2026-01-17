@@ -171,8 +171,8 @@ export default function DashboardSection() {
 
     return (
         <div style={{ 
-            padding: "32px", 
-            maxWidth: "1400px",
+            padding: "32px 40px", 
+            width: "100%",
             boxSizing: "border-box",
         }}>
             {/* Header */}

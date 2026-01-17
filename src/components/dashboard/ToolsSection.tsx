@@ -372,8 +372,7 @@ export default function ToolsSection() {
         <div 
             style={{ 
                 padding: "32px 40px", 
-                maxWidth: "1400px", 
-                margin: "0 auto",
+                width: "100%",
                 boxSizing: "border-box",
             }}
         >

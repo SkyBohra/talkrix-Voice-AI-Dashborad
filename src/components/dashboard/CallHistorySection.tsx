@@ -181,7 +181,8 @@ export default function CallHistorySection() {
     return (
         <div
             style={{
-                padding: "32px",
+                padding: "32px 40px",
+                width: "100%",
                 boxSizing: "border-box",
             }}
         >

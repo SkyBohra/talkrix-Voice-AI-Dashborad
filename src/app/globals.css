@@ -125,6 +125,25 @@
   background: rgba(0, 200, 255, 0.5);
 }
 
+/* Custom scrollbar for template grid */
+.template-grid-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.template-grid-scroll::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.template-grid-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 200, 255, 0.3);
+  border-radius: 3px;
+}
+
+.template-grid-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 200, 255, 0.5);
+}
+
 /* Ultimate Animated Background */
 .app-background {
   position: fixed;
