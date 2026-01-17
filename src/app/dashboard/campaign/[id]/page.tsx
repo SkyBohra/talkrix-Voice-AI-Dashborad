@@ -12,7 +12,7 @@ import {
 import {
     Campaign, CampaignContact, fetchCampaign, updateCampaign,
     addCampaignContacts, updateCampaignContact, deleteCampaignContact,
-    uploadCampaignContacts, fetchCampaignStats
+    uploadCampaignContacts, fetchCampaignStats, triggerCampaignCalls
 } from "@/lib/campaignApi";
 
 export default function CampaignDetailPage() {
@@ -139,17 +139,34 @@ export default function CampaignDetailPage() {
             return;
         }
 
+        // Check if outbound phone number is configured
+        if (!campaign?.outboundProvider || !campaign?.outboundPhoneNumber) {
+            alert('Outbound phone number is not configured for this campaign. Please edit the campaign settings to add an outbound phone number.');
+            return;
+        }
+
         setTriggeringCalls(true);
         try {
-            // TODO: Implement actual call triggering API
             const contactIds = Array.from(selectedContacts);
-            console.log('Triggering calls for contacts:', contactIds);
             
-            // For now, show a placeholder alert
-            alert(`Triggering calls for ${selectedContacts.size} contact(s)...`);
+            const result = await triggerCampaignCalls(campaignId, contactIds);
             
-            // Clear selection after triggering
-            setSelectedContacts(new Set());
+            if (result.success && result.data) {
+                const { summary } = result.data;
+                
+                // Show success message
+                if (summary.failed === 0) {
+                    alert(`Successfully triggered ${summary.success} call(s)!`);
+                } else {
+                    alert(`Triggered ${summary.success} call(s), ${summary.failed} failed.`);
+                }
+                
+                // Clear selection and reload campaign data
+                setSelectedContacts(new Set());
+                await loadCampaign();
+            } else {
+                alert(result.error || 'Failed to trigger calls. Please try again.');
+            }
         } catch (error) {
             console.error('Error triggering calls:', error);
             alert('Failed to trigger calls. Please try again.');
@@ -293,9 +310,15 @@ export default function CampaignDetailPage() {
                                 </div>
                                 <div>
                                     <h1 style={{ fontSize: "26px", fontWeight: "700", color: "white", marginBottom: "4px" }}>{campaign.name}</h1>
-                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
                                         <span style={{ fontSize: "12px", padding: "4px 10px", borderRadius: "6px", background: campaign.type === "outbound" ? "rgba(0, 200, 255, 0.15)" : campaign.type === "inbound" ? "rgba(34, 197, 94, 0.15)" : "rgba(251, 191, 36, 0.15)", color: campaign.type === "outbound" ? "#00C8FF" : campaign.type === "inbound" ? "#22c55e" : "#fbbf24", textTransform: "capitalize" }}>{campaign.type}</span>
                                         <span style={{ fontSize: "14px", color: "rgba(255, 255, 255, 0.5)" }}>Agent: {campaign.agentName || "Not assigned"}</span>
+                                        {(campaign.type === "outbound" || campaign.type === "ondemand") && campaign.outboundPhoneNumber && (
+                                            <span style={{ fontSize: "12px", padding: "4px 10px", borderRadius: "6px", background: "rgba(120, 0, 255, 0.15)", color: "#a855f7", display: "flex", alignItems: "center", gap: "4px" }}>
+                                                <Phone size={12} />
+                                                {campaign.outboundPhoneNumber} ({campaign.outboundProvider})
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             </div>

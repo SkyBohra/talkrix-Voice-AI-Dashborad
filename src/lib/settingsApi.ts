@@ -146,3 +146,36 @@ export const getApiKey = async (): Promise<{ success: boolean; data?: { apiKey: 
     };
   }
 };
+
+/**
+ * Phone number with provider info
+ */
+export interface PhoneNumberOption {
+  provider: TelephonyProvider;
+  phoneNumber: string;
+  isConfigured: boolean;
+}
+
+export interface AvailablePhoneNumbers {
+  phoneNumbers: PhoneNumberOption[];
+  configuredProviders: TelephonyProvider[];
+  totalNumbers: number;
+  autoSelect: PhoneNumberOption | null;
+}
+
+/**
+ * Get available phone numbers for outbound calls
+ */
+export const getAvailablePhoneNumbers = async (): Promise<{ success: boolean; data?: AvailablePhoneNumbers; error?: string }> => {
+  try {
+    const res = await axios.get(`${API_BASE}/settings/phone-numbers`, {
+      headers: getAuthHeaders(),
+    });
+    return normalizeResponse(res);
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err.response?.data?.error || err.message || 'Failed to fetch phone numbers',
+    };
+  }
+};

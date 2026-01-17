@@ -11,6 +11,7 @@ import {
   uploadCampaignContacts
 } from '@/lib/campaignApi';
 import { fetchAgentsByUser } from '@/lib/agentApi';
+import { getAvailablePhoneNumbers, PhoneNumberOption, TelephonyProvider } from '@/lib/settingsApi';
 import Pagination from '@/components/ui/Pagination';
 
 // Type alias for campaign types
@@ -51,6 +52,11 @@ export default function CampaignSection() {
   const [creating, setCreating] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
 
+  // Phone number state
+  const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumberOption[]>([]);
+  const [configuredProviders, setConfiguredProviders] = useState<TelephonyProvider[]>([]);
+  const [loadingPhones, setLoadingPhones] = useState(false);
+
   // Pagination state
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -65,13 +71,17 @@ export default function CampaignSection() {
     scheduledDate: string;
     scheduledTime: string;
     timezone: string;
+    outboundProvider: TelephonyProvider | '';
+    outboundPhoneNumber: string;
   }>({
     name: '',
     type: 'outbound',
     agentId: '',
     scheduledDate: '',
     scheduledTime: '',
-    timezone: 'UTC'
+    timezone: 'UTC',
+    outboundProvider: '',
+    outboundPhoneNumber: ''
   });
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -84,35 +94,111 @@ export default function CampaignSection() {
     return '';
   };
 
+  const getToken = () => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('token') || '';
+    }
+    return '';
+  };
+
+  // Check authentication on mount
+  useEffect(() => {
+    const token = getToken();
+    if (!token) {
+      router.push('/login');
+    }
+  }, [router]);
+
+  // Load available phone numbers
+  const loadPhoneNumbers = useCallback(async () => {
+    try {
+      setLoadingPhones(true);
+      const res = await getAvailablePhoneNumbers();
+      if (res.success && res.data) {
+        setPhoneNumbers(res.data.phoneNumbers || []);
+        setConfiguredProviders(res.data.configuredProviders || []);
+        
+        // Auto-select if only one phone number is available
+        if (res.data.autoSelect) {
+          setFormData(prev => ({
+            ...prev,
+            outboundProvider: res.data!.autoSelect!.provider,
+            outboundPhoneNumber: res.data!.autoSelect!.phoneNumber
+          }));
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load phone numbers:', err);
+    } finally {
+      setLoadingPhones(false);
+    }
+  }, []);
+
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       const userId = getUserId();
+      const token = getToken();
+      
+      // Don't make API calls if not authenticated
+      if (!token) {
+        router.push('/login');
+        return;
+      }
       
       const [campaignsRes, agentsRes] = await Promise.all([
-        fetchCampaigns({ page, limit: itemsPerPage }),
-        fetchAgentsByUser(userId)
+        fetchCampaigns({ page, limit: itemsPerPage }).catch(err => {
+          console.error('Failed to fetch campaigns:', err);
+          // Check if it's a 401 error
+          if (err?.response?.status === 401) {
+            router.push('/login');
+          }
+          return { success: false, data: null, error: err?.response?.data?.error };
+        }),
+        fetchAgentsByUser(userId).catch(err => {
+          console.error('Failed to fetch agents:', err);
+          if (err?.response?.status === 401) {
+            router.push('/login');
+          }
+          return { success: false, data: null };
+        })
       ]);
       
       if (campaignsRes.success && campaignsRes.data) {
         setCampaigns(campaignsRes.data.campaigns || []);
         setTotalPages(campaignsRes.data.pages || 1);
         setTotalItems(campaignsRes.data.total || 0);
+      } else if (!campaignsRes.success) {
+        if (campaignsRes.error === 'Unauthorized') {
+          router.push('/login');
+          return;
+        }
+        setError('Failed to load campaigns. Please check if the server is running.');
       }
       if (agentsRes.success) {
         setAgents(agentsRes.data || []);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load data:', err);
-      setError('Failed to load campaigns');
+      if (err?.response?.status === 401) {
+        router.push('/login');
+        return;
+      }
+      setError('Failed to load campaigns. Please check your connection.');
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, [page, router]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Load phone numbers separately (non-blocking)
+  useEffect(() => {
+    loadPhoneNumbers();
+  }, [loadPhoneNumbers]);
 
   const handleCreateCampaign = async () => {
     if (!formData.name.trim()) {
@@ -126,6 +212,13 @@ export default function CampaignSection() {
     if (formData.type === 'outbound') {
       if (!formData.scheduledDate || !formData.scheduledTime) {
         setError('Schedule is required for outbound campaigns');
+        return;
+      }
+    }
+    // Validate phone number selection for outbound/ondemand campaigns
+    if ((formData.type === 'outbound' || formData.type === 'ondemand') && phoneNumbers.length > 0) {
+      if (!formData.outboundPhoneNumber) {
+        setError('Please select an outbound phone number');
         return;
       }
     }
@@ -146,6 +239,12 @@ export default function CampaignSection() {
           scheduledTime: formData.scheduledTime,
           timezone: formData.timezone
         };
+      }
+
+      // Add outbound phone number if selected
+      if (formData.outboundProvider && formData.outboundPhoneNumber) {
+        createData.outboundProvider = formData.outboundProvider as 'twilio' | 'plivo' | 'telnyx';
+        createData.outboundPhoneNumber = formData.outboundPhoneNumber;
       }
 
       const response = await createCampaign(createData);
@@ -169,13 +268,17 @@ export default function CampaignSection() {
         agentId: '',
         scheduledDate: '',
         scheduledTime: '',
-        timezone: 'UTC'
+        timezone: 'UTC',
+        outboundProvider: '',
+        outboundPhoneNumber: ''
       });
       setSelectedFile(null);
       setShowCreateModal(false);
 
       // Reload campaigns
       await loadData();
+      // Reload phone numbers in case auto-select is needed for next campaign
+      await loadPhoneNumbers();
     } catch (err: unknown) {
       console.error('Failed to create campaign:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to create campaign';
@@ -646,6 +749,152 @@ export default function CampaignSection() {
                       ))}
                     </select>
                   </div>
+                </div>
+              )}
+
+              {/* Outbound Phone Number Selection (for outbound and ondemand campaigns) */}
+              {(formData.type === 'outbound' || formData.type === 'ondemand') && (
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', color: '#9CA3AF', fontSize: '14px', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Phone size={14} />
+                      Outbound Phone Number {phoneNumbers.length > 0 ? '*' : ''}
+                    </div>
+                  </label>
+                  
+                  {loadingPhones ? (
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '8px', 
+                      padding: '12px 16px',
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      borderRadius: '8px',
+                      color: '#9CA3AF'
+                    }}>
+                      <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                      Loading phone numbers...
+                    </div>
+                  ) : phoneNumbers.length === 0 ? (
+                    <div style={{
+                      padding: '12px 16px',
+                      background: 'rgba(251, 191, 36, 0.1)',
+                      border: '1px solid rgba(251, 191, 36, 0.3)',
+                      borderRadius: '8px',
+                      color: '#fbbf24',
+                      fontSize: '13px'
+                    }}>
+                      No phone numbers configured. Please add phone numbers in Settings → Telephony to make outbound calls.
+                    </div>
+                  ) : phoneNumbers.length === 1 ? (
+                    // Auto-selected single phone number
+                    <div style={{
+                      padding: '12px 16px',
+                      background: 'rgba(34, 197, 94, 0.1)',
+                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      borderRadius: '8px',
+                      color: '#22c55e',
+                      fontSize: '14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      <Phone size={16} />
+                      <span>{phoneNumbers[0].phoneNumber}</span>
+                      <span style={{ 
+                        fontSize: '11px', 
+                        padding: '2px 8px', 
+                        background: 'rgba(34, 197, 94, 0.2)', 
+                        borderRadius: '4px',
+                        textTransform: 'capitalize'
+                      }}>
+                        {phoneNumbers[0].provider}
+                      </span>
+                    </div>
+                  ) : (
+                    // Multiple phone numbers - show selection
+                    <div>
+                      {/* Provider selection if multiple providers */}
+                      {configuredProviders.length > 1 && (
+                        <div style={{ marginBottom: '12px' }}>
+                          <span style={{ color: '#6B7280', fontSize: '12px', marginBottom: '6px', display: 'block' }}>
+                            Select Provider
+                          </span>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            {configuredProviders.map((provider) => (
+                              <button
+                                key={provider}
+                                type="button"
+                                onClick={() => {
+                                  setFormData({ 
+                                    ...formData, 
+                                    outboundProvider: provider,
+                                    outboundPhoneNumber: '' 
+                                  });
+                                }}
+                                style={{
+                                  flex: 1,
+                                  padding: '10px',
+                                  background: formData.outboundProvider === provider
+                                    ? 'linear-gradient(135deg, #00C8FF 0%, #7800FF 100%)'
+                                    : 'rgba(255, 255, 255, 0.05)',
+                                  border: formData.outboundProvider === provider
+                                    ? 'none'
+                                    : '1px solid rgba(255, 255, 255, 0.1)',
+                                  borderRadius: '8px',
+                                  color: '#FFFFFF',
+                                  fontSize: '13px',
+                                  fontWeight: formData.outboundProvider === provider ? '600' : '400',
+                                  cursor: 'pointer',
+                                  textTransform: 'capitalize'
+                                }}
+                              >
+                                {provider}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Phone number selection */}
+                      <select
+                        value={formData.outboundPhoneNumber}
+                        onChange={(e) => {
+                          const selectedPhone = phoneNumbers.find(p => p.phoneNumber === e.target.value);
+                          setFormData({ 
+                            ...formData, 
+                            outboundPhoneNumber: e.target.value,
+                            outboundProvider: selectedPhone?.provider || formData.outboundProvider
+                          });
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '8px',
+                          color: '#FFFFFF',
+                          fontSize: '14px',
+                          outline: 'none',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <option value="" style={{ background: '#1A1A2E' }}>Select a phone number</option>
+                        {phoneNumbers
+                          .filter(p => !formData.outboundProvider || p.provider === formData.outboundProvider)
+                          .map((phone, idx) => (
+                            <option 
+                              key={`${phone.provider}-${phone.phoneNumber}-${idx}`} 
+                              value={phone.phoneNumber} 
+                              style={{ background: '#1A1A2E' }}
+                            >
+                              {phone.phoneNumber} ({phone.provider})
+                            </option>
+                          ))
+                        }
+                      </select>
+                    </div>
+                  )}
                 </div>
               )}
 

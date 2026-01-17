@@ -59,6 +59,8 @@ export interface Campaign {
   startedAt?: string;
   completedAt?: string;
   inboundPhoneNumber?: string;
+  outboundProvider?: 'twilio' | 'plivo' | 'telnyx';
+  outboundPhoneNumber?: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -71,6 +73,8 @@ export interface CreateCampaignData {
   description?: string;
   schedule?: CampaignSchedule;
   contacts?: { name: string; phoneNumber: string }[];
+  outboundProvider?: 'twilio' | 'plivo' | 'telnyx';
+  outboundPhoneNumber?: string;
 }
 
 export interface PaginatedCampaigns {
@@ -262,4 +266,46 @@ export const updateContactCallStatus = async (
     }
   );
   return normalizeResponse(res);
+};
+
+// Trigger call result interface
+export interface TriggerCallResult {
+  contactId: string;
+  contactName: string;
+  phoneNumber: string;
+  success: boolean;
+  callId?: string;
+  joinUrl?: string;
+  error?: string;
+}
+
+export interface TriggerCallsResponse {
+  results: TriggerCallResult[];
+  summary: {
+    total: number;
+    success: number;
+    failed: number;
+  };
+}
+
+// Trigger calls for on-demand campaign contacts
+export const triggerCampaignCalls = async (
+  campaignId: string,
+  contactIds: string[]
+): Promise<{ success: boolean; data?: TriggerCallsResponse; message?: string; error?: string }> => {
+  try {
+    const res = await axios.post(
+      `${API_BASE}/${campaignId}/trigger-calls`,
+      { contactIds },
+      {
+        headers: getAuthHeaders(),
+      }
+    );
+    return normalizeResponse(res);
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err.response?.data?.error || err.message || 'Failed to trigger calls',
+    };
+  }
 };
