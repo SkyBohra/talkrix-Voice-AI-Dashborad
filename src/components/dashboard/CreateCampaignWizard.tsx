@@ -117,11 +117,44 @@ export default function CreateCampaignWizard({
   const [currentStep, setCurrentStep] = useState(1);
   const [animationDirection, setAnimationDirection] = useState<'next' | 'prev'>('next');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [sidebarWidth, setSidebarWidth] = useState(260);
+
+  // Track sidebar width changes
+  useEffect(() => {
+    const updateSidebarWidth = () => {
+      const saved = localStorage.getItem('sidebarCollapsed');
+      setSidebarWidth(saved === 'true' ? 80 : 260);
+    };
+
+    // Initial check
+    updateSidebarWidth();
+
+    // Listen for storage changes (when sidebar toggles)
+    window.addEventListener('storage', updateSidebarWidth);
+    
+    // Also check on CSS variable changes via MutationObserver
+    const observer = new MutationObserver(() => {
+      const width = getComputedStyle(document.documentElement).getPropertyValue('--sidebar-width');
+      if (width) {
+        setSidebarWidth(parseInt(width) || 260);
+      }
+    });
+    
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+
+    return () => {
+      window.removeEventListener('storage', updateSidebarWidth);
+      observer.disconnect();
+    };
+  }, []);
 
   // Reset step when modal opens
   useEffect(() => {
     if (isOpen) {
       setCurrentStep(1);
+      // Re-check sidebar width when modal opens
+      const saved = localStorage.getItem('sidebarCollapsed');
+      setSidebarWidth(saved === 'true' ? 80 : 260);
     }
   }, [isOpen]);
 
@@ -193,16 +226,17 @@ export default function CreateCampaignWizard({
     <div style={{
       position: 'fixed',
       top: 0,
-      left: 0,
+      left: `${sidebarWidth}px`,
       right: 0,
       bottom: 0,
-      background: 'rgba(0, 0, 0, 0.9)',
-      backdropFilter: 'blur(8px)',
+      background: 'radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0, 200, 255, 0.12), transparent), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(120, 0, 255, 0.1), transparent), linear-gradient(180deg, rgba(3, 7, 18, 0.97) 0%, rgba(10, 15, 26, 0.98) 100%)',
+      backdropFilter: 'blur(12px)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       zIndex: 1000,
-      animation: 'fadeIn 0.3s ease-out'
+      animation: 'fadeIn 0.3s ease-out',
+      transition: 'left 0.3s ease'
     }}>
       <style>{`
         @keyframes fadeIn {
@@ -233,6 +267,10 @@ export default function CreateCampaignWizard({
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
+        @keyframes auroraGlow {
+          0%, 100% { opacity: 0.3; }
+          50% { opacity: 0.5; }
+        }
         .wizard-content {
           animation: ${animationDirection === 'next' ? 'slideInFromRight' : 'slideInFromLeft'} 0.4s ease-out;
         }
@@ -260,25 +298,46 @@ export default function CreateCampaignWizard({
         }
       `}</style>
 
+      {/* Dot Pattern Overlay */}
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        backgroundImage: 'radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px)',
+        backgroundSize: '24px 24px',
+        pointerEvents: 'none'
+      }} />
+
       {/* Main Container */}
       <div style={{
-        background: 'linear-gradient(180deg, #0f0f1e 0%, #1a1a2e 100%)',
-        borderRadius: '24px',
+        background: 'linear-gradient(180deg, rgba(10, 15, 26, 0.98) 0%, rgba(5, 10, 20, 0.99) 100%)',
+        borderRadius: '20px',
         width: '100%',
         maxWidth: '800px',
         maxHeight: '90vh',
         overflow: 'hidden',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        boxShadow: '0 0 100px rgba(0, 200, 255, 0.1), 0 0 40px rgba(120, 0, 255, 0.1)',
+        border: '1px solid rgba(0, 200, 255, 0.15)',
+        boxShadow: '0 0 80px rgba(0, 200, 255, 0.08), 0 0 40px rgba(120, 0, 255, 0.06), 0 25px 50px rgba(0, 0, 0, 0.5)',
         display: 'flex',
-        flexDirection: 'column'
+        flexDirection: 'column',
+        position: 'relative'
       }}>
+        {/* Inner glow effect */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '150px',
+          background: 'linear-gradient(180deg, rgba(0, 200, 255, 0.04) 0%, transparent 100%)',
+          pointerEvents: 'none',
+          borderRadius: '20px 20px 0 0'
+        }} />
         {/* Header with gradient accent */}
         <div style={{
           position: 'relative',
-          padding: '24px 32px',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-          background: 'linear-gradient(180deg, rgba(0, 200, 255, 0.05) 0%, transparent 100%)'
+          padding: '20px 28px',
+          borderBottom: '1px solid rgba(0, 200, 255, 0.1)',
+          background: 'transparent'
         }}>
           {/* Close button */}
           <button
@@ -342,9 +401,9 @@ export default function CreateCampaignWizard({
 
         {/* Progress Steps */}
         <div style={{
-          padding: '20px 32px',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-          background: 'rgba(0, 0, 0, 0.2)'
+          padding: '16px 28px',
+          borderBottom: '1px solid rgba(0, 200, 255, 0.08)',
+          background: 'rgba(0, 0, 0, 0.15)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             {STEPS.map((step, index) => {
@@ -361,7 +420,7 @@ export default function CreateCampaignWizard({
                       alignItems: 'center',
                       gap: '8px',
                       cursor: isCompleted ? 'pointer' : 'default',
-                      opacity: isActive || isCompleted ? 1 : 0.4,
+                      opacity: isActive || isCompleted ? 1 : 0.7,
                       transition: 'all 0.3s'
                     }}
                     onClick={() => isCompleted && setCurrentStep(step.id)}
@@ -390,9 +449,9 @@ export default function CreateCampaignWizard({
                       )}
                     </div>
                     <span style={{
-                      fontSize: '11px',
+                      fontSize: '12px',
                       fontWeight: isActive ? '600' : '500',
-                      color: isActive ? '#00C8FF' : isCompleted ? '#22c55e' : '#6B7280',
+                      color: isActive ? '#00C8FF' : isCompleted ? '#22c55e' : '#9CA3AF',
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em'
                     }}>
@@ -422,21 +481,21 @@ export default function CreateCampaignWizard({
         <div style={{
           flex: 1,
           overflow: 'auto',
-          padding: '32px',
+          padding: '24px 32px',
         }}>
           {/* Step Title */}
-          <div key={currentStep} className="wizard-content" style={{ marginBottom: '24px' }}>
+          <div key={currentStep} className="wizard-content" style={{ marginBottom: '20px' }}>
             <h3 style={{
-              fontSize: '24px',
+              fontSize: '20px',
               fontWeight: '700',
               color: 'white',
               margin: 0,
-              marginBottom: '8px',
+              marginBottom: '6px',
               letterSpacing: '-0.02em'
             }}>
               {title}
             </h3>
-            <p style={{ color: '#6B7280', fontSize: '14px', margin: 0 }}>
+            <p style={{ color: '#6B7280', fontSize: '13px', margin: 0 }}>
               {subtitle}
             </p>
           </div>
@@ -1201,9 +1260,9 @@ export default function CreateCampaignWizard({
 
         {/* Footer with Navigation */}
         <div style={{
-          padding: '20px 32px',
-          borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-          background: 'rgba(0, 0, 0, 0.3)',
+          padding: '16px 28px',
+          borderTop: '1px solid rgba(0, 200, 255, 0.08)',
+          background: 'rgba(0, 0, 0, 0.2)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center'
@@ -1216,9 +1275,9 @@ export default function CreateCampaignWizard({
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              padding: '12px 20px',
+              padding: '10px 18px',
               background: 'transparent',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              border: '1px solid rgba(0, 200, 255, 0.15)',
               borderRadius: '10px',
               color: currentStep === 1 ? '#4B5563' : '#9CA3AF',
               fontSize: '14px',
@@ -1229,12 +1288,12 @@ export default function CreateCampaignWizard({
             }}
             onMouseEnter={(e) => {
               if (currentStep !== 1) {
-                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                e.currentTarget.style.borderColor = 'rgba(0, 200, 255, 0.3)';
                 e.currentTarget.style.color = '#FFFFFF';
               }
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+              e.currentTarget.style.borderColor = 'rgba(0, 200, 255, 0.15)';
               e.currentTarget.style.color = '#9CA3AF';
             }}
           >
