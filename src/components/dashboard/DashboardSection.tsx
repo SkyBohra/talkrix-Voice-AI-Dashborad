@@ -1,16 +1,23 @@
 "use client";
 
-import { Phone, PhoneCall, PhoneOff, Clock, TrendingUp, Users } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Phone, PhoneCall, PhoneOff, Clock, TrendingUp, Bot, RefreshCw, Loader2 } from "lucide-react";
+import { 
+    fetchDashboard, 
+    DashboardResponse, 
+    RecentCall,
+    TrendData 
+} from "@/lib/dashboardApi";
 
 interface StatCardProps {
     title: string;
     value: string | number;
     icon: React.ReactNode;
-    trend?: string;
-    trendUp?: boolean;
+    trend?: TrendData;
+    loading?: boolean;
 }
 
-function StatCard({ title, value, icon, trend, trendUp }: StatCardProps) {
+function StatCard({ title, value, icon, trend, loading }: StatCardProps) {
     return (
         <div
             style={{
@@ -22,17 +29,18 @@ function StatCard({ title, value, icon, trend, trendUp }: StatCardProps) {
                 flexDirection: "column",
                 gap: "16px",
                 transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                minHeight: "140px",
             }}
             onMouseEnter={(e) => {
-                e.currentTarget.style.background = "rgba(0, 200, 255, 0.15)";
+                e.currentTarget.style.background = "rgba(0, 200, 255, 0.08)";
                 e.currentTarget.style.borderColor = "rgba(0, 200, 255, 0.3)";
-                e.currentTarget.style.transform = "translateY(-4px) scale(1.01)";
-                e.currentTarget.style.boxShadow = "0 12px 24px rgba(0, 0, 0, 0.3)";
+                e.currentTarget.style.transform = "translateY(-2px)";
+                e.currentTarget.style.boxShadow = "0 8px 20px rgba(0, 0, 0, 0.25)";
             }}
             onMouseLeave={(e) => {
                 e.currentTarget.style.background = "rgba(255, 255, 255, 0.03)";
                 e.currentTarget.style.borderColor = "rgba(0, 200, 255, 0.15)";
-                e.currentTarget.style.transform = "scale(1)";
+                e.currentTarget.style.transform = "translateY(0)";
                 e.currentTarget.style.boxShadow = "none";
             }}
         >
@@ -52,7 +60,7 @@ function StatCard({ title, value, icon, trend, trendUp }: StatCardProps) {
                 >
                     {icon}
                 </div>
-                {trend && (
+                {trend && trend.change > 0 && (
                     <div
                         style={{
                             display: "flex",
@@ -60,14 +68,14 @@ function StatCard({ title, value, icon, trend, trendUp }: StatCardProps) {
                             gap: "4px",
                             fontSize: "12px",
                             fontWeight: "500",
-                            color: trendUp ? "#22c55e" : "#ef4444",
-                            background: trendUp ? "rgba(34, 197, 94, 0.1)" : "rgba(239, 68, 68, 0.1)",
+                            color: trend.isUp ? "#22c55e" : "#ef4444",
+                            background: trend.isUp ? "rgba(34, 197, 94, 0.1)" : "rgba(239, 68, 68, 0.1)",
                             padding: "4px 8px",
                             borderRadius: "20px",
                         }}
                     >
-                        <TrendingUp size={12} style={{ transform: trendUp ? "none" : "rotate(180deg)" }} />
-                        {trend}
+                        <TrendingUp size={12} style={{ transform: trend.isUp ? "none" : "rotate(180deg)" }} />
+                        {trend.change}%
                     </div>
                 )}
             </div>
@@ -75,27 +83,29 @@ function StatCard({ title, value, icon, trend, trendUp }: StatCardProps) {
                 <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.5)", marginBottom: "4px" }}>
                     {title}
                 </p>
-                <p style={{ fontSize: "32px", fontWeight: "700", color: "white", letterSpacing: "-1px" }}>
-                    {value}
-                </p>
+                {loading ? (
+                    <div style={{ height: "38px", display: "flex", alignItems: "center" }}>
+                        <Loader2 size={24} style={{ animation: "spin 1s linear infinite", color: "#00C8FF" }} />
+                    </div>
+                ) : (
+                    <p style={{ fontSize: "28px", fontWeight: "700", color: "white", letterSpacing: "-0.5px" }}>
+                        {value}
+                    </p>
+                )}
             </div>
         </div>
     );
 }
 
-interface RecentCallProps {
-    caller: string;
-    duration: string;
-    time: string;
-    status: "completed" | "missed" | "ongoing";
-}
-
-function RecentCallItem({ caller, duration, time, status }: RecentCallProps) {
-    const statusColors = {
+function RecentCallItem({ call }: { call: RecentCall }) {
+    const statusColors: Record<string, { bg: string; color: string }> = {
         completed: { bg: "rgba(34, 197, 94, 0.1)", color: "#22c55e" },
         missed: { bg: "rgba(255, 60, 100, 0.1)", color: "#FF3C64" },
         ongoing: { bg: "rgba(0, 200, 255, 0.1)", color: "#00C8FF" },
+        failed: { bg: "rgba(239, 68, 68, 0.1)", color: "#ef4444" },
     };
+
+    const colors = statusColors[call.status] || statusColors.failed;
 
     return (
         <div
@@ -103,10 +113,19 @@ function RecentCallItem({ caller, duration, time, status }: RecentCallProps) {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                padding: "16px",
-                borderRadius: "12px",
+                padding: "14px 16px",
+                borderRadius: "10px",
                 background: "rgba(5, 15, 30, 0.5)",
-                border: "1px solid rgba(0, 200, 255, 0.1)",
+                border: "1px solid rgba(0, 200, 255, 0.08)",
+                transition: "all 0.2s ease",
+            }}
+            onMouseEnter={(e) => {
+                e.currentTarget.style.background = "rgba(0, 200, 255, 0.05)";
+                e.currentTarget.style.borderColor = "rgba(0, 200, 255, 0.15)";
+            }}
+            onMouseLeave={(e) => {
+                e.currentTarget.style.background = "rgba(5, 15, 30, 0.5)";
+                e.currentTarget.style.borderColor = "rgba(0, 200, 255, 0.08)";
             }}
         >
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -115,36 +134,36 @@ function RecentCallItem({ caller, duration, time, status }: RecentCallProps) {
                         width: "40px",
                         height: "40px",
                         borderRadius: "10px",
-                        background: statusColors[status].bg,
+                        background: colors.bg,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        color: statusColors[status].color,
+                        color: colors.color,
                     }}
                 >
-                    {status === "completed" ? (
+                    {call.status === "completed" ? (
                         <PhoneCall size={18} />
-                    ) : status === "missed" ? (
+                    ) : call.status === "missed" ? (
                         <PhoneOff size={18} />
                     ) : (
                         <Phone size={18} />
                     )}
                 </div>
                 <div>
-                    <p style={{ fontSize: "14px", fontWeight: "500", color: "white" }}>{caller}</p>
-                    <p style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.5)" }}>{time}</p>
+                    <p style={{ fontSize: "14px", fontWeight: "500", color: "white" }}>{call.caller}</p>
+                    <p style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.5)" }}>{call.time}</p>
                 </div>
             </div>
             <div style={{ textAlign: "right" }}>
-                <p style={{ fontSize: "14px", fontWeight: "500", color: "white" }}>{duration}</p>
+                <p style={{ fontSize: "14px", fontWeight: "500", color: "white" }}>{call.duration}</p>
                 <p
                     style={{
                         fontSize: "12px",
-                        color: statusColors[status].color,
+                        color: colors.color,
                         textTransform: "capitalize",
                     }}
                 >
-                    {status}
+                    {call.status}
                 </p>
             </div>
         </div>
@@ -152,22 +171,41 @@ function RecentCallItem({ caller, duration, time, status }: RecentCallProps) {
 }
 
 export default function DashboardSection() {
-    const stats = [
-        { title: "Total Calls", value: "1,284", icon: <Phone size={24} />, trend: "+12.5%", trendUp: true },
-        { title: "Connected Calls", value: "1,156", icon: <PhoneCall size={24} />, trend: "+8.2%", trendUp: true },
-        { title: "Missed Calls", value: "128", icon: <PhoneOff size={24} />, trend: "-3.1%", trendUp: true },
-        { title: "Avg. Duration", value: "4:32", icon: <Clock size={24} />, trend: "+0.8%", trendUp: true },
-        { title: "Active Agents", value: "12", icon: <Users size={24} /> },
-        { title: "Success Rate", value: "90%", icon: <TrendingUp size={24} />, trend: "+2.3%", trendUp: true },
-    ];
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [period, setPeriod] = useState<'today' | 'week' | 'month'>('week');
+    const [data, setData] = useState<DashboardResponse | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
-    const recentCalls: RecentCallProps[] = [
-        { caller: "John Smith", duration: "5:23", time: "2 mins ago", status: "completed" },
-        { caller: "Sarah Johnson", duration: "0:00", time: "15 mins ago", status: "missed" },
-        { caller: "Mike Wilson", duration: "3:45", time: "32 mins ago", status: "completed" },
-        { caller: "Emily Davis", duration: "8:12", time: "1 hour ago", status: "completed" },
-        { caller: "Active User", duration: "2:15", time: "Now", status: "ongoing" },
-    ];
+    const loadDashboard = useCallback(async (showRefresh = false) => {
+        if (showRefresh) setRefreshing(true);
+        else setLoading(true);
+        
+        setError(null);
+
+        try {
+            const result = await fetchDashboard(period);
+            if (result.success && result.data) {
+                setData(result.data);
+            } else {
+                setError(result.message || 'Failed to load dashboard');
+            }
+        } catch (err) {
+            setError('Failed to load dashboard');
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    }, [period]);
+
+    useEffect(() => {
+        loadDashboard();
+    }, [loadDashboard]);
+
+    const formatNumber = (num: number): string => num.toLocaleString();
+
+    const stats = data?.stats;
+    const trends = data?.trends;
 
     return (
         <div style={{ 
@@ -175,28 +213,148 @@ export default function DashboardSection() {
             width: "100%",
             boxSizing: "border-box",
         }}>
+            <style>{`
+                @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+            `}</style>
+
             {/* Header */}
-            <div style={{ marginBottom: "32px" }}>
-                <h1 style={{ fontSize: "28px", fontWeight: "700", color: "white", marginBottom: "8px" }}>
-                    Dashboard
-                </h1>
-                <p style={{ fontSize: "14px", color: "rgba(255, 255, 255, 0.5)" }}>
-                    Welcome back! Here's your overview.
-                </p>
+            <div style={{ 
+                marginBottom: "28px", 
+                display: "flex", 
+                justifyContent: "space-between", 
+                alignItems: "flex-start",
+                flexWrap: "wrap",
+                gap: "16px",
+            }}>
+                <div>
+                    <h1 style={{ fontSize: "28px", fontWeight: "700", color: "white", marginBottom: "6px" }}>
+                        Dashboard
+                    </h1>
+                    <p style={{ fontSize: "14px", color: "rgba(255, 255, 255, 0.5)" }}>
+                        Welcome back! Here&apos;s your overview.
+                    </p>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    {/* Period Selector */}
+                    <div style={{ 
+                        display: "flex", 
+                        background: "rgba(255, 255, 255, 0.03)",
+                        borderRadius: "8px",
+                        padding: "4px",
+                        border: "1px solid rgba(0, 200, 255, 0.1)",
+                    }}>
+                        {(['today', 'week', 'month'] as const).map((p) => (
+                            <button
+                                key={p}
+                                onClick={() => setPeriod(p)}
+                                style={{
+                                    padding: "6px 14px",
+                                    borderRadius: "6px",
+                                    border: "none",
+                                    background: period === p ? "rgba(0, 200, 255, 0.15)" : "transparent",
+                                    color: period === p ? "#00C8FF" : "rgba(255, 255, 255, 0.5)",
+                                    fontSize: "13px",
+                                    fontWeight: "500",
+                                    cursor: "pointer",
+                                    textTransform: "capitalize",
+                                    transition: "all 0.2s ease",
+                                }}
+                            >
+                                {p}
+                            </button>
+                        ))}
+                    </div>
+                    {/* Refresh Button */}
+                    <button
+                        onClick={() => loadDashboard(true)}
+                        disabled={refreshing}
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            padding: "8px 14px",
+                            borderRadius: "8px",
+                            border: "1px solid rgba(0, 200, 255, 0.2)",
+                            background: "transparent",
+                            color: "#00C8FF",
+                            fontSize: "13px",
+                            cursor: refreshing ? "not-allowed" : "pointer",
+                            opacity: refreshing ? 0.6 : 1,
+                        }}
+                    >
+                        <RefreshCw size={14} style={{ animation: refreshing ? "spin 1s linear infinite" : "none" }} />
+                    </button>
+                </div>
             </div>
+
+            {/* Error State */}
+            {error && (
+                <div style={{
+                    padding: "16px",
+                    background: "rgba(239, 68, 68, 0.1)",
+                    border: "1px solid rgba(239, 68, 68, 0.3)",
+                    borderRadius: "10px",
+                    marginBottom: "24px",
+                    color: "#ef4444",
+                    fontSize: "14px",
+                }}>
+                    {error}
+                </div>
+            )}
 
             {/* Stats Grid */}
             <div
                 style={{
                     display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-                    gap: "20px",
-                    marginBottom: "32px",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                    gap: "16px",
+                    marginBottom: "28px",
                 }}
             >
-                {stats.map((stat, index) => (
-                    <StatCard key={index} {...stat} />
-                ))}
+                <StatCard 
+                    title="Total Calls" 
+                    value={stats ? formatNumber(stats.totalCalls) : "0"} 
+                    icon={<Phone size={22} />} 
+                    trend={trends?.calls}
+                    loading={loading}
+                />
+                <StatCard 
+                    title="Completed" 
+                    value={stats ? formatNumber(stats.completedCalls) : "0"} 
+                    icon={<PhoneCall size={22} />} 
+                    trend={trends?.completed}
+                    loading={loading}
+                />
+                <StatCard 
+                    title="Missed" 
+                    value={stats ? formatNumber(stats.missedCalls) : "0"} 
+                    icon={<PhoneOff size={22} />} 
+                    trend={trends?.missed}
+                    loading={loading}
+                />
+                <StatCard 
+                    title="Avg. Duration" 
+                    value={stats?.avgDurationFormatted || "0:00"} 
+                    icon={<Clock size={22} />} 
+                    trend={trends?.duration}
+                    loading={loading}
+                />
+                <StatCard 
+                    title="Active Agents" 
+                    value={stats ? `${stats.activeAgents}/${stats.totalAgents}` : "0/0"} 
+                    icon={<Bot size={22} />}
+                    loading={loading}
+                />
+                <StatCard 
+                    title="Success Rate" 
+                    value={stats ? `${stats.successRate}%` : "0%"} 
+                    icon={<TrendingUp size={22} />} 
+                    trend={trends?.successRate}
+                    loading={loading}
+                />
             </div>
 
             {/* Recent Calls Section */}
@@ -208,8 +366,8 @@ export default function DashboardSection() {
                     padding: "24px",
                 }}
             >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-                    <h2 style={{ fontSize: "18px", fontWeight: "600", color: "white" }}>Recent Calls</h2>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
+                    <h2 style={{ fontSize: "17px", fontWeight: "600", color: "white" }}>Recent Calls</h2>
                     <button
                         style={{
                             background: "transparent",
@@ -219,15 +377,33 @@ export default function DashboardSection() {
                             fontWeight: "500",
                             cursor: "pointer",
                         }}
+                        onClick={() => window.location.href = '/dashboard/call-history'}
                     >
-                        View All
+                        View All →
                     </button>
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                    {recentCalls.map((call, index) => (
-                        <RecentCallItem key={index} {...call} />
-                    ))}
-                </div>
+
+                {loading ? (
+                    <div style={{ display: "flex", justifyContent: "center", padding: "32px" }}>
+                        <Loader2 size={28} style={{ animation: "spin 1s linear infinite", color: "#00C8FF" }} />
+                    </div>
+                ) : data?.recentCalls && data.recentCalls.length > 0 ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                        {data.recentCalls.map((call) => (
+                            <RecentCallItem key={call.id} call={call} />
+                        ))}
+                    </div>
+                ) : (
+                    <div style={{ 
+                        textAlign: "center", 
+                        padding: "32px", 
+                        color: "rgba(255, 255, 255, 0.4)",
+                        fontSize: "14px",
+                    }}>
+                        <Phone size={32} style={{ marginBottom: "12px", opacity: 0.5 }} />
+                        <p>No recent calls</p>
+                    </div>
+                )}
             </div>
         </div>
     );
