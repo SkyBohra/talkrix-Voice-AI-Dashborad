@@ -18,6 +18,7 @@ export interface CampaignContact {
 export interface CampaignSchedule {
   scheduledDate: string;
   scheduledTime: string;
+  endTime: string; // End time in HH:mm format (required)
   timezone: string;
 }
 
@@ -36,7 +37,6 @@ export interface Campaign {
   completedCalls: number;
   successfulCalls: number;
   failedCalls: number;
-  concurrency: number; // Number of concurrent calls (1-10)
   startedAt?: string;
   completedAt?: string;
   inboundPhoneNumber?: string;
@@ -56,7 +56,6 @@ export interface CreateCampaignData {
   contacts?: { name: string; phoneNumber: string }[];
   outboundProvider?: 'twilio' | 'plivo' | 'telnyx';
   outboundPhoneNumber?: string;
-  concurrency?: number; // Number of concurrent calls (1-10)
 }
 
 export interface PaginatedCampaigns {

@@ -39,10 +39,10 @@ interface FormData {
   agentId: string;
   scheduledDate: string;
   scheduledTime: string;
+  endTime: string; // End time in HH:mm format
   timezone: string;
   outboundProvider: TelephonyProvider | '';
   outboundPhoneNumber: string;
-  concurrency: number; // Number of concurrent calls (1-10)
 }
 
 interface CreateCampaignWizardProps {
@@ -185,7 +185,7 @@ export default function CreateCampaignWizard({
         return formData.agentId !== '';
       case 4:
         if (formData.type === 'outbound') {
-          if (!formData.scheduledDate || !formData.scheduledTime) {
+          if (!formData.scheduledDate || !formData.scheduledTime || !formData.endTime) {
             return false;
           }
           if (phoneNumbers.length > 0 && !formData.outboundPhoneNumber) {
@@ -953,7 +953,7 @@ export default function CreateCampaignWizard({
                           letterSpacing: '0.05em'
                         }}>
                           <Clock size={12} color="#00C8FF" />
-                          Time
+                          Start Time
                         </label>
                         <div style={{ position: 'relative' }}>
                           <input
@@ -1004,6 +1004,69 @@ export default function CreateCampaignWizard({
                             }} 
                           />
                         </div>
+                      </div>
+                      <div>
+                        <label style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '6px',
+                          color: '#9CA3AF', 
+                          fontSize: '12px', 
+                          marginBottom: '8px',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em'
+                        }}>
+                          <Clock size={12} color="#f59e0b" />
+                          End Time
+                        </label>
+                        <div style={{ position: 'relative' }}>
+                          <input
+                            type="time"
+                            value={formData.endTime}
+                            min={formData.scheduledTime || undefined}
+                            onChange={(e) => {
+                              const selectedEndTime = e.target.value;
+                              // Validate end time is after start time
+                              if (formData.scheduledTime && selectedEndTime < formData.scheduledTime) {
+                                return; // Don't allow end time before start time
+                              }
+                              setFormData({ ...formData, endTime: selectedEndTime });
+                            }}
+                            style={{
+                              width: '100%',
+                              padding: '14px 16px',
+                              paddingRight: '44px',
+                              background: 'rgba(0, 0, 0, 0.3)',
+                              border: '1px solid rgba(245, 158, 11, 0.15)',
+                              borderRadius: '10px',
+                              color: '#FFFFFF',
+                              fontSize: '14px',
+                              outline: 'none',
+                              boxSizing: 'border-box',
+                              cursor: 'pointer',
+                              colorScheme: 'dark'
+                            }}
+                            onClick={(e) => (e.target as HTMLInputElement).showPicker?.()}
+                          />
+                          <Clock 
+                            size={18} 
+                            color="#f59e0b" 
+                            style={{ 
+                              position: 'absolute', 
+                              right: '14px', 
+                              top: '50%', 
+                              transform: 'translateY(-50%)',
+                              pointerEvents: 'none'
+                            }} 
+                          />
+                        </div>
+                        <p style={{ 
+                          color: '#6B7280', 
+                          fontSize: '11px', 
+                          margin: '6px 0 0 0' 
+                        }}>
+                          Campaign will stop at this time
+                        </p>
                       </div>
                     </div>
 
@@ -1220,98 +1283,6 @@ export default function CreateCampaignWizard({
                         </select>
                       </div>
                     )}
-                  </div>
-                )}
-
-                {/* Concurrency Setting - Only for outbound campaigns */}
-                {formData.type === 'outbound' && (
-                  <div style={{
-                    background: 'rgba(255, 255, 255, 0.02)',
-                    borderRadius: '16px',
-                    padding: '24px',
-                    border: '1px solid rgba(255, 255, 255, 0.05)'
-                  }}>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      marginBottom: '20px'
-                    }}>
-                      <div style={{
-                        width: '36px',
-                        height: '36px',
-                        borderRadius: '10px',
-                        background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        <Zap size={18} color="white" />
-                      </div>
-                      <div>
-                        <h4 style={{ color: 'white', fontSize: '15px', fontWeight: '600', margin: 0 }}>
-                          Call Concurrency
-                        </h4>
-                        <p style={{ color: '#6B7280', fontSize: '12px', margin: 0, marginTop: '2px' }}>
-                          How many calls to make simultaneously
-                        </p>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '6px',
-                        color: '#9CA3AF', 
-                        fontSize: '12px', 
-                        marginBottom: '8px',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em'
-                      }}>
-                        <Zap size={12} color="#f59e0b" />
-                        Concurrent Calls (1-10)
-                      </label>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <input
-                          type="range"
-                          min="1"
-                          max="10"
-                          value={formData.concurrency}
-                          onChange={(e) => setFormData({ ...formData, concurrency: parseInt(e.target.value) })}
-                          style={{
-                            flex: 1,
-                            height: '8px',
-                            appearance: 'none',
-                            background: `linear-gradient(to right, #f59e0b 0%, #f59e0b ${(formData.concurrency - 1) * 100 / 9}%, rgba(255,255,255,0.1) ${(formData.concurrency - 1) * 100 / 9}%, rgba(255,255,255,0.1) 100%)`,
-                            borderRadius: '4px',
-                            cursor: 'pointer'
-                          }}
-                        />
-                        <div style={{
-                          padding: '10px 16px',
-                          background: 'rgba(245, 158, 11, 0.15)',
-                          border: '1px solid rgba(245, 158, 11, 0.3)',
-                          borderRadius: '10px',
-                          color: '#f59e0b',
-                          fontSize: '16px',
-                          fontWeight: '700',
-                          minWidth: '50px',
-                          textAlign: 'center'
-                        }}>
-                          {formData.concurrency}
-                        </div>
-                      </div>
-                      <p style={{ 
-                        color: '#6B7280', 
-                        fontSize: '12px', 
-                        margin: '12px 0 0 0',
-                        lineHeight: '1.5'
-                      }}>
-                        AI will make up to {formData.concurrency} call{formData.concurrency > 1 ? 's' : ''} at the same time. 
-                        When a call ends, the next contact will be called automatically.
-                      </p>
-                    </div>
                   </div>
                 )}
 

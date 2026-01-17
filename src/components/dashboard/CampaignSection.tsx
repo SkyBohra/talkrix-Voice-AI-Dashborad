@@ -73,20 +73,20 @@ export default function CampaignSection() {
     agentId: string;
     scheduledDate: string;
     scheduledTime: string;
+    endTime: string;
     timezone: string;
     outboundProvider: TelephonyProvider | '';
     outboundPhoneNumber: string;
-    concurrency: number;
   }>({
     name: '',
     type: 'outbound',
     agentId: '',
     scheduledDate: '',
     scheduledTime: '',
+    endTime: '',
     timezone: 'Asia/Kolkata',
     outboundProvider: '',
-    outboundPhoneNumber: '',
-    concurrency: 1
+    outboundPhoneNumber: ''
   });
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -215,8 +215,8 @@ export default function CampaignSection() {
       return;
     }
     if (formData.type === 'outbound') {
-      if (!formData.scheduledDate || !formData.scheduledTime) {
-        toast.error('Validation Error', 'Schedule is required for outbound campaigns');
+      if (!formData.scheduledDate || !formData.scheduledTime || !formData.endTime) {
+        toast.error('Validation Error', 'Schedule date, start time, and end time are required for outbound campaigns');
         return;
       }
     }
@@ -242,9 +242,9 @@ export default function CampaignSection() {
         createData.schedule = {
           scheduledDate: formData.scheduledDate,
           scheduledTime: formData.scheduledTime,
+          endTime: formData.endTime, // Required end time
           timezone: formData.timezone
         };
-        createData.concurrency = formData.concurrency;
       }
 
       // Add outbound phone number if selected
@@ -278,10 +278,10 @@ export default function CampaignSection() {
         agentId: '',
         scheduledDate: '',
         scheduledTime: '',
-        timezone: 'UTC',
+        endTime: '',
+        timezone: 'Asia/Kolkata',
         outboundProvider: '',
-        outboundPhoneNumber: '',
-        concurrency: 1
+        outboundPhoneNumber: ''
       });
       setSelectedFile(null);
       setShowCreateModal(false);
