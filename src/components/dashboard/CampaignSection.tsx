@@ -82,7 +82,7 @@ export default function CampaignSection() {
     agentId: '',
     scheduledDate: '',
     scheduledTime: '',
-    timezone: 'UTC',
+    timezone: 'Asia/Kolkata',
     outboundProvider: '',
     outboundPhoneNumber: ''
   });

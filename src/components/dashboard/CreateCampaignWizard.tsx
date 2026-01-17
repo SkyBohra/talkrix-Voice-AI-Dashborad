@@ -296,6 +296,27 @@ export default function CreateCampaignWizard({
           animation: shimmer 3s infinite linear;
           background-size: 200% 100%;
         }
+        /* Date and Time input styling for dark mode */
+        input[type="date"]::-webkit-calendar-picker-indicator,
+        input[type="time"]::-webkit-calendar-picker-indicator {
+          filter: invert(1);
+          opacity: 0;
+          cursor: pointer;
+          position: absolute;
+          right: 0;
+          top: 0;
+          width: 100%;
+          height: 100%;
+        }
+        input[type="date"]:hover,
+        input[type="time"]:hover {
+          border-color: rgba(0, 200, 255, 0.3) !important;
+        }
+        input[type="date"]:focus,
+        input[type="time"]:focus {
+          border-color: rgba(0, 200, 255, 0.5) !important;
+          box-shadow: 0 0 0 3px rgba(0, 200, 255, 0.1);
+        }
       `}</style>
 
       {/* Dot Pattern Overlay */}
@@ -864,25 +885,56 @@ export default function CreateCampaignWizard({
                           textTransform: 'uppercase',
                           letterSpacing: '0.05em'
                         }}>
-                          <Calendar size={12} />
+                          <Calendar size={12} color="#00C8FF" />
                           Date
                         </label>
-                        <input
-                          type="date"
-                          value={formData.scheduledDate}
-                          onChange={(e) => setFormData({ ...formData, scheduledDate: e.target.value })}
-                          style={{
-                            width: '100%',
-                            padding: '14px 16px',
-                            background: 'rgba(0, 0, 0, 0.3)',
-                            border: '1px solid rgba(255, 255, 255, 0.1)',
-                            borderRadius: '10px',
-                            color: '#FFFFFF',
-                            fontSize: '14px',
-                            outline: 'none',
-                            boxSizing: 'border-box'
-                          }}
-                        />
+                        <div style={{ position: 'relative' }}>
+                          <input
+                            type="date"
+                            value={formData.scheduledDate}
+                            min={new Date().toISOString().split('T')[0]}
+                            onChange={(e) => {
+                              const selectedDate = e.target.value;
+                              const today = new Date().toISOString().split('T')[0];
+                              // If date changed to today and time is in the past, clear time
+                              if (selectedDate === today && formData.scheduledTime) {
+                                const now = new Date();
+                                const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                                if (formData.scheduledTime < currentTime) {
+                                  setFormData({ ...formData, scheduledDate: selectedDate, scheduledTime: '' });
+                                  return;
+                                }
+                              }
+                              setFormData({ ...formData, scheduledDate: selectedDate });
+                            }}
+                            style={{
+                              width: '100%',
+                              padding: '14px 16px',
+                              paddingRight: '44px',
+                              background: 'rgba(0, 0, 0, 0.3)',
+                              border: '1px solid rgba(0, 200, 255, 0.15)',
+                              borderRadius: '10px',
+                              color: '#FFFFFF',
+                              fontSize: '14px',
+                              outline: 'none',
+                              boxSizing: 'border-box',
+                              cursor: 'pointer',
+                              colorScheme: 'dark'
+                            }}
+                            onClick={(e) => (e.target as HTMLInputElement).showPicker?.()}
+                          />
+                          <Calendar 
+                            size={18} 
+                            color="#00C8FF" 
+                            style={{ 
+                              position: 'absolute', 
+                              right: '14px', 
+                              top: '50%', 
+                              transform: 'translateY(-50%)',
+                              pointerEvents: 'none'
+                            }} 
+                          />
+                        </div>
                       </div>
                       <div>
                         <label style={{ 
@@ -895,25 +947,58 @@ export default function CreateCampaignWizard({
                           textTransform: 'uppercase',
                           letterSpacing: '0.05em'
                         }}>
-                          <Clock size={12} />
+                          <Clock size={12} color="#00C8FF" />
                           Time
                         </label>
-                        <input
-                          type="time"
-                          value={formData.scheduledTime}
-                          onChange={(e) => setFormData({ ...formData, scheduledTime: e.target.value })}
-                          style={{
-                            width: '100%',
-                            padding: '14px 16px',
-                            background: 'rgba(0, 0, 0, 0.3)',
-                            border: '1px solid rgba(255, 255, 255, 0.1)',
-                            borderRadius: '10px',
-                            color: '#FFFFFF',
-                            fontSize: '14px',
-                            outline: 'none',
-                            boxSizing: 'border-box'
-                          }}
-                        />
+                        <div style={{ position: 'relative' }}>
+                          <input
+                            type="time"
+                            value={formData.scheduledTime}
+                            min={formData.scheduledDate === new Date().toISOString().split('T')[0] 
+                              ? `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`
+                              : undefined
+                            }
+                            onChange={(e) => {
+                              const selectedTime = e.target.value;
+                              const today = new Date().toISOString().split('T')[0];
+                              // Validate time if date is today
+                              if (formData.scheduledDate === today) {
+                                const now = new Date();
+                                const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                                if (selectedTime < currentTime) {
+                                  return; // Don't allow past times for today
+                                }
+                              }
+                              setFormData({ ...formData, scheduledTime: selectedTime });
+                            }}
+                            style={{
+                              width: '100%',
+                              padding: '14px 16px',
+                              paddingRight: '44px',
+                              background: 'rgba(0, 0, 0, 0.3)',
+                              border: '1px solid rgba(0, 200, 255, 0.15)',
+                              borderRadius: '10px',
+                              color: '#FFFFFF',
+                              fontSize: '14px',
+                              outline: 'none',
+                              boxSizing: 'border-box',
+                              cursor: 'pointer',
+                              colorScheme: 'dark'
+                            }}
+                            onClick={(e) => (e.target as HTMLInputElement).showPicker?.()}
+                          />
+                          <Clock 
+                            size={18} 
+                            color="#00C8FF" 
+                            style={{ 
+                              position: 'absolute', 
+                              right: '14px', 
+                              top: '50%', 
+                              transform: 'translateY(-50%)',
+                              pointerEvents: 'none'
+                            }} 
+                          />
+                        </div>
                       </div>
                     </div>
 
@@ -928,7 +1013,7 @@ export default function CreateCampaignWizard({
                         textTransform: 'uppercase',
                         letterSpacing: '0.05em'
                       }}>
-                        <Globe size={12} />
+                        <Globe size={12} color="#00C8FF" />
                         Timezone
                       </label>
                       <select
@@ -938,7 +1023,7 @@ export default function CreateCampaignWizard({
                           width: '100%',
                           padding: '14px 16px',
                           background: 'rgba(0, 0, 0, 0.3)',
-                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          border: '1px solid rgba(0, 200, 255, 0.15)',
                           borderRadius: '10px',
                           color: '#FFFFFF',
                           fontSize: '14px',
