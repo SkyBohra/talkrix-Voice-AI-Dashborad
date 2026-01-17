@@ -366,13 +366,6 @@ export default function DashboardSection() {
                     loading={loading}
                 />
                 <StatCard 
-                    title="Avg. Duration" 
-                    value={stats?.avgDurationFormatted || "0:00"} 
-                    icon={<Clock size={22} />} 
-                    trend={trends?.duration}
-                    loading={loading}
-                />
-                <StatCard 
                     title="Active Agents" 
                     value={stats ? `${stats.activeAgents}/${stats.totalAgents}` : "0/0"} 
                     icon={<Bot size={22} />}
