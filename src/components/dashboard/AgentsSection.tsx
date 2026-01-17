@@ -3102,11 +3102,11 @@ export default function AgentsSection() {
                         inset: 0,
                         background: "rgba(0, 0, 0, 0.8)",
                         display: "flex",
-                        alignItems: "center",
+                        alignItems: "flex-start",
                         justifyContent: "center",
                         zIndex: 100,
                         overflow: "auto",
-                        padding: "20px",
+                        padding: "40px 20px",
                     }}
                     onClick={() => setIsModalOpen(false)}
                 >
@@ -3119,8 +3119,7 @@ export default function AgentsSection() {
                             padding: "32px",
                             width: "100%",
                             maxWidth: showTemplateSelection && !editingAgent ? "900px" : "640px",
-                            maxHeight: "90vh",
-                            overflowY: "auto",
+                            margin: "auto",
                         }}
                         onClick={(e) => e.stopPropagation()}
                     >
@@ -3298,21 +3297,21 @@ export default function AgentsSection() {
                                     </button>
                                 </div>
 
-                        {error && (
-                            <div style={{
-                                background: "rgba(255, 60, 100, 0.1)",
-                                border: "1px solid rgba(255, 60, 100, 0.3)",
-                                borderRadius: "8px",
-                                padding: "12px",
-                                marginBottom: "20px",
-                                color: "#FF3C64",
-                                fontSize: "14px",
-                            }}>
-                                {error}
-                            </div>
-                        )}
+                                {error && (
+                                    <div style={{
+                                        background: "rgba(255, 60, 100, 0.1)",
+                                        border: "1px solid rgba(255, 60, 100, 0.3)",
+                                        borderRadius: "8px",
+                                        padding: "12px",
+                                        marginBottom: "20px",
+                                        color: "#FF3C64",
+                                        fontSize: "14px",
+                                    }}>
+                                        {error}
+                                    </div>
+                                )}
 
-                        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                                <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
                             {/* Agent Name */}
                             <div>
                                 <label style={{ display: "block", fontSize: "13px", color: "rgba(255, 255, 255, 0.6)", marginBottom: "8px" }}>
@@ -3846,40 +3845,40 @@ export default function AgentsSection() {
                                 </div>
                             </div>
 
-                            <button
-                                onClick={handleSave}
-                                disabled={loading}
-                                style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    gap: "8px",
-                                    padding: "14px 24px",
-                                    borderRadius: "12px",
-                                    border: "none",
-                                    background: loading 
-                                        ? "rgba(0, 200, 255, 0.5)" 
-                                        : "linear-gradient(135deg, #00C8FF 0%, #7800FF 100%)",
-                                    color: "white",
-                                    fontSize: "14px",
-                                    fontWeight: "600",
-                                    cursor: loading ? "not-allowed" : "pointer",
-                                    marginTop: "8px",
-                                }}
-                            >
-                                {loading ? (
-                                    <>
-                                        <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
-                                        {editingAgent ? "Saving..." : "Creating..."}
-                                    </>
-                                ) : (
-                                    <>
-                                        <Save size={16} />
-                                        {editingAgent ? "Save Changes" : "Create Agent"}
-                                    </>
-                                )}
-                            </button>
-                        </div>
+                                    <button
+                                        onClick={handleSave}
+                                        disabled={loading}
+                                        style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            gap: "8px",
+                                            padding: "14px 24px",
+                                            borderRadius: "12px",
+                                            border: "none",
+                                            background: loading 
+                                                ? "rgba(0, 200, 255, 0.5)" 
+                                                : "linear-gradient(135deg, #00C8FF 0%, #7800FF 100%)",
+                                            color: "white",
+                                            fontSize: "14px",
+                                            fontWeight: "600",
+                                            cursor: loading ? "not-allowed" : "pointer",
+                                            marginTop: "8px",
+                                        }}
+                                    >
+                                        {loading ? (
+                                            <>
+                                                <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
+                                                {editingAgent ? "Saving..." : "Creating..."}
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Save size={16} />
+                                                {editingAgent ? "Save Changes" : "Create Agent"}
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
                             </>
                         )}
                     </div>

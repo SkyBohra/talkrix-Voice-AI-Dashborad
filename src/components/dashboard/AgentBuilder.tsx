@@ -463,17 +463,18 @@ export default function AgentBuilder({
 
     return (
         <div style={{
-            position: 'absolute',
+            position: 'fixed',
             top: 0,
-            left: 0,
+            left: 'var(--sidebar-width, 260px)',
             right: 0,
             bottom: 0,
-            background: 'rgba(0, 0, 0, 0.95)',
-            backdropFilter: 'blur(8px)',
-            zIndex: 100,
+            background: 'linear-gradient(180deg, rgba(5, 10, 20, 0.99) 0%, rgba(8, 15, 30, 0.99) 100%)',
+            zIndex: 50,
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
+            boxShadow: '-10px 0 40px rgba(0, 0, 0, 0.5)',
+            transition: 'left 0.3s ease',
         }}>
             {/* Top Toolbar */}
             <div style={{
@@ -924,9 +925,9 @@ export default function AgentBuilder({
                     </div>
 
                     {/* Tab Content */}
-                    <div style={{ flex: 1, padding: '24px', overflowY: 'auto' }}>
+                    <div style={{ flex: 1, padding: '24px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
                         {activeTab === 'prompt' && (
-                            <div style={{ height: '100%' }}>
+                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                                 <textarea
                                     value={formData.systemPrompt}
                                     onChange={(e) => setFormData({ ...formData, systemPrompt: e.target.value })}
@@ -941,8 +942,8 @@ Key responsibilities:
 • Escalate complex issues when needed"
                                     style={{
                                         width: '100%',
-                                        height: '100%',
-                                        minHeight: '400px',
+                                        flex: 1,
+                                        minHeight: '300px',
                                         padding: '20px',
                                         background: 'rgba(5, 10, 20, 0.5)',
                                         border: '1px solid rgba(0, 200, 255, 0.1)',

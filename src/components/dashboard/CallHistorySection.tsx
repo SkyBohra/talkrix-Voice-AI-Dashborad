@@ -8,7 +8,8 @@ import {
     CallHistoryRecord, 
     CallStats, 
     formatDuration, 
-    formatCallDate 
+    formatCallDate,
+    getCallDisplayDate 
 } from "@/lib/callHistoryApi";
 import Pagination from "@/components/ui/Pagination";
 
@@ -150,7 +151,7 @@ export default function CallHistorySection() {
         // Export calls as CSV
         const headers = ["Date", "Customer Name", "Phone", "Agent", "Type", "Status", "Duration", "Billed Duration", "End Reason", "Short Summary", "Summary"];
         const rows = filteredCalls.map(call => [
-            formatCallDate(call.createdAt),
+            formatCallDate(getCallDisplayDate(call)),
             call.customerName || "-",
             call.customerPhone || "-",
             call.agentName,
@@ -546,7 +547,7 @@ export default function CallHistorySection() {
 
                                 {/* Timestamp */}
                                 <span style={{ color: "rgba(255, 255, 255, 0.5)", fontSize: "13px" }}>
-                                    {formatCallDate(call.createdAt)}
+                                    {formatCallDate(getCallDisplayDate(call))}
                                 </span>
 
                                 {/* Audio Control */}

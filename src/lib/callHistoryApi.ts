@@ -207,3 +207,24 @@ export const formatCallDate = (dateString: string): string => {
     hour12: true,
   });
 };
+
+/**
+ * Format date with time only
+ */
+export const formatCallTime = (dateString: string): string => {
+  const date = new Date(dateString);
+  return date.toLocaleString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
+  });
+};
+
+/**
+ * Get the best date to display for a call (startedAt > createdAt)
+ */
+export const getCallDisplayDate = (call: CallHistoryRecord): string => {
+  // Use startedAt if available (when call actually started), otherwise fall back to createdAt
+  return call.startedAt || call.createdAt;
+};

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     LayoutDashboard,
     Bot,
@@ -38,6 +38,11 @@ interface SidebarProps {
 
 export default function Sidebar({ activeSection, onSectionChange, onLogout }: SidebarProps) {
     const [collapsed, setCollapsed] = useState(false);
+
+    // Set CSS variable for sidebar width so other components can use it
+    useEffect(() => {
+        document.documentElement.style.setProperty('--sidebar-width', collapsed ? '80px' : '260px');
+    }, [collapsed]);
 
     return (
         <aside
