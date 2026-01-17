@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Settings, User, Bell, Shield, Key, Globe, Palette, Save, Check, Phone, Server, Copy, RefreshCw, Eye, EyeOff, Plus, Trash2 } from "lucide-react";
 import { getSettings, updateGeneralSettings, updateTelephonySettings, regenerateApiKey, getApiKey, TelephonyProvider, UserSettings } from "@/lib/settingsApi";
+import { useToast } from "@/components/ui/toast";
 
 interface SettingsState {
     profile: {
@@ -46,6 +47,7 @@ interface SettingsState {
 }
 
 export default function SettingsSection() {
+    const toast = useToast();
     const [activeTab, setActiveTab] = useState("profile");
     const [saved, setSaved] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -179,18 +181,31 @@ export default function SettingsSection() {
                 if (telnyxPhones.length > 0) telephonyData.telnyxPhoneNumbers = telnyxPhones;
                 if (settings.telephony.telnyxConnectionId) telephonyData.telnyxConnectionId = settings.telephony.telnyxConnectionId;
 
-                await updateTelephonySettings(telephonyData);
+                const res = await updateTelephonySettings(telephonyData);
+                if (res.success) {
+                    toast.success("Settings Saved", "Telephony settings updated successfully.");
+                } else {
+                    toast.error("Save Failed", res.message || "Failed to update telephony settings.");
+                    return;
+                }
             } else if (activeTab === "limits") {
-                await updateGeneralSettings({
+                const res = await updateGeneralSettings({
                     maxConcurrentCalls: settings.general.maxConcurrentCalls,
                     maxRagDocuments: settings.general.maxRagDocuments,
                     maxAgents: settings.general.maxAgents,
                 });
+                if (res.success) {
+                    toast.success("Settings Saved", "Limits updated successfully.");
+                } else {
+                    toast.error("Save Failed", res.message || "Failed to update settings.");
+                    return;
+                }
             }
             setSaved(true);
             setTimeout(() => setSaved(false), 2000);
-        } catch (err) {
+        } catch (err: any) {
             console.error("Failed to save settings:", err);
+            toast.error("Error", err?.message || "Failed to save settings.");
         } finally {
             setSaving(false);
         }
@@ -203,9 +218,13 @@ export default function SettingsSection() {
             if (res.success && res.data) {
                 setSettings(prev => ({ ...prev, apiKey: res.data!.apiKey }));
                 setShowApiKey(true);
+                toast.success("API Key Regenerated", "Your new API key has been generated. Make sure to save it.");
+            } else {
+                toast.error("Regeneration Failed", res.message || "Failed to regenerate API key.");
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error("Failed to regenerate API key:", err);
+            toast.error("Error", err?.message || "Failed to regenerate API key.");
         }
     };
 
@@ -228,9 +247,11 @@ export default function SettingsSection() {
         try {
             await navigator.clipboard.writeText(text);
             setCopied(true);
+            toast.success("Copied!", "Text copied to clipboard.");
             setTimeout(() => setCopied(false), 2000);
         } catch (err) {
             console.error("Failed to copy to clipboard:", err);
+            toast.error("Copy Failed", "Could not copy to clipboard.");
         }
     };
 
@@ -699,17 +720,18 @@ export default function SettingsSection() {
                             padding: "12px 16px",
                             borderRadius: "10px",
                             border: "1px solid rgba(0, 200, 255, 0.1)",
-                            background: "rgba(255, 255, 255, 0.05)",
+                            background: "#1a1a2e",
                             color: "white",
                             fontSize: "14px",
                             outline: "none",
                             boxSizing: "border-box",
+                            cursor: "pointer",
                         }}
                     >
-                        <option value="none">None</option>
-                        <option value="plivo">Plivo</option>
-                        <option value="twilio">Twilio</option>
-                        <option value="telnyx">Telnyx</option>
+                        <option value="none" style={{ background: "#1a1a2e", color: "white" }}>None</option>
+                        <option value="plivo" style={{ background: "#1a1a2e", color: "white" }}>Plivo</option>
+                        <option value="twilio" style={{ background: "#1a1a2e", color: "white" }}>Twilio</option>
+                        <option value="telnyx" style={{ background: "#1a1a2e", color: "white" }}>Telnyx</option>
                     </select>
                 </div>
 

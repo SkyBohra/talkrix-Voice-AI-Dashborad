@@ -1,27 +1,7 @@
 import axios from 'axios';
+import { getAuthHeaders, safeApiCall, ApiResponse } from './apiHelper';
 
 const API_BASE = `${process.env.NEXT_PUBLIC_API_URL}/call-history`;
-
-const getAuthHeaders = () => {
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('token');
-    if (token) {
-      return { Authorization: `Bearer ${token}` };
-    }
-  }
-  return {};
-};
-
-// Helper to normalize backend response
-const normalizeResponse = (response: any) => {
-  const data = response.data;
-  return {
-    success: data.statusCode < 400,
-    data: data.data,
-    message: data.message,
-    error: data.error,
-  };
-};
 
 export interface CallHistoryRecord {
   _id: string;
@@ -71,7 +51,7 @@ export const fetchCallHistory = async (options?: {
   status?: string;
   callType?: string;
   agentId?: string;
-}) => {
+}): Promise<ApiResponse> => {
   const params = new URLSearchParams();
   if (options?.page) params.append('page', String(options.page));
   if (options?.limit) params.append('limit', String(options.limit));
@@ -80,20 +60,14 @@ export const fetchCallHistory = async (options?: {
   if (options?.agentId) params.append('agentId', options.agentId);
 
   const url = `${API_BASE}${params.toString() ? '?' + params.toString() : ''}`;
-  const res = await axios.get(url, {
-    headers: getAuthHeaders(),
-  });
-  return normalizeResponse(res);
+  return safeApiCall(() => axios.get(url, { headers: getAuthHeaders() }));
 };
 
 /**
  * Fetch call statistics for the current user
  */
-export const fetchCallStats = async () => {
-  const res = await axios.get(`${API_BASE}/stats`, {
-    headers: getAuthHeaders(),
-  });
-  return normalizeResponse(res);
+export const fetchCallStats = async (): Promise<ApiResponse> => {
+  return safeApiCall(() => axios.get(`${API_BASE}/stats`, { headers: getAuthHeaders() }));
 };
 
 /**
@@ -102,36 +76,27 @@ export const fetchCallStats = async () => {
 export const fetchAgentCallHistory = async (
   agentId: string,
   options?: { page?: number; limit?: number }
-) => {
+): Promise<ApiResponse> => {
   const params = new URLSearchParams();
   if (options?.page) params.append('page', String(options.page));
   if (options?.limit) params.append('limit', String(options.limit));
 
   const url = `${API_BASE}/agent/${agentId}${params.toString() ? '?' + params.toString() : ''}`;
-  const res = await axios.get(url, {
-    headers: getAuthHeaders(),
-  });
-  return normalizeResponse(res);
+  return safeApiCall(() => axios.get(url, { headers: getAuthHeaders() }));
 };
 
 /**
  * Fetch call statistics for a specific agent
  */
-export const fetchAgentCallStats = async (agentId: string) => {
-  const res = await axios.get(`${API_BASE}/agent/${agentId}/stats`, {
-    headers: getAuthHeaders(),
-  });
-  return normalizeResponse(res);
+export const fetchAgentCallStats = async (agentId: string): Promise<ApiResponse> => {
+  return safeApiCall(() => axios.get(`${API_BASE}/agent/${agentId}/stats`, { headers: getAuthHeaders() }));
 };
 
 /**
  * Get a single call history record
  */
-export const fetchCallHistoryById = async (id: string) => {
-  const res = await axios.get(`${API_BASE}/${id}`, {
-    headers: getAuthHeaders(),
-  });
-  return normalizeResponse(res);
+export const fetchCallHistoryById = async (id: string): Promise<ApiResponse> => {
+  return safeApiCall(() => axios.get(`${API_BASE}/${id}`, { headers: getAuthHeaders() }));
 };
 
 /**
@@ -144,21 +109,15 @@ export const updateCallHistory = async (
     durationSeconds?: number;
     recordingUrl?: string;
   }
-) => {
-  const res = await axios.put(`${API_BASE}/${id}`, data, {
-    headers: getAuthHeaders(),
-  });
-  return normalizeResponse(res);
+): Promise<ApiResponse> => {
+  return safeApiCall(() => axios.put(`${API_BASE}/${id}`, data, { headers: getAuthHeaders() }));
 };
 
 /**
  * Delete a call history record
  */
-export const deleteCallHistory = async (id: string) => {
-  const res = await axios.delete(`${API_BASE}/${id}`, {
-    headers: getAuthHeaders(),
-  });
-  return normalizeResponse(res);
+export const deleteCallHistory = async (id: string): Promise<ApiResponse> => {
+  return safeApiCall(() => axios.delete(`${API_BASE}/${id}`, { headers: getAuthHeaders() }));
 };
 
 /**
@@ -172,15 +131,14 @@ export const endCall = async (
     durationSeconds?: number;
     recordingUrl?: string;
   }
-) => {
-  const res = await axios.put(
-    `${process.env.NEXT_PUBLIC_API_URL}/agents/${agentId}/call/${callHistoryId}/end`,
-    data,
-    {
-      headers: getAuthHeaders(),
-    }
+): Promise<ApiResponse> => {
+  return safeApiCall(() => 
+    axios.put(
+      `${process.env.NEXT_PUBLIC_API_URL}/agents/${agentId}/call/${callHistoryId}/end`,
+      data,
+      { headers: getAuthHeaders() }
+    )
   );
-  return normalizeResponse(res);
 };
 
 /**

@@ -1,27 +1,7 @@
 import axios from 'axios';
+import { getAuthHeaders, safeApiCall, ApiResponse } from './apiHelper';
 
 const API_BASE = `${process.env.NEXT_PUBLIC_API_URL}/campaigns`;
-
-const getAuthHeaders = () => {
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('token');
-    if (token) {
-      return { Authorization: `Bearer ${token}` };
-    }
-  }
-  return {};
-};
-
-// Helper to normalize backend response
-const normalizeResponse = (response: any) => {
-  const data = response.data;
-  return {
-    success: data.statusCode < 400,
-    data: data.data,
-    message: data.message,
-    error: data.error,
-  };
-};
 
 // Campaign interfaces
 export interface CampaignContact {
@@ -89,79 +69,56 @@ export interface PaginatedCampaigns {
 export const fetchCampaigns = async (options?: {
   page?: number;
   limit?: number;
-}) => {
+}): Promise<ApiResponse> => {
   const params = new URLSearchParams();
   if (options?.page) params.append('page', String(options.page));
   if (options?.limit) params.append('limit', String(options.limit));
 
   const url = `${API_BASE}${params.toString() ? '?' + params.toString() : ''}`;
-  const res = await axios.get(url, {
-    headers: getAuthHeaders(),
-  });
-  return normalizeResponse(res);
+  return safeApiCall(() => axios.get(url, { headers: getAuthHeaders() }));
 };
 
 // Fetch campaigns by user ID with pagination
 export const fetchCampaignsByUser = async (userId: string, options?: {
   page?: number;
   limit?: number;
-}) => {
+}): Promise<ApiResponse> => {
   const params = new URLSearchParams();
   if (options?.page) params.append('page', String(options.page));
   if (options?.limit) params.append('limit', String(options.limit));
 
   const url = `${API_BASE}/user/${userId}${params.toString() ? '?' + params.toString() : ''}`;
-  const res = await axios.get(url, {
-    headers: getAuthHeaders(),
-  });
-  return normalizeResponse(res);
+  return safeApiCall(() => axios.get(url, { headers: getAuthHeaders() }));
 };
 
 // Fetch a single campaign by ID
-export const fetchCampaign = async (id: string) => {
-  const res = await axios.get(`${API_BASE}/${id}`, {
-    headers: getAuthHeaders(),
-  });
-  return normalizeResponse(res);
+export const fetchCampaign = async (id: string): Promise<ApiResponse> => {
+  return safeApiCall(() => axios.get(`${API_BASE}/${id}`, { headers: getAuthHeaders() }));
 };
 
 // Create a new campaign
-export const createCampaign = async (campaignData: CreateCampaignData) => {
-  const res = await axios.post(API_BASE, campaignData, {
-    headers: getAuthHeaders(),
-  });
-  return normalizeResponse(res);
+export const createCampaign = async (campaignData: CreateCampaignData): Promise<ApiResponse> => {
+  return safeApiCall(() => axios.post(API_BASE, campaignData, { headers: getAuthHeaders() }));
 };
 
 // Update a campaign
-export const updateCampaign = async (id: string, campaignData: Partial<Campaign>) => {
-  const res = await axios.put(`${API_BASE}/${id}`, campaignData, {
-    headers: getAuthHeaders(),
-  });
-  return normalizeResponse(res);
+export const updateCampaign = async (id: string, campaignData: Partial<Campaign>): Promise<ApiResponse> => {
+  return safeApiCall(() => axios.put(`${API_BASE}/${id}`, campaignData, { headers: getAuthHeaders() }));
 };
 
 // Update campaign status
 export const updateCampaignStatus = async (
   id: string,
   status: Campaign['status']
-) => {
-  const res = await axios.put(
-    `${API_BASE}/${id}/status`,
-    { status },
-    {
-      headers: getAuthHeaders(),
-    }
+): Promise<ApiResponse> => {
+  return safeApiCall(() => 
+    axios.put(`${API_BASE}/${id}/status`, { status }, { headers: getAuthHeaders() })
   );
-  return normalizeResponse(res);
 };
 
 // Delete a campaign
-export const deleteCampaign = async (id: string) => {
-  const res = await axios.delete(`${API_BASE}/${id}`, {
-    headers: getAuthHeaders(),
-  });
-  return normalizeResponse(res);
+export const deleteCampaign = async (id: string): Promise<ApiResponse> => {
+  return safeApiCall(() => axios.delete(`${API_BASE}/${id}`, { headers: getAuthHeaders() }));
 };
 
 // Get contacts for a campaign with pagination
@@ -169,27 +126,23 @@ export const fetchCampaignContacts = async (
   campaignId: string,
   page: number = 1,
   limit: number = 50
-) => {
-  const res = await axios.get(`${API_BASE}/${campaignId}/contacts`, {
-    headers: getAuthHeaders(),
-    params: { page, limit },
-  });
-  return normalizeResponse(res);
+): Promise<ApiResponse> => {
+  return safeApiCall(() => 
+    axios.get(`${API_BASE}/${campaignId}/contacts`, {
+      headers: getAuthHeaders(),
+      params: { page, limit },
+    })
+  );
 };
 
 // Add contacts to a campaign
 export const addCampaignContacts = async (
   campaignId: string,
   contacts: { name: string; phoneNumber: string }[]
-) => {
-  const res = await axios.post(
-    `${API_BASE}/${campaignId}/contacts`,
-    { contacts },
-    {
-      headers: getAuthHeaders(),
-    }
+): Promise<ApiResponse> => {
+  return safeApiCall(() => 
+    axios.post(`${API_BASE}/${campaignId}/contacts`, { contacts }, { headers: getAuthHeaders() })
   );
-  return normalizeResponse(res);
 };
 
 // Update a single contact
@@ -197,54 +150,43 @@ export const updateCampaignContact = async (
   campaignId: string,
   contactId: string,
   contactData: Partial<CampaignContact>
-) => {
-  const res = await axios.put(
-    `${API_BASE}/${campaignId}/contacts/${contactId}`,
-    contactData,
-    {
-      headers: getAuthHeaders(),
-    }
+): Promise<ApiResponse> => {
+  return safeApiCall(() => 
+    axios.put(`${API_BASE}/${campaignId}/contacts/${contactId}`, contactData, { headers: getAuthHeaders() })
   );
-  return normalizeResponse(res);
 };
 
 // Delete a contact from a campaign
 export const deleteCampaignContact = async (
   campaignId: string,
   contactId: string
-) => {
-  const res = await axios.delete(
-    `${API_BASE}/${campaignId}/contacts/${contactId}`,
-    {
-      headers: getAuthHeaders(),
-    }
+): Promise<ApiResponse> => {
+  return safeApiCall(() => 
+    axios.delete(`${API_BASE}/${campaignId}/contacts/${contactId}`, { headers: getAuthHeaders() })
   );
-  return normalizeResponse(res);
 };
 
 // Upload Excel file with contacts
 export const uploadCampaignContacts = async (
   campaignId: string,
   file: File
-) => {
+): Promise<ApiResponse> => {
   const formData = new FormData();
   formData.append('file', file);
 
-  const res = await axios.post(`${API_BASE}/${campaignId}/upload`, formData, {
-    headers: {
-      ...getAuthHeaders(),
-      'Content-Type': 'multipart/form-data',
-    },
-  });
-  return normalizeResponse(res);
+  return safeApiCall(() => 
+    axios.post(`${API_BASE}/${campaignId}/upload`, formData, {
+      headers: {
+        ...getAuthHeaders(),
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+  );
 };
 
 // Get campaign statistics
-export const fetchCampaignStats = async (campaignId: string) => {
-  const res = await axios.get(`${API_BASE}/${campaignId}/stats`, {
-    headers: getAuthHeaders(),
-  });
-  return normalizeResponse(res);
+export const fetchCampaignStats = async (campaignId: string): Promise<ApiResponse> => {
+  return safeApiCall(() => axios.get(`${API_BASE}/${campaignId}/stats`, { headers: getAuthHeaders() }));
 };
 
 // Update contact call status
@@ -257,15 +199,10 @@ export const updateContactCallStatus = async (
     callDuration?: number;
     callNotes?: string;
   }
-) => {
-  const res = await axios.put(
-    `${API_BASE}/${campaignId}/contacts/${contactId}/call-status`,
-    data,
-    {
-      headers: getAuthHeaders(),
-    }
+): Promise<ApiResponse> => {
+  return safeApiCall(() => 
+    axios.put(`${API_BASE}/${campaignId}/contacts/${contactId}/call-status`, data, { headers: getAuthHeaders() })
   );
-  return normalizeResponse(res);
 };
 
 // Trigger call result interface
@@ -292,20 +229,8 @@ export interface TriggerCallsResponse {
 export const triggerCampaignCalls = async (
   campaignId: string,
   contactIds: string[]
-): Promise<{ success: boolean; data?: TriggerCallsResponse; message?: string; error?: string }> => {
-  try {
-    const res = await axios.post(
-      `${API_BASE}/${campaignId}/trigger-calls`,
-      { contactIds },
-      {
-        headers: getAuthHeaders(),
-      }
-    );
-    return normalizeResponse(res);
-  } catch (err: any) {
-    return {
-      success: false,
-      error: err.response?.data?.error || err.message || 'Failed to trigger calls',
-    };
-  }
+): Promise<ApiResponse<TriggerCallsResponse>> => {
+  return safeApiCall(() => 
+    axios.post(`${API_BASE}/${campaignId}/trigger-calls`, { contactIds }, { headers: getAuthHeaders() })
+  );
 };

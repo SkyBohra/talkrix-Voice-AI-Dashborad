@@ -1,27 +1,7 @@
 import axios from 'axios';
+import { getAuthHeaders, safeApiCall, ApiResponse } from './apiHelper';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
-
-const getAuthHeaders = () => {
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('token');
-    if (token) {
-      return { Authorization: `Bearer ${token}` };
-    }
-  }
-  return {};
-};
-
-// Helper to normalize backend response
-const normalizeResponse = (response: any) => {
-  const data = response.data;
-  return {
-    success: data.statusCode < 400,
-    data: data.data,
-    message: data.message,
-    error: data.error,
-  };
-};
 
 // Types
 export type TelephonyProvider = 'plivo' | 'twilio' | 'telnyx' | 'none';
@@ -61,18 +41,8 @@ export interface UserSettings {
 /**
  * Get all user settings
  */
-export const getSettings = async (): Promise<{ success: boolean; data?: UserSettings; error?: string }> => {
-  try {
-    const res = await axios.get(`${API_BASE}/settings`, {
-      headers: getAuthHeaders(),
-    });
-    return normalizeResponse(res);
-  } catch (err: any) {
-    return {
-      success: false,
-      error: err.response?.data?.error || err.message || 'Failed to fetch settings',
-    };
-  }
+export const getSettings = async (): Promise<ApiResponse<UserSettings>> => {
+  return safeApiCall(() => axios.get(`${API_BASE}/settings`, { headers: getAuthHeaders() }));
 };
 
 /**
@@ -80,18 +50,8 @@ export const getSettings = async (): Promise<{ success: boolean; data?: UserSett
  */
 export const updateGeneralSettings = async (
   settings: Partial<GeneralSettings>
-): Promise<{ success: boolean; data?: GeneralSettings; error?: string }> => {
-  try {
-    const res = await axios.put(`${API_BASE}/settings/general`, settings, {
-      headers: getAuthHeaders(),
-    });
-    return normalizeResponse(res);
-  } catch (err: any) {
-    return {
-      success: false,
-      error: err.response?.data?.error || err.message || 'Failed to update general settings',
-    };
-  }
+): Promise<ApiResponse<GeneralSettings>> => {
+  return safeApiCall(() => axios.put(`${API_BASE}/settings/general`, settings, { headers: getAuthHeaders() }));
 };
 
 /**
@@ -99,52 +59,22 @@ export const updateGeneralSettings = async (
  */
 export const updateTelephonySettings = async (
   settings: Partial<TelephonySettings>
-): Promise<{ success: boolean; data?: any; error?: string }> => {
-  try {
-    const res = await axios.put(`${API_BASE}/settings/telephony`, settings, {
-      headers: getAuthHeaders(),
-    });
-    return normalizeResponse(res);
-  } catch (err: any) {
-    return {
-      success: false,
-      error: err.response?.data?.error || err.message || 'Failed to update telephony settings',
-    };
-  }
+): Promise<ApiResponse> => {
+  return safeApiCall(() => axios.put(`${API_BASE}/settings/telephony`, settings, { headers: getAuthHeaders() }));
 };
 
 /**
  * Regenerate API key
  */
-export const regenerateApiKey = async (): Promise<{ success: boolean; data?: { apiKey: string }; error?: string }> => {
-  try {
-    const res = await axios.put(`${API_BASE}/settings/regenerate-api-key`, {}, {
-      headers: getAuthHeaders(),
-    });
-    return normalizeResponse(res);
-  } catch (err: any) {
-    return {
-      success: false,
-      error: err.response?.data?.error || err.message || 'Failed to regenerate API key',
-    };
-  }
+export const regenerateApiKey = async (): Promise<ApiResponse<{ apiKey: string }>> => {
+  return safeApiCall(() => axios.put(`${API_BASE}/settings/regenerate-api-key`, {}, { headers: getAuthHeaders() }));
 };
 
 /**
  * Get full API key
  */
-export const getApiKey = async (): Promise<{ success: boolean; data?: { apiKey: string }; error?: string }> => {
-  try {
-    const res = await axios.get(`${API_BASE}/settings/api-key`, {
-      headers: getAuthHeaders(),
-    });
-    return normalizeResponse(res);
-  } catch (err: any) {
-    return {
-      success: false,
-      error: err.response?.data?.error || err.message || 'Failed to fetch API key',
-    };
-  }
+export const getApiKey = async (): Promise<ApiResponse<{ apiKey: string }>> => {
+  return safeApiCall(() => axios.get(`${API_BASE}/settings/api-key`, { headers: getAuthHeaders() }));
 };
 
 /**
@@ -166,16 +96,6 @@ export interface AvailablePhoneNumbers {
 /**
  * Get available phone numbers for outbound calls
  */
-export const getAvailablePhoneNumbers = async (): Promise<{ success: boolean; data?: AvailablePhoneNumbers; error?: string }> => {
-  try {
-    const res = await axios.get(`${API_BASE}/settings/phone-numbers`, {
-      headers: getAuthHeaders(),
-    });
-    return normalizeResponse(res);
-  } catch (err: any) {
-    return {
-      success: false,
-      error: err.response?.data?.error || err.message || 'Failed to fetch phone numbers',
-    };
-  }
+export const getAvailablePhoneNumbers = async (): Promise<ApiResponse<AvailablePhoneNumbers>> => {
+  return safeApiCall(() => axios.get(`${API_BASE}/settings/phone-numbers`, { headers: getAuthHeaders() }));
 };

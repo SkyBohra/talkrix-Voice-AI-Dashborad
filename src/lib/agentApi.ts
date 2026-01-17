@@ -1,27 +1,7 @@
 import axios from 'axios';
+import { getAuthHeaders, safeApiCall, ApiResponse } from './apiHelper';
 
 const API_BASE = `${process.env.NEXT_PUBLIC_API_URL}/agents`;
-
-const getAuthHeaders = () => {
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('token');
-    if (token) {
-      return { Authorization: `Bearer ${token}` };
-    }
-  }
-  return {};
-};
-
-// Helper to normalize backend response
-const normalizeResponse = (response: any) => {
-  const data = response.data;
-  return {
-    success: data.statusCode < 400,
-    data: data.data,
-    message: data.message,
-    error: data.error,
-  };
-};
 
 export interface PaginatedAgents {
   agents: any[];
@@ -34,49 +14,40 @@ export interface PaginatedAgents {
 export const fetchAgentsByUser = async (userId: string, options?: {
   page?: number;
   limit?: number;
-}) => {
+}): Promise<ApiResponse> => {
   const params = new URLSearchParams();
   if (options?.page) params.append('page', String(options.page));
   if (options?.limit) params.append('limit', String(options.limit));
 
   const url = `${API_BASE}/user/${userId}${params.toString() ? '?' + params.toString() : ''}`;
-  const res = await axios.get(url, {
-    headers: getAuthHeaders(),
-  });
-  return normalizeResponse(res);
+  return safeApiCall(() => axios.get(url, { headers: getAuthHeaders() }));
 };
 
-export const createAgent = async (userId: string, agentData: any) => {
-  const res = await axios.post(`${API_BASE}/ultravox/${userId}`, agentData, {
-    headers: getAuthHeaders(),
-  });
-  return normalizeResponse(res);
+export const createAgent = async (userId: string, agentData: any): Promise<ApiResponse> => {
+  return safeApiCall(() => 
+    axios.post(`${API_BASE}/ultravox/${userId}`, agentData, { headers: getAuthHeaders() })
+  );
 };
 
-export const updateAgent = async (id: string, agentData: any) => {
-  const res = await axios.put(`${API_BASE}/${id}`, agentData, {
-    headers: getAuthHeaders(),
-  });
-  return normalizeResponse(res);
+export const updateAgent = async (id: string, agentData: any): Promise<ApiResponse> => {
+  return safeApiCall(() => 
+    axios.put(`${API_BASE}/${id}`, agentData, { headers: getAuthHeaders() })
+  );
 };
 
-export const deleteAgent = async (id: string) => {
-  const res = await axios.delete(`${API_BASE}/${id}`, {
-    headers: getAuthHeaders(),
-  });
-  return normalizeResponse(res);
+export const deleteAgent = async (id: string): Promise<ApiResponse> => {
+  return safeApiCall(() => 
+    axios.delete(`${API_BASE}/${id}`, { headers: getAuthHeaders() })
+  );
 };
 
-export const fetchVoices = async (search?: string) => {
+export const fetchVoices = async (search?: string): Promise<ApiResponse> => {
   const params = new URLSearchParams();
   if (search && search.trim()) {
     params.append('search', search.trim());
   }
   const url = `${API_BASE}/voices${params.toString() ? '?' + params.toString() : ''}`;
-  const res = await axios.get(url, {
-    headers: getAuthHeaders(),
-  });
-  return normalizeResponse(res);
+  return safeApiCall(() => axios.get(url, { headers: getAuthHeaders() }));
 };
 
 /**
@@ -89,11 +60,10 @@ export const createAgentCall = async (agentId: string, options?: {
   callType?: 'test' | 'inbound' | 'outbound';
   customerName?: string;
   customerPhone?: string;
-}) => {
-  const res = await axios.post(`${API_BASE}/${agentId}/call`, options || {}, {
-    headers: getAuthHeaders(),
-  });
-  return normalizeResponse(res);
+}): Promise<ApiResponse> => {
+  return safeApiCall(() => 
+    axios.post(`${API_BASE}/${agentId}/call`, options || {}, { headers: getAuthHeaders() })
+  );
 };
 
 /**
@@ -107,15 +77,14 @@ export const endAgentCall = async (
     durationSeconds?: number;
     recordingUrl?: string;
   }
-) => {
-  const res = await axios.put(
-    `${API_BASE}/${agentId}/call/${callHistoryId}/end`,
-    data,
-    {
-      headers: getAuthHeaders(),
-    }
+): Promise<ApiResponse> => {
+  return safeApiCall(() => 
+    axios.put(
+      `${API_BASE}/${agentId}/call/${callHistoryId}/end`,
+      data,
+      { headers: getAuthHeaders() }
+    )
   );
-  return normalizeResponse(res);
 };
 
 /**
@@ -130,9 +99,8 @@ export const createOutboundCall = async (
     recordingEnabled?: boolean;
     metadata?: Record<string, any>;
   }
-) => {
-  const res = await axios.post(`${API_BASE}/${agentId}/outbound-call`, data, {
-    headers: getAuthHeaders(),
-  });
-  return normalizeResponse(res);
+): Promise<ApiResponse> => {
+  return safeApiCall(() => 
+    axios.post(`${API_BASE}/${agentId}/outbound-call`, data, { headers: getAuthHeaders() })
+  );
 };

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Wrench, Plus, Pencil, Trash2, X, Save, Code, Globe, Database, Zap, Loader2, AlertCircle, RefreshCw, Phone, PhoneOff, Voicemail, Search, Music, PhoneCall } from "lucide-react";
 import { fetchUserTools, createTool, updateTool, deleteTool, Tool, ToolDefinition, DynamicParameter } from "@/lib/toolApi";
+import { useToast } from "@/components/ui/toast";
 
 // Tool type mapping for Talkrix tools
 type ToolType = "http" | "client" | "dataConnection" | "staticResponse";
@@ -150,6 +151,7 @@ const emptyFormData: FormData = {
 type TabType = "builtin" | "custom";
 
 export default function ToolsSection() {
+    const toast = useToast();
     const [activeTab, setActiveTab] = useState<TabType>("builtin");
     const [customTools, setCustomTools] = useState<Tool[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -265,17 +267,17 @@ export default function ToolsSection() {
 
     const handleSave = async () => {
         if (!formData.name.trim()) {
-            setError("Tool name is required");
+            toast.error("Validation Error", "Tool name is required");
             return;
         }
 
         if (!isValidToolName(formData.name.trim())) {
-            setError("Tool name can only contain letters, numbers, underscores, and hyphens (max 40 chars)");
+            toast.error("Validation Error", "Tool name can only contain letters, numbers, underscores, and hyphens (max 40 chars)");
             return;
         }
 
         if (formData.type === "http" && !formData.baseUrlPattern.trim()) {
-            setError("Base URL is required for HTTP tools");
+            toast.error("Validation Error", "Base URL is required for HTTP tools");
             return;
         }
 
@@ -290,8 +292,9 @@ export default function ToolsSection() {
                 if (response.success) {
                     await loadCustomTools();
                     setIsModalOpen(false);
+                    toast.success("Tool Updated", `"${formData.name}" has been updated successfully.`);
                 } else {
-                    setError(response.message || "Failed to update tool");
+                    toast.error("Update Failed", response.message || "Failed to update tool");
                 }
             } else {
                 const response = await createTool(payload);
@@ -299,12 +302,13 @@ export default function ToolsSection() {
                     await loadCustomTools();
                     setIsModalOpen(false);
                     setActiveTab("custom"); // Switch to custom tab after creating
+                    toast.success("Tool Created", `"${formData.name}" has been created successfully.`);
                 } else {
-                    setError(response.message || "Failed to create tool");
+                    toast.error("Creation Failed", response.message || "Failed to create tool");
                 }
             }
         } catch (err: any) {
-            setError(err.response?.data?.message || err.message || "Failed to save tool");
+            toast.error("Error", err.response?.data?.message || err.message || "Failed to save tool");
         } finally {
             setIsSaving(false);
         }
@@ -312,15 +316,17 @@ export default function ToolsSection() {
 
     const handleDelete = async (id: string) => {
         try {
+            const toolToDelete = customTools.find(t => t._id === id);
             const response = await deleteTool(id);
             if (response.success) {
                 setCustomTools(customTools.filter(t => t._id !== id));
                 setDeleteConfirmId(null);
+                toast.success("Tool Deleted", `"${toolToDelete?.name || 'Tool'}" has been deleted successfully.`);
             } else {
-                setError(response.message || "Failed to delete tool");
+                toast.error("Delete Failed", response.message || "Failed to delete tool");
             }
         } catch (err: any) {
-            setError(err.message || "Failed to delete tool");
+            toast.error("Error", err.message || "Failed to delete tool");
         }
     };
 

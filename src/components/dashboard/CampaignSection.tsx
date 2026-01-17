@@ -13,6 +13,7 @@ import {
 import { fetchAgentsByUser } from '@/lib/agentApi';
 import { getAvailablePhoneNumbers, PhoneNumberOption, TelephonyProvider } from '@/lib/settingsApi';
 import Pagination from '@/components/ui/Pagination';
+import { useToast } from '@/components/ui/toast';
 
 // Type alias for campaign types
 type CampaignType = 'outbound' | 'inbound' | 'ondemand';
@@ -44,6 +45,7 @@ const TIMEZONES = [
 export default function CampaignSection() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const toast = useToast();
 
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -202,23 +204,23 @@ export default function CampaignSection() {
 
   const handleCreateCampaign = async () => {
     if (!formData.name.trim()) {
-      setError('Campaign name is required');
+      toast.error('Validation Error', 'Campaign name is required');
       return;
     }
     if (!formData.agentId) {
-      setError('Please select an agent');
+      toast.error('Validation Error', 'Please select an agent');
       return;
     }
     if (formData.type === 'outbound') {
       if (!formData.scheduledDate || !formData.scheduledTime) {
-        setError('Schedule is required for outbound campaigns');
+        toast.error('Validation Error', 'Schedule is required for outbound campaigns');
         return;
       }
     }
     // Validate phone number selection for outbound/ondemand campaigns
     if ((formData.type === 'outbound' || formData.type === 'ondemand') && phoneNumbers.length > 0) {
       if (!formData.outboundPhoneNumber) {
-        setError('Please select an outbound phone number');
+        toast.error('Validation Error', 'Please select an outbound phone number');
         return;
       }
     }
@@ -250,7 +252,8 @@ export default function CampaignSection() {
       const response = await createCampaign(createData);
       
       if (!response.success) {
-        throw new Error(response.message || 'Failed to create campaign');
+        toast.error('Creation Failed', response.message || 'Failed to create campaign');
+        return;
       }
       
       const newCampaign = response.data;
@@ -258,7 +261,10 @@ export default function CampaignSection() {
       // If file is selected, upload contacts
       if (selectedFile && newCampaign?._id) {
         setUploadingFile(true);
-        await uploadCampaignContacts(newCampaign._id, selectedFile);
+        const uploadRes = await uploadCampaignContacts(newCampaign._id, selectedFile);
+        if (!uploadRes.success) {
+          toast.warning('Campaign Created', 'Campaign created but failed to upload contacts');
+        }
       }
 
       // Reset form and close modal
@@ -275,6 +281,8 @@ export default function CampaignSection() {
       setSelectedFile(null);
       setShowCreateModal(false);
 
+      toast.success('Campaign Created', `"${formData.name}" has been created successfully.`);
+
       // Reload campaigns
       await loadData();
       // Reload phone numbers in case auto-select is needed for next campaign
@@ -282,7 +290,7 @@ export default function CampaignSection() {
     } catch (err: unknown) {
       console.error('Failed to create campaign:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to create campaign';
-      setError(errorMessage);
+      toast.error('Error', errorMessage);
     } finally {
       setCreating(false);
       setUploadingFile(false);

@@ -1,27 +1,7 @@
 import axios from 'axios';
+import { getAuthHeaders, safeApiCall, ApiResponse } from './apiHelper';
 
 const API_BASE = `${process.env.NEXT_PUBLIC_API_URL}/tools`;
-
-const getAuthHeaders = () => {
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('token');
-    if (token) {
-      return { Authorization: `Bearer ${token}` };
-    }
-  }
-  return {};
-};
-
-// Helper to normalize backend response
-const normalizeResponse = (response: any) => {
-  const data = response.data;
-  return {
-    success: data.statusCode < 400,
-    data: data.data,
-    message: data.message,
-    error: data.error,
-  };
-};
 
 // Tool Definition interfaces
 export interface DynamicParameter {
@@ -84,69 +64,48 @@ export interface CreateToolPayload {
 /**
  * Fetch tools for the current user
  */
-export const fetchUserTools = async () => {
-  const res = await axios.get(`${API_BASE}/user/me`, {
-    headers: getAuthHeaders(),
-  });
-  return normalizeResponse(res);
+export const fetchUserTools = async (): Promise<ApiResponse> => {
+  return safeApiCall(() => axios.get(`${API_BASE}/user/me`, { headers: getAuthHeaders() }));
 };
 
 /**
  * Fetch tools for a specific user
  */
-export const fetchToolsByUser = async (userId: string) => {
-  const res = await axios.get(`${API_BASE}/user/${userId}`, {
-    headers: getAuthHeaders(),
-  });
-  return normalizeResponse(res);
+export const fetchToolsByUser = async (userId: string): Promise<ApiResponse> => {
+  return safeApiCall(() => axios.get(`${API_BASE}/user/${userId}`, { headers: getAuthHeaders() }));
 };
 
 /**
  * Fetch all tools
  */
-export const fetchAllTools = async () => {
-  const res = await axios.get(API_BASE, {
-    headers: getAuthHeaders(),
-  });
-  return normalizeResponse(res);
+export const fetchAllTools = async (): Promise<ApiResponse> => {
+  return safeApiCall(() => axios.get(API_BASE, { headers: getAuthHeaders() }));
 };
 
 /**
  * Get a specific tool by local database ID
  */
-export const fetchTool = async (id: string) => {
-  const res = await axios.get(`${API_BASE}/${id}`, {
-    headers: getAuthHeaders(),
-  });
-  return normalizeResponse(res);
+export const fetchTool = async (id: string): Promise<ApiResponse> => {
+  return safeApiCall(() => axios.get(`${API_BASE}/${id}`, { headers: getAuthHeaders() }));
 };
 
 /**
  * Create a new tool
  */
-export const createTool = async (toolData: CreateToolPayload) => {
-  const res = await axios.post(API_BASE, toolData, {
-    headers: getAuthHeaders(),
-  });
-  return normalizeResponse(res);
+export const createTool = async (toolData: CreateToolPayload): Promise<ApiResponse> => {
+  return safeApiCall(() => axios.post(API_BASE, toolData, { headers: getAuthHeaders() }));
 };
 
 /**
  * Update a tool (full replacement in Ultravox)
  */
-export const updateTool = async (id: string, toolData: CreateToolPayload) => {
-  const res = await axios.put(`${API_BASE}/${id}`, toolData, {
-    headers: getAuthHeaders(),
-  });
-  return normalizeResponse(res);
+export const updateTool = async (id: string, toolData: CreateToolPayload): Promise<ApiResponse> => {
+  return safeApiCall(() => axios.put(`${API_BASE}/${id}`, toolData, { headers: getAuthHeaders() }));
 };
 
 /**
  * Delete a tool
  */
-export const deleteTool = async (id: string) => {
-  const res = await axios.delete(`${API_BASE}/${id}`, {
-    headers: getAuthHeaders(),
-  });
-  return normalizeResponse(res);
+export const deleteTool = async (id: string): Promise<ApiResponse> => {
+  return safeApiCall(() => axios.delete(`${API_BASE}/${id}`, { headers: getAuthHeaders() }));
 };

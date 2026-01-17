@@ -465,16 +465,15 @@ export default function AgentBuilder({
         <div style={{
             position: 'fixed',
             top: 0,
-            left: 'var(--sidebar-width, 260px)',
+            left: '260px',
             right: 0,
             bottom: 0,
             background: 'linear-gradient(180deg, rgba(5, 10, 20, 0.99) 0%, rgba(8, 15, 30, 0.99) 100%)',
-            zIndex: 50,
+            zIndex: 100,
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
             boxShadow: '-10px 0 40px rgba(0, 0, 0, 0.5)',
-            transition: 'left 0.3s ease',
         }}>
             {/* Top Toolbar */}
             <div style={{

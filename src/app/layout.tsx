@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { ToastProvider } from "@/components/ui/toast";
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -49,7 +50,9 @@ export default function RootLayout({
                         <div className="particle"></div>
                     </div>
                 </div>
-                {children}
+                <ToastProvider>
+                    {children}
+                </ToastProvider>
             </body>
         </html>
     );

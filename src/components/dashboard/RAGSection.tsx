@@ -13,6 +13,7 @@ import {
     Corpus, CorpusSource, QueryResult
 } from "@/lib/corpusApi";
 import { getUserInfo } from "@/lib/userApi";
+import { useToast } from "@/components/ui/toast";
 
 type ViewMode = "list" | "detail" | "sources" | "documents" | "query";
 
@@ -35,6 +36,7 @@ const getStatus = (status: string | undefined) => {
 };
 
 export default function RAGSection() {
+    const toast = useToast();
     // State
     const [corpora, setCorpora] = useState<Corpus[]>([]);
     const [selectedCorpus, setSelectedCorpus] = useState<Corpus | null>(null);
@@ -157,7 +159,10 @@ export default function RAGSection() {
     };
 
     const handleSaveCorpus = async () => {
-        if (!corpusForm.name.trim()) return;
+        if (!corpusForm.name.trim()) {
+            toast.error("Validation Error", "Name is required");
+            return;
+        }
         setActionLoading(true);
         try {
             if (editingCorpus) {
@@ -165,20 +170,22 @@ export default function RAGSection() {
                 if (res.success) {
                     await loadCorpora();
                     setIsModalOpen(false);
+                    toast.success("Knowledge Base Updated", `"${corpusForm.name}" has been updated.`);
                 } else {
-                    setError(res.error || "Failed to update corpus");
+                    toast.error("Update Failed", res.error || "Failed to update knowledge base");
                 }
             } else {
                 const res = await createCorpus(corpusForm);
                 if (res.success) {
                     await loadCorpora();
                     setIsModalOpen(false);
+                    toast.success("Knowledge Base Created", `"${corpusForm.name}" has been created.`);
                 } else {
-                    setError(res.error || "Failed to create corpus");
+                    toast.error("Creation Failed", res.error || "Failed to create knowledge base");
                 }
             }
         } catch (err: any) {
-            setError(err.message || "Failed to save corpus");
+            toast.error("Error", err.message || "Failed to save knowledge base");
         } finally {
             setActionLoading(false);
         }
@@ -188,6 +195,7 @@ export default function RAGSection() {
         if (!confirm("Are you sure you want to delete this knowledge base? This will also delete all sources and documents.")) return;
         setActionLoading(true);
         try {
+            const corpusToDelete = corpora.find(c => c._id === id);
             const res = await deleteCorpus(id);
             if (res.success) {
                 await loadCorpora();
@@ -195,18 +203,22 @@ export default function RAGSection() {
                     setSelectedCorpus(null);
                     setViewMode("list");
                 }
+                toast.success("Knowledge Base Deleted", `"${corpusToDelete?.name || 'Item'}" has been deleted.`);
             } else {
-                setError(res.error || "Failed to delete corpus");
+                toast.error("Delete Failed", res.error || "Failed to delete knowledge base");
             }
         } catch (err: any) {
-            setError(err.message || "Failed to delete corpus");
+            toast.error("Error", err.message || "Failed to delete knowledge base");
         } finally {
             setActionLoading(false);
         }
     };
 
     const handleCreateCrawlSource = async () => {
-        if (!selectedCorpus || !crawlForm.name.trim() || !crawlForm.startUrls.trim()) return;
+        if (!selectedCorpus || !crawlForm.name.trim() || !crawlForm.startUrls.trim()) {
+            toast.error("Validation Error", "Name and URLs are required");
+            return;
+        }
         setActionLoading(true);
         try {
             const urls = crawlForm.startUrls.split("\n").map(u => u.trim()).filter(Boolean);
@@ -220,18 +232,22 @@ export default function RAGSection() {
             if (res.success) {
                 await loadSources(selectedCorpus._id);
                 setIsModalOpen(false);
+                toast.success("Web Crawler Created", `"${crawlForm.name}" source has been created.`);
             } else {
-                setError(res.error || "Failed to create source");
+                toast.error("Creation Failed", res.error || "Failed to create web crawler");
             }
         } catch (err: any) {
-            setError(err.message || "Failed to create source");
+            toast.error("Error", err.message || "Failed to create web crawler");
         } finally {
             setActionLoading(false);
         }
     };
 
     const handleFileUpload = async () => {
-        if (!selectedCorpus || !uploadFile) return;
+        if (!selectedCorpus || !uploadFile) {
+            toast.error("Validation Error", "Please select a file to upload");
+            return;
+        }
         setActionLoading(true);
         try {
             // Get presigned URL
@@ -241,7 +257,7 @@ export default function RAGSection() {
             });
             
             if (!uploadRes.success) {
-                setError(uploadRes.error || "Failed to get upload URL");
+                toast.error("Upload Failed", uploadRes.error || "Failed to get upload URL");
                 return;
             }
 
@@ -256,11 +272,12 @@ export default function RAGSection() {
                 });
                 await loadSources(selectedCorpus._id);
                 setIsModalOpen(false);
+                toast.success("File Uploaded", `"${uploadFile.name}" has been uploaded successfully.`);
             } else {
-                setError("Failed to upload file");
+                toast.error("Upload Failed", "Failed to upload file to storage");
             }
         } catch (err: any) {
-            setError(err.message || "Failed to upload file");
+            toast.error("Error", err.message || "Failed to upload file");
         } finally {
             setActionLoading(false);
         }
@@ -270,14 +287,16 @@ export default function RAGSection() {
         if (!selectedCorpus || !confirm("Are you sure you want to delete this source?")) return;
         setActionLoading(true);
         try {
+            const sourceToDelete = sources.find(s => s._id === sourceId);
             const res = await deleteSource(selectedCorpus._id, sourceId);
             if (res.success) {
                 await loadSources(selectedCorpus._id);
+                toast.success("Source Deleted", `"${sourceToDelete?.name || 'Source'}" has been deleted.`);
             } else {
-                setError(res.error || "Failed to delete source");
+                toast.error("Delete Failed", res.error || "Failed to delete source");
             }
         } catch (err: any) {
-            setError(err.message || "Failed to delete source");
+            toast.error("Error", err.message || "Failed to delete source");
         } finally {
             setActionLoading(false);
         }

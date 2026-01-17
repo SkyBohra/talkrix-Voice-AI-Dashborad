@@ -6,6 +6,7 @@ import { createAgent, fetchAgentsByUser, updateAgent, deleteAgent, fetchVoices, 
 import { fetchUserTools, Tool } from "../../lib/toolApi";
 import AgentBuilder from "./AgentBuilder";
 import Pagination from "@/components/ui/Pagination";
+import { useToast } from "@/components/ui/toast";
 
 interface Voice {
     voiceId: string;
@@ -126,10 +127,10 @@ const defaultFormData: FormData = {
     recordingEnabled: true,
     systemPrompt: "You are a helpful assistant",
     temperature: 0,
-    voice: "Crhysa",
+    voice: "Saavi-English-Indian",
     corpusId: undefined, // RAG Knowledge Base
     firstSpeaker: "agent",
-    firstSpeakerText: "Hello, how can I help you today?",
+    firstSpeakerText: "Hello! How can I help you?",
     firstSpeakerUninterruptible: true,
     firstSpeakerDelay: "",
     userFallbackDelay: "5s",
@@ -421,7 +422,7 @@ Before ending any call, confirm:
 [Continue naturally based on responses...]
 
 Remember: Your goal is to help prospects find the right solution, not to push them into something that doesn't fit. Quality leads who genuinely need your solution will always outperform a high volume of unqualified contacts.`,
-        greeting: "Hi there! Thanks so much for reaching out. I'd love to learn more about what you're looking for and see how we might be able to help. What brings you to us today?",
+        greeting: "Hi! Thanks for reaching out. What brings you to us today?",
     },
     {
         id: 'customer-support',
@@ -701,7 +702,7 @@ You are a friendly, patient, and highly capable customer support representative.
 **You**: "Thank you. I see your order #12345 was placed on January 1st. Let me check the shipping status... I can see there was a carrier delay—it looks like the package was held at a distribution center due to weather. It's now showing it will arrive tomorrow by end of day. I know that doesn't make up for the lack of communication. As an apology for this experience, I'm going to refund your shipping cost and add a $20 credit to your account. Does that help make this right?"
 
 Remember: Every customer interaction is a chance to create a loyal advocate or lose a customer forever. Choose to create advocates.`,
-        greeting: "Hello! Thank you for contacting our support team. My name is your AI assistant, and I'm here to help you today. What can I assist you with?",
+        greeting: "Hello! How can I help you today?",
     },
     {
         id: 'appointment-booking',
@@ -994,7 +995,7 @@ If this is after hours, be sure to:
 **You**: "Wonderful! We'll see you tomorrow at 3 PM. Have a great day!"
 
 Remember: A well-booked appointment is the first step to a satisfied customer. Make the scheduling process so easy that customers look forward to calling back.`,
-        greeting: "Hello! Thank you for calling. I'm here to help you with scheduling. Would you like to book a new appointment, reschedule an existing one, or is there something else I can help you with today?",
+        greeting: "Hello! Are you looking to book, reschedule, or cancel an appointment?",
     },
     {
         id: 'order-status',
@@ -1315,7 +1316,7 @@ Provide comprehensive status including:
 **You**: "Perfect. I'm sending that to your email now. You should receive it within a few minutes. If your package doesn't arrive by end of day tomorrow, please call us back and we'll explore additional options including reshipping with expedited delivery. Is there anything else I can help you with today?"
 
 Remember: A customer calling about an order is trusting you to be the calm in their uncertainty. Provide accurate information, set realistic expectations, and always offer solutions—not excuses.`,
-        greeting: "Hello! I can help you check on your order. Do you have your order number handy, or would you like me to look it up using your email address?",
+        greeting: "Hello! Do you have your order number, or should I look it up by email?",
     },
     {
         id: 'survey-feedback',
@@ -1629,7 +1630,7 @@ Never pressure or make them feel bad for declining.
 **You**: "Thank you so much for taking the time to share your thoughts with us today. Your feedback about shipping expectations is exactly what helps us improve. We really appreciate you being a customer, and I hope your next experience earns us that 10!"
 
 Remember: Every piece of feedback, positive or negative, is a customer taking time to help you improve. Treat every survey like a conversation with a valuable friend.`,
-        greeting: "Hello! Thank you for taking a moment to speak with me. We're conducting a brief survey to help us improve our services, and your feedback is incredibly valuable. This will only take about 3-5 minutes. Would you be willing to share your thoughts with us?",
+        greeting: "Hi! Do you have 2 minutes to share your feedback with us?",
     },
     {
         id: 'restaurant-reservation',
@@ -1978,7 +1979,7 @@ Does everything look correct?"
 **You**: "Thank you for choosing [Restaurant Name], Sarah. Have a lovely evening, and we'll see you Saturday!"
 
 Remember: A reservation is the appetizer to the dining experience. Make it as delightful as the meal itself.`,
-        greeting: "Good evening! Thank you for calling [Restaurant Name]. I'd be delighted to help you with a reservation. What date and time were you thinking, and how many guests will be joining us?",
+        greeting: "Hello! For how many guests, and what date and time?",
     },
     {
         id: 'real-estate',
@@ -2026,7 +2027,7 @@ Remember: A reservation is the appetizer to the dining experience. Make it as de
 - Market conditions
 
 Remember: Buying or renting a home is a major decision. Be patient, informative, and supportive.`,
-        greeting: "Hello! Thank you for your interest in finding your perfect property. I'm here to help you explore your options. Are you looking to buy, rent, or sell a property today?",
+        greeting: "Hello! Are you looking to buy, rent, or sell?",
     },
     {
         id: 'healthcare-reception',
@@ -2072,7 +2073,7 @@ Remember: Buying or renting a home is a major decision. Be patient, informative,
 - Test results → Cannot disclose; schedule callback with provider
 
 Remember: Patients may be anxious about their health. Your calm, professional demeanor provides comfort.`,
-        greeting: "Hello, thank you for calling our medical office. This is your virtual assistant. How may I help you today? Are you calling to schedule an appointment or do you have a question I can assist with?",
+        greeting: "Hello! Are you calling to schedule an appointment or have a question?",
     },
     {
         id: 'tech-support',
@@ -2125,7 +2126,7 @@ Remember: Patients may be anxious about their health. Your calm, professional de
 - Issues requiring remote access
 
 Remember: Technical issues can be frustrating. Your patience and clarity can turn a negative experience into a positive one.`,
-        greeting: "Hello! Welcome to technical support. I'm here to help you resolve any issues you're experiencing. Can you tell me what product or service you're having trouble with and describe what's happening?",
+        greeting: "Hello! What issue are you experiencing today?",
     },
     {
         id: 'scratch',
@@ -2138,6 +2139,7 @@ Remember: Technical issues can be frustrating. Your patience and clarity can tur
 ];
 
 export default function AgentsSection() {
+    const toast = useToast();
     const [agents, setAgents] = useState<Agent[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [showAgentBuilder, setShowAgentBuilder] = useState(false);
@@ -2522,13 +2524,13 @@ export default function AgentsSection() {
 
     const handleSave = async () => {
         if (!formData.name.trim()) {
-            setError("Agent name is required");
+            toast.error("Agent Name Required", "Please enter a name for your agent before saving.");
             return;
         }
 
         const userId = getUserId();
         if (!userId) {
-            setError("User not authenticated. Please log in again.");
+            toast.error("Authentication Error", "Please log in again to continue.");
             return;
         }
 
@@ -2546,22 +2548,37 @@ export default function AgentsSection() {
                     ));
                     setIsModalOpen(false);
                     setShowAgentBuilder(false);
+                    toast.success("Agent Updated", `"${formData.name}" has been updated successfully.`);
                 } else {
-                    setError(response.message || "Failed to update agent");
+                    toast.error("Update Failed", response.message || "Failed to update agent");
                 }
             } else {
                 const response = await createAgent(userId, payload);
                 if (response.success && response.data) {
-                    setAgents([...agents, response.data]);
+                    // Reload agents list from API to ensure proper data with _id
+                    const refreshResponse = await fetchAgentsByUser(userId, { page: 1, limit: itemsPerPage });
+                    if (refreshResponse.success && refreshResponse.data) {
+                        if (refreshResponse.data.agents) {
+                            setAgents(refreshResponse.data.agents);
+                            setTotalPages(refreshResponse.data.pages || 1);
+                            setTotalItems(refreshResponse.data.total || 0);
+                        } else {
+                            setAgents(refreshResponse.data);
+                            setTotalItems(refreshResponse.data.length || 0);
+                            setTotalPages(1);
+                        }
+                    }
+                    setPage(1); // Reset to first page to show new agent
                     setIsModalOpen(false);
                     setShowAgentBuilder(false);
+                    toast.success("Agent Created", `"${formData.name}" has been created successfully.`);
                 } else {
-                    setError(response.message || response.error || "Failed to create agent");
+                    toast.error("Creation Failed", response.message || response.error || "Failed to create agent");
                 }
             }
         } catch (err: any) {
             console.error("Error saving agent:", err);
-            setError(err?.response?.data?.message || err?.message || "An error occurred");
+            toast.error("Error", err?.response?.data?.message || err?.message || "An unexpected error occurred");
         } finally {
             setLoading(false);
         }
@@ -2605,7 +2622,7 @@ export default function AgentsSection() {
             });
             
             if (!response.success || !response.data?.joinUrl) {
-                setCallError(response.message || 'Failed to create call');
+                toast.error("Call Failed", response.message || 'Failed to create call');
                 setCallStatus('idle');
                 return;
             }
@@ -2737,15 +2754,17 @@ export default function AgentsSection() {
         if (!confirm("Are you sure you want to delete this agent?")) return;
         
         try {
+            const agentToDelete = agents.find(a => a._id === id);
             const response = await deleteAgent(id);
             if (response.success) {
                 setAgents(agents.filter(a => a._id !== id));
+                toast.success("Agent Deleted", `"${agentToDelete?.name || 'Agent'}" has been deleted successfully.`);
             } else {
-                alert(response.message || response.error || "Failed to delete agent");
+                toast.error("Delete Failed", response.message || response.error || "Failed to delete agent");
             }
         } catch (err: any) {
             console.error("Error deleting agent:", err);
-            alert(err?.response?.data?.message || err?.message || "Failed to delete agent");
+            toast.error("Error", err?.response?.data?.message || err?.message || "Failed to delete agent");
         }
     };
 
@@ -2936,10 +2955,11 @@ export default function AgentsSection() {
                                     {/* Info chips */}
                                     <div style={{ 
                                         display: "flex", 
-                                        flexWrap: "wrap",
+                                        flexDirection: "column",
                                         gap: "8px", 
                                         marginBottom: "16px",
                                     }}>
+                                        {/* Voice - First Row */}
                                         <div style={{ 
                                             padding: "6px 10px",
                                             borderRadius: "6px",
@@ -2954,37 +2974,40 @@ export default function AgentsSection() {
                                                 {agent.callTemplate?.voice || "Default"}
                                             </span>
                                         </div>
-                                        <div style={{ 
-                                            padding: "6px 10px",
-                                            borderRadius: "6px",
-                                            background: "rgba(255, 255, 255, 0.04)",
-                                            border: "1px solid rgba(255, 255, 255, 0.06)",
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: "6px",
-                                        }}>
-                                            <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.5)" }}>⏱️</span>
-                                            <span style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.7)", fontWeight: "500" }}>
-                                                {agent.callTemplate?.maxDuration || "N/A"}
-                                            </span>
-                                        </div>
-                                        <div style={{ 
-                                            padding: "6px 10px",
-                                            borderRadius: "6px",
-                                            background: agent.callTemplate?.recordingEnabled ? "rgba(34, 197, 94, 0.08)" : "rgba(255, 255, 255, 0.04)",
-                                            border: `1px solid ${agent.callTemplate?.recordingEnabled ? "rgba(34, 197, 94, 0.15)" : "rgba(255, 255, 255, 0.06)"}`,
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: "6px",
-                                        }}>
-                                            <span style={{ fontSize: "11px" }}>{agent.callTemplate?.recordingEnabled ? "🔴" : "⚫"}</span>
-                                            <span style={{ 
-                                                fontSize: "12px", 
-                                                color: agent.callTemplate?.recordingEnabled ? "#22c55e" : "rgba(255, 255, 255, 0.4)", 
-                                                fontWeight: "500" 
+                                        {/* Recording & Time - Second Row */}
+                                        <div style={{ display: "flex", gap: "8px" }}>
+                                            <div style={{ 
+                                                padding: "6px 10px",
+                                                borderRadius: "6px",
+                                                background: agent.callTemplate?.recordingEnabled ? "rgba(34, 197, 94, 0.08)" : "rgba(255, 255, 255, 0.04)",
+                                                border: `1px solid ${agent.callTemplate?.recordingEnabled ? "rgba(34, 197, 94, 0.15)" : "rgba(255, 255, 255, 0.06)"}`,
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: "6px",
                                             }}>
-                                                {agent.callTemplate?.recordingEnabled ? "Recording" : "No Rec"}
-                                            </span>
+                                                <span style={{ fontSize: "11px" }}>{agent.callTemplate?.recordingEnabled ? "🔴" : "⚫"}</span>
+                                                <span style={{ 
+                                                    fontSize: "12px", 
+                                                    color: agent.callTemplate?.recordingEnabled ? "#22c55e" : "rgba(255, 255, 255, 0.4)", 
+                                                    fontWeight: "500" 
+                                                }}>
+                                                    {agent.callTemplate?.recordingEnabled ? "Recording" : "No Rec"}
+                                                </span>
+                                            </div>
+                                            <div style={{ 
+                                                padding: "6px 10px",
+                                                borderRadius: "6px",
+                                                background: "rgba(255, 255, 255, 0.04)",
+                                                border: "1px solid rgba(255, 255, 255, 0.06)",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: "6px",
+                                            }}>
+                                                <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.5)" }}>⏱️</span>
+                                                <span style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.7)", fontWeight: "500" }}>
+                                                    {agent.callTemplate?.maxDuration || "N/A"}
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -3099,12 +3122,16 @@ export default function AgentsSection() {
                 <div
                     style={{
                         position: "fixed",
-                        inset: 0,
-                        background: "rgba(0, 0, 0, 0.8)",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: "rgba(3, 7, 18, 0.9)",
+                        backdropFilter: "blur(8px)",
                         display: "flex",
                         alignItems: "flex-start",
                         justifyContent: "center",
-                        zIndex: 100,
+                        zIndex: 1000,
                         overflow: "auto",
                         padding: "40px 20px",
                     }}
@@ -3112,14 +3139,15 @@ export default function AgentsSection() {
                 >
                     <div
                         style={{
-                            background: "rgba(15, 15, 20, 0.95)",
+                            background: "linear-gradient(180deg, rgba(10, 15, 30, 0.98) 0%, rgba(5, 10, 20, 0.98) 100%)",
                             backdropFilter: "blur(20px)",
-                            border: "1px solid rgba(0, 200, 255, 0.1)",
+                            border: "1px solid rgba(0, 200, 255, 0.2)",
                             borderRadius: "20px",
                             padding: "32px",
                             width: "100%",
                             maxWidth: showTemplateSelection && !editingAgent ? "900px" : "640px",
                             margin: "auto",
+                            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 200, 255, 0.1)",
                         }}
                         onClick={(e) => e.stopPropagation()}
                     >
@@ -3946,21 +3974,25 @@ export default function AgentsSection() {
                 <div
                     style={{
                         position: "fixed",
-                        inset: 0,
-                        background: "rgba(0, 0, 0, 0.9)",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: "rgba(3, 7, 18, 0.95)",
+                        backdropFilter: "blur(8px)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        zIndex: 200,
+                        zIndex: 1000,
                         padding: "20px",
                     }}
                     onClick={closeTestModal}
                 >
                     <div
                         style={{
-                            background: "rgba(15, 15, 20, 0.98)",
+                            background: "linear-gradient(180deg, rgba(10, 15, 30, 0.98) 0%, rgba(5, 10, 20, 0.98) 100%)",
                             backdropFilter: "blur(20px)",
-                            border: "1px solid rgba(0, 200, 255, 0.1)",
+                            border: "1px solid rgba(0, 200, 255, 0.2)",
                             borderRadius: "24px",
                             width: "100%",
                             maxWidth: callStatus === 'connected' || callStatus === 'ended' ? "600px" : "480px",
@@ -3969,6 +4001,7 @@ export default function AgentsSection() {
                             display: "flex",
                             flexDirection: "column",
                             position: "relative",
+                            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 200, 255, 0.1)",
                         }}
                         onClick={(e) => e.stopPropagation()}
                     >
