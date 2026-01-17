@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getAuthHeaders, safeApiCall, ApiResponse } from './apiHelper';
+import { getAuthHeaders } from './apiHelper';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -78,15 +78,24 @@ export async function fetchDashboard(
   period: 'today' | 'week' | 'month' = 'week'
 ): Promise<{ success: boolean; data?: DashboardResponse; message?: string }> {
   try {
+    const headers = getAuthHeaders();
+    console.log('Fetching dashboard with headers:', headers ? 'Auth present' : 'No auth');
+    
     const response = await axios.get(`${API_URL}/dashboard?period=${period}`, {
-      headers: getAuthHeaders(),
+      headers,
     });
+    
+    console.log('Dashboard response:', response.data);
     return { success: true, data: response.data?.data };
   } catch (error: any) {
-    console.error('Error fetching dashboard:', error);
+    console.error('Error fetching dashboard:', {
+      status: error?.response?.status,
+      message: error?.response?.data?.message,
+      error: error?.message,
+    });
     return {
       success: false,
-      message: error?.response?.data?.message || 'Failed to fetch dashboard',
+      message: error?.response?.data?.message || error?.message || 'Failed to fetch dashboard',
     };
   }
 }

@@ -177,6 +177,32 @@ export default function DashboardSection() {
     const [data, setData] = useState<DashboardResponse | null>(null);
     const [error, setError] = useState<string | null>(null);
 
+    // Default empty data for when API fails or returns no data
+    const defaultData: DashboardResponse = {
+        stats: {
+            totalCalls: 0,
+            completedCalls: 0,
+            missedCalls: 0,
+            failedCalls: 0,
+            avgDurationSeconds: 0,
+            avgDurationFormatted: '0:00',
+            successRate: 0,
+            totalAgents: 0,
+            activeAgents: 0,
+            totalCampaigns: 0,
+            activeCampaigns: 0,
+        },
+        trends: {
+            calls: { value: 0, change: 0, isUp: true },
+            completed: { value: 0, change: 0, isUp: true },
+            missed: { value: 0, change: 0, isUp: false },
+            duration: { value: 0, change: 0, isUp: true },
+            successRate: { value: 0, change: 0, isUp: true },
+        },
+        recentCalls: [],
+        period: period,
+    };
+
     const loadDashboard = useCallback(async (showRefresh = false) => {
         if (showRefresh) setRefreshing(true);
         else setLoading(true);
@@ -188,10 +214,14 @@ export default function DashboardSection() {
             if (result.success && result.data) {
                 setData(result.data);
             } else {
-                setError(result.message || 'Failed to load dashboard');
+                // Use default data when API fails
+                console.warn('Dashboard API failed, using defaults:', result.message);
+                setData(defaultData);
             }
         } catch (err) {
-            setError('Failed to load dashboard');
+            console.error('Dashboard load error:', err);
+            // Use default data on error
+            setData(defaultData);
         } finally {
             setLoading(false);
             setRefreshing(false);
