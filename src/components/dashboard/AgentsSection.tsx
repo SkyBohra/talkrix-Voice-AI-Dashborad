@@ -27,6 +27,15 @@ function useDebounce<T>(value: T, delay: number): T {
     return debouncedValue;
 }
 
+// Sanitize agent name to match Ultravox pattern: ^[a-zA-Z0-9_-]{1,64}$
+function sanitizeAgentName(name: string): string {
+    if (!name) return '';
+    return name
+        .replace(/\s+/g, '_')           // Replace spaces with underscores
+        .replace(/[^a-zA-Z0-9_-]/g, '') // Remove invalid characters
+        .substring(0, 64);              // Limit to 64 characters
+}
+
 // Tool reference format as stored in API
 interface ToolReference {
     toolName?: string;  // For built-in tools
@@ -3538,8 +3547,8 @@ export default function AgentsSection() {
                                 <input
                                     type="text"
                                     value={formData.name}
-                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                    placeholder="Enter agent name..."
+                                    onChange={(e) => setFormData({ ...formData, name: sanitizeAgentName(e.target.value) })}
+                                    placeholder="Enter agent name (letters, numbers, _ and - only)"
                                     style={{
                                         width: "100%",
                                         padding: "12px 16px",

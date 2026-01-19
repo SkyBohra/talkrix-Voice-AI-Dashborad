@@ -13,6 +13,15 @@ import { fetchVoices } from "../../lib/agentApi";
 import { fetchUserTools, Tool } from "../../lib/toolApi";
 import { listCorpora, Corpus } from "../../lib/corpusApi";
 
+// Sanitize agent name to match Ultravox pattern: ^[a-zA-Z0-9_-]{1,64}$
+function sanitizeAgentName(name: string): string {
+    if (!name) return '';
+    return name
+        .replace(/\s+/g, '_')           // Replace spaces with underscores
+        .replace(/[^a-zA-Z0-9_-]/g, '') // Remove invalid characters
+        .substring(0, 64);              // Limit to 64 characters
+}
+
 interface Voice {
     voiceId: string;
     name: string;
@@ -509,7 +518,7 @@ export default function AgentBuilder({
                         <input
                             type="text"
                             value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            onChange={(e) => setFormData({ ...formData, name: sanitizeAgentName(e.target.value) })}
                             placeholder="Agent_Name"
                             style={{
                                 background: 'transparent',
