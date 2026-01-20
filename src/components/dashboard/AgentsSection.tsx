@@ -131,7 +131,7 @@ const defaultFormData: FormData = {
     name: "",
     callTemplateName: "",
     initialOutputMedium: "MESSAGE_MEDIUM_VOICE",
-    joinTimeout: "30s",
+    joinTimeout: "50s",
     maxDuration: "300s",
     recordingEnabled: true,
     systemPrompt: "You are a helpful assistant",
