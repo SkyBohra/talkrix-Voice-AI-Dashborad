@@ -2674,7 +2674,7 @@ export default function AgentsSection() {
             initialOutputMedium: formData.initialOutputMedium,
             joinTimeout: formData.joinTimeout,
             maxDuration: formData.maxDuration,
-            model: "fixie-ai/ultravox-70B", // Hidden from UI - internal setting
+            model: "ultravox-v0.7", // Hidden from UI - internal setting
             recordingEnabled: formData.recordingEnabled,
             firstSpeakerSettings,
             systemPrompt: formData.systemPrompt,
