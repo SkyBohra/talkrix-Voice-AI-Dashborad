@@ -976,6 +976,7 @@ export default function CreateCampaignWizard({
                               }
                               setFormData({ ...formData, scheduledTime: selectedTime });
                             }}
+                            className="time-input-dark"
                             style={{
                               width: '100%',
                               padding: '14px 16px',
@@ -988,7 +989,9 @@ export default function CreateCampaignWizard({
                               outline: 'none',
                               boxSizing: 'border-box',
                               cursor: 'pointer',
-                              colorScheme: 'dark'
+                              colorScheme: 'dark',
+                              WebkitAppearance: 'none',
+                              MozAppearance: 'none'
                             }}
                             onClick={(e) => (e.target as HTMLInputElement).showPicker?.()}
                           />
@@ -1016,7 +1019,7 @@ export default function CreateCampaignWizard({
                           textTransform: 'uppercase',
                           letterSpacing: '0.05em'
                         }}>
-                          <Clock size={12} color="#f59e0b" />
+                          <Clock size={12} color="#00C8FF" />
                           End Time
                         </label>
                         <div style={{ position: 'relative' }}>
@@ -1032,25 +1035,28 @@ export default function CreateCampaignWizard({
                               }
                               setFormData({ ...formData, endTime: selectedEndTime });
                             }}
+                            className="time-input-dark"
                             style={{
                               width: '100%',
                               padding: '14px 16px',
                               paddingRight: '44px',
                               background: 'rgba(0, 0, 0, 0.3)',
-                              border: '1px solid rgba(245, 158, 11, 0.15)',
+                              border: '1px solid rgba(0, 200, 255, 0.15)',
                               borderRadius: '10px',
                               color: '#FFFFFF',
                               fontSize: '14px',
                               outline: 'none',
                               boxSizing: 'border-box',
                               cursor: 'pointer',
-                              colorScheme: 'dark'
+                              colorScheme: 'dark',
+                              WebkitAppearance: 'none',
+                              MozAppearance: 'none'
                             }}
                             onClick={(e) => (e.target as HTMLInputElement).showPicker?.()}
                           />
                           <Clock 
                             size={18} 
-                            color="#f59e0b" 
+                            color="#00C8FF" 
                             style={{ 
                               position: 'absolute', 
                               right: '14px', 

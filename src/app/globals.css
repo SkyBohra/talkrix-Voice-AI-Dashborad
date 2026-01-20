@@ -430,3 +430,39 @@ input:-webkit-autofill:active {
 .neon-border {
   box-shadow: 0 0 5px rgba(0, 200, 255, 0.5), 0 0 10px rgba(0, 200, 255, 0.3), inset 0 0 5px rgba(0, 200, 255, 0.1);
 }
+
+/* Time Input Dark Theme Styles */
+.time-input-dark {
+  color-scheme: dark;
+}
+
+.time-input-dark::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: 0;
+  cursor: pointer;
+}
+
+.time-input-dark::-webkit-datetime-edit {
+  color: #FFFFFF;
+}
+
+.time-input-dark::-webkit-datetime-edit-fields-wrapper {
+  color: #FFFFFF;
+}
+
+.time-input-dark::-webkit-datetime-edit-text {
+  color: #9CA3AF;
+}
+
+.time-input-dark::-webkit-datetime-edit-hour-field,
+.time-input-dark::-webkit-datetime-edit-minute-field,
+.time-input-dark::-webkit-datetime-edit-ampm-field {
+  color: #FFFFFF;
+}
+
+.time-input-dark::-webkit-datetime-edit-hour-field:focus,
+.time-input-dark::-webkit-datetime-edit-minute-field:focus,
+.time-input-dark::-webkit-datetime-edit-ampm-field:focus {
+  background: rgba(0, 200, 255, 0.2);
+  color: #FFFFFF;
+}
