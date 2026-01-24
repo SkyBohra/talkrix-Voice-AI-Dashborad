@@ -181,17 +181,65 @@ export default function CallHistorySection() {
     return (
         <div
             style={{
-                padding: "32px 40px",
+                padding: "clamp(16px, 4vw, 40px)",
                 width: "100%",
                 boxSizing: "border-box",
             }}
         >
+            <style>{`
+                @media (max-width: 768px) {
+                    .call-history-header {
+                        flex-direction: column !important;
+                        gap: 16px !important;
+                        align-items: flex-start !important;
+                    }
+                    .call-history-stats {
+                        grid-template-columns: repeat(2, 1fr) !important;
+                    }
+                    .call-history-filters {
+                        flex-direction: column !important;
+                    }
+                    .call-history-search {
+                        max-width: 100% !important;
+                        width: 100% !important;
+                    }
+                    .call-history-selects {
+                        width: 100%;
+                        display: flex;
+                        gap: 8px;
+                    }
+                    .call-history-selects select {
+                        flex: 1;
+                    }
+                    .call-item {
+                        flex-direction: column !important;
+                        align-items: flex-start !important;
+                        gap: 12px !important;
+                    }
+                    .call-item-actions {
+                        width: 100%;
+                        justify-content: flex-start !important;
+                    }
+                }
+                @media (max-width: 480px) {
+                    .call-history-stats {
+                        grid-template-columns: 1fr !important;
+                    }
+                }
+                @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+                .animate-spin {
+                    animation: spin 1s linear infinite;
+                }
+            `}</style>
             {/* Header */}
-            <div style={{ marginBottom: "32px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div className="call-history-header" style={{ marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
                 <div>
                     <h1
                         style={{
-                            fontSize: "28px",
+                            fontSize: "clamp(22px, 4vw, 28px)",
                             fontWeight: "700",
                             background: "linear-gradient(135deg, #00C8FF 0%, #7800FF 100%)",
                             WebkitBackgroundClip: "text",
@@ -201,7 +249,7 @@ export default function CallHistorySection() {
                     >
                         Call History
                     </h1>
-                    <p style={{ color: "rgba(255, 255, 255, 0.6)", fontSize: "14px" }}>
+                    <p style={{ color: "rgba(255, 255, 255, 0.6)", fontSize: "13px" }}>
                         View and manage all your voice AI call records
                     </p>
                 </div>
@@ -220,6 +268,7 @@ export default function CallHistorySection() {
                         fontSize: "14px",
                         cursor: "pointer",
                         opacity: loading ? 0.5 : 1,
+                        minHeight: "40px",
                     }}
                 >
                     <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
@@ -229,18 +278,19 @@ export default function CallHistorySection() {
 
             {/* Stats Cards */}
             <div
+                className="call-history-stats"
                 style={{
                     display: "grid",
                     gridTemplateColumns: "repeat(4, 1fr)",
-                    gap: "16px",
+                    gap: "12px",
                     marginBottom: "24px",
                 }}
             >
                 {[
-                    { label: "Total Calls", value: stats?.totalCalls?.toLocaleString() || "0", icon: <Phone size={18} /> },
-                    { label: "Completed", value: stats?.completedCalls?.toLocaleString() || "0", icon: <PhoneIncoming size={18} /> },
-                    { label: "Missed", value: stats?.missedCalls?.toLocaleString() || "0", icon: <PhoneMissed size={18} /> },
-                    { label: "Avg Duration", value: stats ? formatDuration(stats.averageDurationSeconds) : "0:00", icon: <Clock size={18} /> },
+                    { label: "Total Calls", value: stats?.totalCalls?.toLocaleString() || "0", icon: <Phone size={16} /> },
+                    { label: "Completed", value: stats?.completedCalls?.toLocaleString() || "0", icon: <PhoneIncoming size={16} /> },
+                    { label: "Missed", value: stats?.missedCalls?.toLocaleString() || "0", icon: <PhoneMissed size={16} /> },
+                    { label: "Avg Duration", value: stats ? formatDuration(stats.averageDurationSeconds) : "0:00", icon: <Clock size={16} /> },
                 ].map((stat, index) => (
                     <div
                         key={index}
@@ -248,7 +298,7 @@ export default function CallHistorySection() {
                             background: "rgba(255, 255, 255, 0.03)",
                             border: "1px solid rgba(0, 200, 255, 0.15)",
                             borderRadius: "10px",
-                            padding: "16px",
+                            padding: "clamp(12px, 2vw, 16px)",
                             transition: "all 0.3s ease",
                         }}
                         onMouseEnter={(e) => {
@@ -260,30 +310,32 @@ export default function CallHistorySection() {
                             e.currentTarget.style.borderColor = "rgba(0, 200, 255, 0.15)";
                         }}
                     >
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
                             <div
                                 style={{
-                                    width: "32px",
-                                    height: "32px",
+                                    width: "28px",
+                                    height: "28px",
                                     borderRadius: "8px",
                                     background: "linear-gradient(135deg, rgba(0, 200, 255, 0.2) 0%, rgba(120, 0, 255, 0.15) 100%)",
                                     display: "flex",
                                     alignItems: "center",
                                     justifyContent: "center",
                                     color: "#00C8FF",
+                                    flexShrink: 0,
                                 }}
                             >
                                 {stat.icon}
                             </div>
-                            <p style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.5)", margin: 0 }}>{stat.label}</p>
+                            <p style={{ fontSize: "10px", color: "rgba(255, 255, 255, 0.5)", margin: 0 }}>{stat.label}</p>
                         </div>
-                        <p style={{ fontSize: "20px", fontWeight: "700", color: "white", margin: 0 }}>{stat.value}</p>
+                        <p style={{ fontSize: "clamp(16px, 3vw, 20px)", fontWeight: "700", color: "white", margin: 0 }}>{stat.value}</p>
                     </div>
                 ))}
             </div>
 
             {/* Filters & Search */}
             <div
+                className="call-history-filters"
                 style={{
                     display: "flex",
                     gap: "12px",
@@ -294,6 +346,7 @@ export default function CallHistorySection() {
             >
                 {/* Search */}
                 <div
+                    className="call-history-search"
                     style={{
                         flex: "1 1 300px",
                         minWidth: "200px",

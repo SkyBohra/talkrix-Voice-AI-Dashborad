@@ -2969,18 +2969,54 @@ export default function AgentsSection() {
 
     return (
         <div style={{ 
-            padding: "32px 40px", 
+            padding: "clamp(16px, 4vw, 40px)", 
             width: "100%",
             boxSizing: "border-box",
             position: "relative",
         }}>
+            <style>{`
+                @media (max-width: 768px) {
+                    .agents-header {
+                        flex-direction: column !important;
+                        gap: 16px !important;
+                        align-items: flex-start !important;
+                    }
+                    .agents-header button {
+                        width: 100%;
+                        justify-content: center;
+                    }
+                    .agents-search-row {
+                        flex-direction: column !important;
+                        gap: 12px !important;
+                    }
+                    .agents-search-row > div:first-child {
+                        width: 100% !important;
+                    }
+                    .agent-card {
+                        width: 100% !important;
+                    }
+                    .agent-card-header {
+                        flex-direction: column !important;
+                        gap: 12px !important;
+                    }
+                    .agent-card-actions {
+                        width: 100% !important;
+                        justify-content: flex-start !important;
+                    }
+                }
+                @media (max-width: 480px) {
+                    .agent-card-actions button {
+                        flex: 1;
+                    }
+                }
+            `}</style>
             {/* Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
+            <div className="agents-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>
                 <div>
-                    <h1 style={{ fontSize: "28px", fontWeight: "700", color: "white", marginBottom: "8px" }}>
+                    <h1 style={{ fontSize: "clamp(22px, 4vw, 28px)", fontWeight: "700", color: "white", marginBottom: "8px" }}>
                         Agents
                     </h1>
-                    <p style={{ fontSize: "14px", color: "rgba(255, 255, 255, 0.5)" }}>
+                    <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.5)" }}>
                         Manage your voice agents and their configurations.
                     </p>
                 </div>
@@ -2990,7 +3026,7 @@ export default function AgentsSection() {
                         display: "flex",
                         alignItems: "center",
                         gap: "8px",
-                        padding: "12px 24px",
+                        padding: "12px 20px",
                         borderRadius: "12px",
                         border: "none",
                         background: "linear-gradient(135deg, #00C8FF 0%, #7800FF 100%)",

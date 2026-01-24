@@ -170,32 +170,70 @@ export default function VoicesSection() {
     return (
         <div 
             style={{ 
-                padding: "32px 40px", 
+                padding: "clamp(16px, 4vw, 40px)", 
                 width: "100%",
                 boxSizing: "border-box",
             }}
         >
+            <style>{`
+                @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+                @media (max-width: 768px) {
+                    .voices-header {
+                        flex-direction: column !important;
+                        gap: 12px !important;
+                    }
+                    .voices-search {
+                        max-width: 100% !important;
+                    }
+                    .voices-grid {
+                        grid-template-columns: 1fr !important;
+                    }
+                    .voice-card {
+                        padding: 16px !important;
+                    }
+                    .voice-card-header {
+                        flex-direction: column !important;
+                        gap: 12px !important;
+                        align-items: flex-start !important;
+                    }
+                }
+                @media (max-width: 480px) {
+                    .voice-card-actions {
+                        width: 100%;
+                        flex-direction: column;
+                        gap: 8px;
+                    }
+                    .voice-card-actions button {
+                        width: 100%;
+                        justify-content: center;
+                    }
+                }
+            `}</style>
             {/* Header */}
-            <div style={{ marginBottom: "32px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "8px" }}>
+            <div style={{ marginBottom: "24px" }}>
+                <div className="voices-header" style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "8px" }}>
                     <div
                         style={{
-                            width: "48px",
-                            height: "48px",
+                            width: "44px",
+                            height: "44px",
                             borderRadius: "12px",
                             background: "linear-gradient(135deg, #ec4899 0%, #00C8FF 100%)",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
+                            flexShrink: 0,
                         }}
                     >
-                        <Mic size={24} color="white" />
+                        <Mic size={22} color="white" />
                     </div>
                     <div>
-                        <h1 style={{ fontSize: "28px", fontWeight: "700", color: "white", margin: 0 }}>
+                        <h1 style={{ fontSize: "clamp(22px, 4vw, 28px)", fontWeight: "700", color: "white", margin: 0 }}>
                             Voices
                         </h1>
-                        <p style={{ color: "rgba(255,255,255,0.5)", margin: 0, fontSize: "14px" }}>
+                        <p style={{ color: "rgba(255,255,255,0.5)", margin: 0, fontSize: "13px" }}>
                             Browse and preview available AI voices ({total} total)
                         </p>
                     </div>
@@ -205,6 +243,7 @@ export default function VoicesSection() {
             {/* Search Bar */}
             <div style={{ marginBottom: "24px" }}>
                 <div
+                    className="voices-search"
                     style={{
                         position: "relative",
                         maxWidth: "400px",
@@ -224,7 +263,7 @@ export default function VoicesSection() {
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search voices by name, language, or description..."
+                        placeholder="Search voices by name, language..."
                         style={{
                             width: "100%",
                             padding: "12px 14px 12px 44px",
@@ -268,11 +307,11 @@ export default function VoicesSection() {
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        padding: "80px 0",
+                        padding: "60px 0",
                         color: "rgba(255,255,255,0.5)",
                     }}
                 >
-                    <Loader2 size={32} style={{ animation: "spin 1s linear infinite", marginRight: "12px" }} />
+                    <Loader2 size={28} style={{ animation: "spin 1s linear infinite", marginRight: "12px" }} />
                     Loading voices...
                 </div>
             ) : voices.length === 0 ? (

@@ -384,18 +384,60 @@ export default function ToolsSection() {
     return (
         <div 
             style={{ 
-                padding: "32px 40px", 
+                padding: "clamp(16px, 4vw, 40px)", 
                 width: "100%",
                 boxSizing: "border-box",
             }}
         >
+            <style>{`
+                @media (max-width: 768px) {
+                    .tools-header {
+                        flex-direction: column !important;
+                        gap: 16px !important;
+                        align-items: flex-start !important;
+                    }
+                    .tools-header button {
+                        width: 100%;
+                        justify-content: center;
+                    }
+                    .tools-tabs {
+                        width: 100% !important;
+                        overflow-x: auto !important;
+                    }
+                    .tools-tabs button {
+                        flex: 1;
+                        justify-content: center;
+                        white-space: nowrap;
+                        min-width: 120px;
+                    }
+                    .tools-grid {
+                        grid-template-columns: 1fr !important;
+                    }
+                    .tool-card {
+                        padding: 16px !important;
+                    }
+                    .tool-card-actions {
+                        flex-wrap: wrap;
+                        gap: 8px !important;
+                    }
+                }
+                @media (max-width: 480px) {
+                    .tools-tabs {
+                        flex-direction: column !important;
+                        gap: 8px !important;
+                    }
+                    .tools-tabs button {
+                        width: 100% !important;
+                    }
+                }
+            `}</style>
             {/* Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+            <div className="tools-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>
                 <div>
-                    <h1 style={{ fontSize: "28px", fontWeight: "700", color: "white", marginBottom: "8px" }}>
+                    <h1 style={{ fontSize: "clamp(22px, 4vw, 28px)", fontWeight: "700", color: "white", marginBottom: "8px" }}>
                         Tools
                     </h1>
-                    <p style={{ fontSize: "14px", color: "rgba(255, 255, 255, 0.5)" }}>
+                    <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.5)" }}>
                         Configure tools for your voice AI agents.
                     </p>
                 </div>
@@ -405,7 +447,7 @@ export default function ToolsSection() {
                         display: "flex",
                         alignItems: "center",
                         gap: "8px",
-                        padding: "12px 24px",
+                        padding: "12px 20px",
                         borderRadius: "12px",
                         border: "none",
                         background: "linear-gradient(135deg, #00C8FF 0%, #7800FF 100%)",
@@ -421,7 +463,7 @@ export default function ToolsSection() {
             </div>
 
             {/* Tabs */}
-            <div style={{ 
+            <div className="tools-tabs" style={{ 
                 display: "flex", 
                 gap: "4px", 
                 marginBottom: "24px",
@@ -436,14 +478,14 @@ export default function ToolsSection() {
                         display: "flex",
                         alignItems: "center",
                         gap: "8px",
-                        padding: "10px 20px",
+                        padding: "10px 16px",
                         borderRadius: "8px",
                         border: "none",
                         background: activeTab === "builtin" 
                             ? "linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%)" 
                             : "transparent",
                         color: activeTab === "builtin" ? "#818cf8" : "rgba(255, 255, 255, 0.5)",
-                        fontSize: "14px",
+                        fontSize: "13px",
                         fontWeight: "600",
                         cursor: "pointer",
                         transition: "all 0.2s ease",
@@ -468,14 +510,14 @@ export default function ToolsSection() {
                         display: "flex",
                         alignItems: "center",
                         gap: "8px",
-                        padding: "10px 20px",
+                        padding: "10px 16px",
                         borderRadius: "8px",
                         border: "none",
                         background: activeTab === "custom" 
                             ? "linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(0, 200, 255, 0.2) 100%)" 
                             : "transparent",
                         color: activeTab === "custom" ? "#22c55e" : "rgba(255, 255, 255, 0.5)",
-                        fontSize: "14px",
+                        fontSize: "13px",
                         fontWeight: "600",
                         cursor: "pointer",
                         transition: "all 0.2s ease",

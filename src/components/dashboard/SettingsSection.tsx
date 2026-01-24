@@ -1124,23 +1124,65 @@ export default function SettingsSection() {
 
     return (
         <div style={{ 
-            padding: "32px 40px",
+            padding: "clamp(16px, 4vw, 40px)",
             width: "100%",
             boxSizing: "border-box",
         }}>
+            <style>{`
+                @media (max-width: 900px) {
+                    .settings-layout {
+                        flex-direction: column !important;
+                        gap: 20px !important;
+                    }
+                    .settings-tabs {
+                        flex-direction: row !important;
+                        overflow-x: auto !important;
+                        min-width: 100% !important;
+                        gap: 4px !important;
+                        padding: 4px !important;
+                        background: rgba(255, 255, 255, 0.03) !important;
+                        border-radius: 12px !important;
+                    }
+                    .settings-tabs button {
+                        flex-shrink: 0;
+                        padding: 10px 16px !important;
+                        white-space: nowrap;
+                    }
+                    .settings-tabs button span {
+                        display: none;
+                    }
+                    .settings-content {
+                        padding: 20px !important;
+                    }
+                }
+                @media (max-width: 600px) {
+                    .settings-tabs button {
+                        padding: 10px 12px !important;
+                    }
+                    .settings-input-grid {
+                        grid-template-columns: 1fr !important;
+                    }
+                    .settings-toggle-row {
+                        flex-direction: column !important;
+                        align-items: flex-start !important;
+                        gap: 8px !important;
+                    }
+                }
+            `}</style>
             {/* Header */}
             <div style={{ marginBottom: "24px" }}>
-                <h1 style={{ fontSize: "28px", fontWeight: "700", color: "white", marginBottom: "8px" }}>
+                <h1 style={{ fontSize: "clamp(22px, 4vw, 28px)", fontWeight: "700", color: "white", marginBottom: "8px" }}>
                     Settings
                 </h1>
-                <p style={{ fontSize: "14px", color: "rgba(255, 255, 255, 0.5)" }}>
+                <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.5)" }}>
                     Manage your account settings and preferences.
                 </p>
             </div>
 
-            <div style={{ display: "flex", gap: "32px" }}>
+            <div className="settings-layout" style={{ display: "flex", gap: "32px" }}>
                 {/* Tabs - Fixed sidebar */}
                 <div
+                    className="settings-tabs"
                     style={{
                         display: "flex",
                         flexDirection: "column",
@@ -1172,19 +1214,21 @@ export default function SettingsSection() {
                             }}
                         >
                             {tab.icon}
-                            {tab.label}
+                            <span>{tab.label}</span>
                         </button>
                     ))}
                 </div>
 
                 {/* Content area */}
                 <div
+                    className="settings-content"
                     style={{
                         flex: 1,
                         background: "rgba(255, 255, 255, 0.03)",
                         border: "1px solid rgba(0, 200, 255, 0.15)",
                         borderRadius: "12px",
-                        padding: "32px",
+                        padding: "clamp(16px, 3vw, 32px)",
+                        minWidth: 0,
                     }}
                 >
                     {loading ? (
@@ -1202,7 +1246,7 @@ export default function SettingsSection() {
 
                             {/* Save Button - Only show for tabs that save to backend */}
                             {(activeTab === "telephony" || activeTab === "limits") && (
-                                <div style={{ marginTop: "32px", paddingTop: "24px", borderTop: "1px solid rgba(255, 255, 255, 0.05)" }}>
+                                <div style={{ marginTop: "24px", paddingTop: "20px", borderTop: "1px solid rgba(255, 255, 255, 0.05)" }}>
                                     <button
                                         onClick={handleSave}
                                         disabled={saving}
@@ -1210,7 +1254,7 @@ export default function SettingsSection() {
                                             display: "flex",
                                             alignItems: "center",
                                             gap: "8px",
-                                            padding: "12px 24px",
+                                            padding: "12px 20px",
                                             borderRadius: "10px",
                                             border: "none",
                                             background: saved
@@ -1224,6 +1268,9 @@ export default function SettingsSection() {
                                             cursor: saving ? "not-allowed" : "pointer",
                                             transition: "all 0.2s ease",
                                             opacity: saving ? 0.7 : 1,
+                                            width: "100%",
+                                            maxWidth: "200px",
+                                            justifyContent: "center",
                                         }}
                                     >
                                         {saved ? <Check size={16} /> : <Save size={16} />}

@@ -360,31 +360,59 @@ export default function CampaignSection() {
   }
 
   return (
-    <div style={{ padding: '32px 40px', width: '100%', boxSizing: 'border-box' }}>
+    <div style={{ padding: 'clamp(16px, 4vw, 40px)', width: '100%', boxSizing: 'border-box' }}>
       <style>{`
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
+        @media (max-width: 768px) {
+          .campaign-header {
+            flex-direction: column !important;
+            gap: 16px !important;
+            align-items: flex-start !important;
+          }
+          .campaign-header button {
+            width: 100%;
+            justify-content: center;
+          }
+          .campaign-stats-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+          }
+          .campaign-card {
+            flex-direction: column !important;
+            gap: 12px !important;
+          }
+          .campaign-card-actions {
+            width: 100% !important;
+          }
+        }
+        @media (max-width: 480px) {
+          .campaign-stats-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
       `}</style>
 
       {/* Header */}
-      <div style={{
+      <div className="campaign-header" style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: '24px'
+        marginBottom: '24px',
+        flexWrap: 'wrap',
+        gap: '16px'
       }}>
         <div>
           <h1 style={{
-            fontSize: '24px',
+            fontSize: 'clamp(20px, 4vw, 24px)',
             fontWeight: 'bold',
             color: '#FFFFFF',
             margin: 0
           }}>
             Campaigns
           </h1>
-          <p style={{ color: '#9CA3AF', marginTop: '4px' }}>
+          <p style={{ color: '#9CA3AF', marginTop: '4px', fontSize: '13px' }}>
             Manage your voice campaigns
           </p>
         </div>
@@ -410,10 +438,10 @@ export default function CampaignSection() {
       </div>
 
       {/* Stats Cards */}
-      <div style={{
+      <div className="campaign-stats-grid" style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(4, 1fr)',
-        gap: '16px',
+        gap: '12px',
         marginBottom: '24px'
       }}>
         {[
@@ -425,24 +453,25 @@ export default function CampaignSection() {
           <div key={index} style={{
             background: 'rgba(255, 255, 255, 0.05)',
             borderRadius: '12px',
-            padding: '20px',
+            padding: 'clamp(12px, 2vw, 20px)',
             border: '1px solid rgba(255, 255, 255, 0.1)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div style={{
-                width: '40px',
-                height: '40px',
+                width: '36px',
+                height: '36px',
                 borderRadius: '8px',
                 background: 'linear-gradient(135deg, rgba(0, 200, 255, 0.2) 0%, rgba(120, 0, 255, 0.2) 100%)',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                flexShrink: 0
               }}>
-                <stat.icon size={20} color="#00C8FF" />
+                <stat.icon size={18} color="#00C8FF" />
               </div>
-              <div>
-                <p style={{ color: '#9CA3AF', fontSize: '14px', margin: 0 }}>{stat.label}</p>
-                <p style={{ color: '#FFFFFF', fontSize: '24px', fontWeight: 'bold', margin: 0 }}>{stat.value}</p>
+              <div style={{ minWidth: 0 }}>
+                <p style={{ color: '#9CA3AF', fontSize: '12px', margin: 0 }}>{stat.label}</p>
+                <p style={{ color: '#FFFFFF', fontSize: 'clamp(18px, 3vw, 24px)', fontWeight: 'bold', margin: 0 }}>{stat.value}</p>
               </div>
             </div>
           </div>

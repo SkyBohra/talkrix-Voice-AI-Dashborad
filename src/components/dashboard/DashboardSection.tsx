@@ -20,16 +20,17 @@ interface StatCardProps {
 function StatCard({ title, value, icon, trend, loading }: StatCardProps) {
     return (
         <div
+            className="stat-card"
             style={{
                 background: "rgba(255, 255, 255, 0.03)",
                 border: "1px solid rgba(0, 200, 255, 0.15)",
                 borderRadius: "12px",
-                padding: "24px",
+                padding: "20px",
                 display: "flex",
                 flexDirection: "column",
-                gap: "16px",
+                gap: "14px",
                 transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                minHeight: "140px",
+                minHeight: "120px",
             }}
             onMouseEnter={(e) => {
                 e.currentTarget.style.background = "rgba(0, 200, 255, 0.08)";
@@ -46,9 +47,10 @@ function StatCard({ title, value, icon, trend, loading }: StatCardProps) {
         >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div
+                    className="stat-icon"
                     style={{
-                        width: "48px",
-                        height: "48px",
+                        width: "44px",
+                        height: "44px",
                         borderRadius: "12px",
                         background: "linear-gradient(135deg, rgba(0, 200, 255, 0.2) 0%, rgba(120, 0, 255, 0.15) 100%)",
                         display: "flex",
@@ -56,6 +58,7 @@ function StatCard({ title, value, icon, trend, loading }: StatCardProps) {
                         justifyContent: "center",
                         color: "#00C8FF",
                         boxShadow: "0 0 15px rgba(0, 200, 255, 0.2)",
+                        flexShrink: 0,
                     }}
                 >
                     {icon}
@@ -66,29 +69,29 @@ function StatCard({ title, value, icon, trend, loading }: StatCardProps) {
                             display: "flex",
                             alignItems: "center",
                             gap: "4px",
-                            fontSize: "12px",
+                            fontSize: "11px",
                             fontWeight: "500",
                             color: trend.isUp ? "#22c55e" : "#ef4444",
                             background: trend.isUp ? "rgba(34, 197, 94, 0.1)" : "rgba(239, 68, 68, 0.1)",
-                            padding: "4px 8px",
+                            padding: "3px 6px",
                             borderRadius: "20px",
                         }}
                     >
-                        <TrendingUp size={12} style={{ transform: trend.isUp ? "none" : "rotate(180deg)" }} />
+                        <TrendingUp size={10} style={{ transform: trend.isUp ? "none" : "rotate(180deg)" }} />
                         {trend.change}%
                     </div>
                 )}
             </div>
             <div>
-                <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.5)", marginBottom: "4px" }}>
+                <p style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.5)", marginBottom: "4px" }}>
                     {title}
                 </p>
                 {loading ? (
-                    <div style={{ height: "38px", display: "flex", alignItems: "center" }}>
-                        <Loader2 size={24} style={{ animation: "spin 1s linear infinite", color: "#00C8FF" }} />
+                    <div style={{ height: "32px", display: "flex", alignItems: "center" }}>
+                        <Loader2 size={20} style={{ animation: "spin 1s linear infinite", color: "#00C8FF" }} />
                     </div>
                 ) : (
-                    <p style={{ fontSize: "28px", fontWeight: "700", color: "white", letterSpacing: "-0.5px" }}>
+                    <p className="stat-value" style={{ fontSize: "24px", fontWeight: "700", color: "white", letterSpacing: "-0.5px" }}>
                         {value}
                     </p>
                 )}
@@ -238,8 +241,8 @@ export default function DashboardSection() {
     const trends = data?.trends;
 
     return (
-        <div style={{ 
-            padding: "32px 40px", 
+        <div className="dashboard-section-content" style={{ 
+            padding: "clamp(16px, 4vw, 40px)", 
             width: "100%",
             boxSizing: "border-box",
         }}>
@@ -248,11 +251,54 @@ export default function DashboardSection() {
                     from { transform: rotate(0deg); }
                     to { transform: rotate(360deg); }
                 }
+                
+                @media (max-width: 768px) {
+                    .dashboard-header {
+                        flex-direction: column !important;
+                        align-items: flex-start !important;
+                    }
+                    .dashboard-header-controls {
+                        width: 100%;
+                        flex-wrap: wrap;
+                    }
+                    .stat-card {
+                        min-height: 100px !important;
+                    }
+                    .stat-value {
+                        font-size: 20px !important;
+                    }
+                    .stat-icon {
+                        width: 38px !important;
+                        height: 38px !important;
+                    }
+                    .recent-call-item {
+                        flex-direction: column !important;
+                        gap: 12px !important;
+                        align-items: flex-start !important;
+                    }
+                    .recent-call-item > div:last-child {
+                        text-align: left !important;
+                        width: 100%;
+                        display: flex;
+                        justify-content: space-between;
+                    }
+                }
+                
+                @media (max-width: 480px) {
+                    .period-selector {
+                        width: 100%;
+                        justify-content: center;
+                    }
+                    .period-btn {
+                        flex: 1;
+                        text-align: center;
+                    }
+                }
             `}</style>
 
             {/* Header */}
-            <div style={{ 
-                marginBottom: "28px", 
+            <div className="dashboard-header" style={{ 
+                marginBottom: "24px", 
                 display: "flex", 
                 justifyContent: "space-between", 
                 alignItems: "flex-start",
@@ -260,16 +306,16 @@ export default function DashboardSection() {
                 gap: "16px",
             }}>
                 <div>
-                    <h1 style={{ fontSize: "28px", fontWeight: "700", color: "white", marginBottom: "6px" }}>
+                    <h1 style={{ fontSize: "clamp(22px, 4vw, 28px)", fontWeight: "700", color: "white", marginBottom: "6px" }}>
                         Dashboard
                     </h1>
-                    <p style={{ fontSize: "14px", color: "rgba(255, 255, 255, 0.5)" }}>
+                    <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.5)" }}>
                         Welcome back! Here&apos;s your overview.
                     </p>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div className="dashboard-header-controls" style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
                     {/* Period Selector */}
-                    <div style={{ 
+                    <div className="period-selector" style={{ 
                         display: "flex", 
                         background: "rgba(255, 255, 255, 0.03)",
                         borderRadius: "8px",
@@ -279,14 +325,15 @@ export default function DashboardSection() {
                         {(['today', 'week', 'month'] as const).map((p) => (
                             <button
                                 key={p}
+                                className="period-btn"
                                 onClick={() => setPeriod(p)}
                                 style={{
-                                    padding: "6px 14px",
+                                    padding: "6px 12px",
                                     borderRadius: "6px",
                                     border: "none",
                                     background: period === p ? "rgba(0, 200, 255, 0.15)" : "transparent",
                                     color: period === p ? "#00C8FF" : "rgba(255, 255, 255, 0.5)",
-                                    fontSize: "13px",
+                                    fontSize: "12px",
                                     fontWeight: "500",
                                     cursor: "pointer",
                                     textTransform: "capitalize",
@@ -305,7 +352,7 @@ export default function DashboardSection() {
                             display: "flex",
                             alignItems: "center",
                             gap: "6px",
-                            padding: "8px 14px",
+                            padding: "8px 12px",
                             borderRadius: "8px",
                             border: "1px solid rgba(0, 200, 255, 0.2)",
                             background: "transparent",
@@ -313,6 +360,7 @@ export default function DashboardSection() {
                             fontSize: "13px",
                             cursor: refreshing ? "not-allowed" : "pointer",
                             opacity: refreshing ? 0.6 : 1,
+                            minHeight: "36px",
                         }}
                     >
                         <RefreshCw size={14} style={{ animation: refreshing ? "spin 1s linear infinite" : "none" }} />
@@ -339,42 +387,42 @@ export default function DashboardSection() {
             <div
                 style={{
                     display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                    gap: "16px",
-                    marginBottom: "28px",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+                    gap: "12px",
+                    marginBottom: "24px",
                 }}
             >
                 <StatCard 
                     title="Total Calls" 
                     value={stats ? formatNumber(stats.totalCalls) : "0"} 
-                    icon={<Phone size={22} />} 
+                    icon={<Phone size={20} />} 
                     trend={trends?.calls}
                     loading={loading}
                 />
                 <StatCard 
                     title="Completed" 
                     value={stats ? formatNumber(stats.completedCalls) : "0"} 
-                    icon={<PhoneCall size={22} />} 
+                    icon={<PhoneCall size={20} />} 
                     trend={trends?.completed}
                     loading={loading}
                 />
                 <StatCard 
                     title="Missed" 
                     value={stats ? formatNumber(stats.missedCalls) : "0"} 
-                    icon={<PhoneOff size={22} />} 
+                    icon={<PhoneOff size={20} />} 
                     trend={trends?.missed}
                     loading={loading}
                 />
                 <StatCard 
                     title="Active Agents" 
                     value={stats ? `${stats.activeAgents}/${stats.totalAgents}` : "0/0"} 
-                    icon={<Bot size={22} />}
+                    icon={<Bot size={20} />}
                     loading={loading}
                 />
                 <StatCard 
                     title="Success Rate" 
                     value={stats ? `${stats.successRate}%` : "0%"} 
-                    icon={<TrendingUp size={22} />} 
+                    icon={<TrendingUp size={20} />} 
                     trend={trends?.successRate}
                     loading={loading}
                 />
@@ -386,19 +434,21 @@ export default function DashboardSection() {
                     background: "rgba(255, 255, 255, 0.03)",
                     border: "1px solid rgba(0, 200, 255, 0.15)",
                     borderRadius: "12px",
-                    padding: "24px",
+                    padding: "clamp(16px, 3vw, 24px)",
                 }}
             >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
-                    <h2 style={{ fontSize: "17px", fontWeight: "600", color: "white" }}>Recent Calls</h2>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "12px" }}>
+                    <h2 style={{ fontSize: "clamp(14px, 2.5vw, 17px)", fontWeight: "600", color: "white" }}>Recent Calls</h2>
                     <button
                         style={{
                             background: "transparent",
                             border: "none",
                             color: "#00C8FF",
-                            fontSize: "13px",
+                            fontSize: "12px",
                             fontWeight: "500",
                             cursor: "pointer",
+                            padding: "6px 12px",
+                            borderRadius: "6px",
                         }}
                         onClick={() => window.location.href = '/dashboard/call-history'}
                     >
@@ -407,11 +457,11 @@ export default function DashboardSection() {
                 </div>
 
                 {loading ? (
-                    <div style={{ display: "flex", justifyContent: "center", padding: "32px" }}>
-                        <Loader2 size={28} style={{ animation: "spin 1s linear infinite", color: "#00C8FF" }} />
+                    <div style={{ display: "flex", justifyContent: "center", padding: "24px" }}>
+                        <Loader2 size={24} style={{ animation: "spin 1s linear infinite", color: "#00C8FF" }} />
                     </div>
                 ) : data?.recentCalls && data.recentCalls.length > 0 ? (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                         {data.recentCalls.map((call) => (
                             <RecentCallItem key={call.id} call={call} />
                         ))}
@@ -419,11 +469,11 @@ export default function DashboardSection() {
                 ) : (
                     <div style={{ 
                         textAlign: "center", 
-                        padding: "32px", 
+                        padding: "24px", 
                         color: "rgba(255, 255, 255, 0.4)",
-                        fontSize: "14px",
+                        fontSize: "13px",
                     }}>
-                        <Phone size={32} style={{ marginBottom: "12px", opacity: 0.5 }} />
+                        <Phone size={28} style={{ marginBottom: "10px", opacity: 0.5 }} />
                         <p>No recent calls</p>
                     </div>
                 )}

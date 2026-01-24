@@ -1319,29 +1319,72 @@ export default function RAGSection() {
 
     return (
         <div style={{ 
-            padding: "32px 40px", 
+            padding: "clamp(16px, 4vw, 40px)", 
             width: "100%",
             boxSizing: "border-box",
         }}>
+            <style jsx>{`
+                @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+                .animate-spin {
+                    animation: spin 1s linear infinite;
+                }
+            `}</style>
+            <style>{`
+                @media (max-width: 768px) {
+                    .rag-header {
+                        flex-direction: column !important;
+                        gap: 16px !important;
+                        align-items: flex-start !important;
+                    }
+                    .rag-header-actions {
+                        width: 100%;
+                        flex-direction: column !important;
+                        gap: 8px !important;
+                    }
+                    .rag-header-actions button {
+                        width: 100%;
+                        justify-content: center;
+                    }
+                    .corpora-grid {
+                        grid-template-columns: 1fr !important;
+                    }
+                    .corpus-card {
+                        padding: 16px !important;
+                    }
+                    .source-card {
+                        flex-direction: column !important;
+                        gap: 12px !important;
+                    }
+                    .document-item {
+                        flex-direction: column !important;
+                        align-items: flex-start !important;
+                        gap: 8px !important;
+                    }
+                }
+            `}</style>
             {error && (
                 <div
                     style={{
                         display: "flex",
                         alignItems: "center",
                         gap: "12px",
-                        padding: "16px",
+                        padding: "14px",
                         background: "rgba(255, 60, 100, 0.1)",
                         border: "1px solid rgba(255, 60, 100, 0.3)",
                         borderRadius: "12px",
                         marginBottom: "24px",
                         color: "#FF3C64",
+                        fontSize: "13px",
                     }}
                 >
-                    <AlertCircle size={20} />
-                    <span>{error}</span>
+                    <AlertCircle size={18} />
+                    <span style={{ flex: 1 }}>{error}</span>
                     <button
                         onClick={() => setError(null)}
-                        style={{ marginLeft: "auto", background: "transparent", border: "none", color: "#FF3C64", cursor: "pointer" }}
+                        style={{ marginLeft: "auto", background: "transparent", border: "none", color: "#FF3C64", cursor: "pointer", padding: "4px" }}
                     >
                         <X size={16} />
                     </button>
@@ -1362,16 +1405,6 @@ export default function RAGSection() {
             )}
 
             {renderModal()}
-
-            <style jsx>{`
-                @keyframes spin {
-                    from { transform: rotate(0deg); }
-                    to { transform: rotate(360deg); }
-                }
-                .animate-spin {
-                    animation: spin 1s linear infinite;
-                }
-            `}</style>
         </div>
     );
 }
