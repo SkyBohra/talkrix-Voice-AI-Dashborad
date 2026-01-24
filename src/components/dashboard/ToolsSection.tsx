@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Wrench, Plus, Pencil, Trash2, X, Save, Code, Globe, Database, Zap, Loader2, AlertCircle, RefreshCw, Phone, PhoneOff, Voicemail, Search, Music, PhoneCall } from "lucide-react";
+import { Wrench, Plus, Pencil, Trash2, X, Save, Code, Globe, Database, Zap, Loader2, AlertCircle, RefreshCw, Phone, PhoneOff, Voicemail, Search, Music, PhoneCall, Clock } from "lucide-react";
 import { fetchUserTools, createTool, updateTool, deleteTool, Tool, ToolDefinition, DynamicParameter } from "@/lib/toolApi";
 import { useToast } from "@/components/ui/toast";
 
@@ -33,35 +33,29 @@ const parameterLocations = [
 ];
 
 // Hardcoded built-in Talkrix tools
-const BUILT_IN_TOOLS: Tool[] = [
+interface ExtendedTool extends Tool {
+    isComingSoon?: boolean;
+    displayName?: string;
+}
+
+const BUILT_IN_TOOLS: ExtendedTool[] = [
     {
-        talkrixToolId: "builtin-warm-transfer",
-        name: "warmTransfer",
+        talkrixToolId: "builtin-hang-up",
+        name: "hangUp",
+        displayName: "Hang Up",
         ownership: "public",
         definition: {
-            modelToolName: "warmTransfer",
-            description: "Transfer the call to another agent or phone number with a warm handoff. The AI will stay on the line and introduce the caller before transferring.",
+            modelToolName: "hangUp",
+            description: "End the current call. Use this when the conversation is complete or the caller requests to hang up.",
             dynamicParameters: [
-                { name: "phoneNumber", location: "PARAMETER_LOCATION_BODY", schema: { type: "string", description: "The phone number to transfer to (E.164 format)" }, required: true },
-                { name: "introMessage", location: "PARAMETER_LOCATION_BODY", schema: { type: "string", description: "Introduction message to speak before transferring" }, required: false },
-            ],
-        },
-    },
-    {
-        talkrixToolId: "builtin-cold-transfer",
-        name: "coldTransfer",
-        ownership: "public",
-        definition: {
-            modelToolName: "coldTransfer",
-            description: "Transfer the call to another agent or phone number immediately (cold transfer). The AI will disconnect after initiating the transfer.",
-            dynamicParameters: [
-                { name: "phoneNumber", location: "PARAMETER_LOCATION_BODY", schema: { type: "string", description: "The phone number to transfer to (E.164 format)" }, required: true },
+                { name: "reason", location: "PARAMETER_LOCATION_BODY", schema: { type: "string", description: "Reason for ending the call (for logging)" }, required: false },
             ],
         },
     },
     {
         talkrixToolId: "builtin-leave-voicemail",
         name: "leaveVoicemail",
+        displayName: "Leave a Voicemail",
         ownership: "public",
         definition: {
             modelToolName: "leaveVoicemail",
@@ -75,6 +69,7 @@ const BUILT_IN_TOOLS: Tool[] = [
     {
         talkrixToolId: "builtin-query-corpus",
         name: "queryCorpus",
+        displayName: "Query Corpus",
         ownership: "public",
         definition: {
             modelToolName: "queryCorpus",
@@ -89,6 +84,7 @@ const BUILT_IN_TOOLS: Tool[] = [
     {
         talkrixToolId: "builtin-play-dtmf",
         name: "playDtmfSounds",
+        displayName: "Play DTMF",
         ownership: "public",
         definition: {
             modelToolName: "playDtmfSounds",
@@ -100,14 +96,31 @@ const BUILT_IN_TOOLS: Tool[] = [
         },
     },
     {
-        talkrixToolId: "builtin-hang-up",
-        name: "hangUp",
+        talkrixToolId: "builtin-warm-transfer",
+        name: "warmTransfer",
+        displayName: "Warm Transfer",
         ownership: "public",
+        isComingSoon: true,
         definition: {
-            modelToolName: "hangUp",
-            description: "End the current call. Use this when the conversation is complete or the caller requests to hang up.",
+            modelToolName: "warmTransfer",
+            description: "Transfer the call to another agent or phone number with a warm handoff. The AI will stay on the line and introduce the caller before transferring.",
             dynamicParameters: [
-                { name: "reason", location: "PARAMETER_LOCATION_BODY", schema: { type: "string", description: "Reason for ending the call (for logging)" }, required: false },
+                { name: "phoneNumber", location: "PARAMETER_LOCATION_BODY", schema: { type: "string", description: "The phone number to transfer to (E.164 format)" }, required: true },
+                { name: "introMessage", location: "PARAMETER_LOCATION_BODY", schema: { type: "string", description: "Introduction message to speak before transferring" }, required: false },
+            ],
+        },
+    },
+    {
+        talkrixToolId: "builtin-cold-transfer",
+        name: "coldTransfer",
+        displayName: "Cold Transfer",
+        ownership: "public",
+        isComingSoon: true,
+        definition: {
+            modelToolName: "coldTransfer",
+            description: "Transfer the call to another agent or phone number immediately (cold transfer). The AI will disconnect after initiating the transfer.",
+            dynamicParameters: [
+                { name: "phoneNumber", location: "PARAMETER_LOCATION_BODY", schema: { type: "string", description: "The phone number to transfer to (E.164 format)" }, required: true },
             ],
         },
     },
@@ -560,30 +573,36 @@ export default function ToolsSection() {
                             ];
                             const accent = accentColors[index % 6];
                             const icon = builtInToolIcons[tool.name] || <Zap size={20} />;
+                            const isComingSoon = tool.isComingSoon;
                             
                             return (
                                 <div
                                     key={tool.talkrixToolId}
-                                    onClick={() => setSelectedBuiltInTool(tool)}
+                                    onClick={() => !isComingSoon && setSelectedBuiltInTool(tool)}
                                     style={{
-                                        background: "rgba(255, 255, 255, 0.03)",
-                                        border: "1px solid rgba(99, 102, 241, 0.2)",
+                                        background: isComingSoon ? "rgba(255, 255, 255, 0.02)" : "rgba(255, 255, 255, 0.03)",
+                                        border: isComingSoon ? "1px solid rgba(255, 255, 255, 0.1)" : "1px solid rgba(99, 102, 241, 0.2)",
                                         borderRadius: "12px",
                                         overflow: "hidden",
                                         transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                                        cursor: "pointer",
+                                        cursor: isComingSoon ? "not-allowed" : "pointer",
+                                        opacity: isComingSoon ? 0.6 : 1,
                                     }}
                                     onMouseEnter={(e) => {
-                                        e.currentTarget.style.background = "rgba(99, 102, 241, 0.1)";
-                                        e.currentTarget.style.borderColor = "rgba(99, 102, 241, 0.35)";
-                                        e.currentTarget.style.transform = "translateY(-4px) scale(1.01)";
-                                        e.currentTarget.style.boxShadow = "0 12px 24px rgba(0, 0, 0, 0.3)";
+                                        if (!isComingSoon) {
+                                            e.currentTarget.style.background = "rgba(99, 102, 241, 0.1)";
+                                            e.currentTarget.style.borderColor = "rgba(99, 102, 241, 0.35)";
+                                            e.currentTarget.style.transform = "translateY(-4px) scale(1.01)";
+                                            e.currentTarget.style.boxShadow = "0 12px 24px rgba(0, 0, 0, 0.3)";
+                                        }
                                     }}
                                     onMouseLeave={(e) => {
-                                        e.currentTarget.style.background = "rgba(255, 255, 255, 0.03)";
-                                        e.currentTarget.style.borderColor = "rgba(99, 102, 241, 0.2)";
-                                        e.currentTarget.style.transform = "scale(1)";
-                                        e.currentTarget.style.boxShadow = "none";
+                                        if (!isComingSoon) {
+                                            e.currentTarget.style.background = "rgba(255, 255, 255, 0.03)";
+                                            e.currentTarget.style.borderColor = "rgba(99, 102, 241, 0.2)";
+                                            e.currentTarget.style.transform = "scale(1)";
+                                            e.currentTarget.style.boxShadow = "none";
+                                        }
                                     }}
                                 >
                                     <div style={{ padding: "20px" }}>
@@ -613,7 +632,7 @@ export default function ToolsSection() {
                                                         color: "white", 
                                                         margin: 0,
                                                     }}>
-                                                        {tool.name}
+                                                        {tool.displayName || tool.name}
                                                     </h3>
                                                     <p style={{ 
                                                         fontSize: "11px", 
@@ -697,7 +716,7 @@ export default function ToolsSection() {
                                             </div>
                                         )}
 
-                                        {/* Ready to use indicator */}
+                                        {/* Ready to use / Coming Soon indicator */}
                                         <div style={{ 
                                             display: "flex", 
                                             alignItems: "center",
@@ -705,18 +724,22 @@ export default function ToolsSection() {
                                             gap: "6px",
                                             padding: "10px 16px",
                                             borderRadius: "8px",
-                                            background: "rgba(34, 197, 94, 0.08)",
-                                            border: "1px solid rgba(34, 197, 94, 0.15)",
+                                            background: isComingSoon ? "rgba(245, 158, 11, 0.08)" : "rgba(34, 197, 94, 0.08)",
+                                            border: isComingSoon ? "1px solid rgba(245, 158, 11, 0.15)" : "1px solid rgba(34, 197, 94, 0.15)",
                                         }}>
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "#22c55e" }}>
-                                                <polyline points="20 6 9 17 4 12"></polyline>
-                                            </svg>
+                                            {isComingSoon ? (
+                                                <Clock size={14} style={{ color: "#f59e0b" }} />
+                                            ) : (
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "#22c55e" }}>
+                                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                                </svg>
+                                            )}
                                             <span style={{ 
                                                 fontSize: "13px", 
-                                                color: "#22c55e",
+                                                color: isComingSoon ? "#f59e0b" : "#22c55e",
                                                 fontWeight: "600",
                                             }}>
-                                                Ready to Use
+                                                {isComingSoon ? "Coming Soon" : "Ready to Use"}
                                             </span>
                                         </div>
                                     </div>

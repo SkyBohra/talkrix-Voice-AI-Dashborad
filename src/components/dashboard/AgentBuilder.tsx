@@ -70,29 +70,29 @@ interface FormData {
     vadSettings: VADSettings;
 }
 
+// Extended Tool interface for built-in tools
+interface ExtendedTool extends Tool {
+    isComingSoon?: boolean;
+    requiresRag?: boolean;
+    displayName?: string;
+}
+
 // Built-in tools
-const BUILT_IN_TOOLS: Tool[] = [
+const BUILT_IN_TOOLS: ExtendedTool[] = [
     {
-        talkrixToolId: "builtin-warm-transfer",
-        name: "warmTransfer",
+        talkrixToolId: "builtin-hang-up",
+        name: "hangUp",
+        displayName: "Hang Up",
         ownership: "public",
         definition: {
-            modelToolName: "warmTransfer",
-            description: "Transfer the call with a warm handoff.",
-        },
-    },
-    {
-        talkrixToolId: "builtin-cold-transfer",
-        name: "coldTransfer",
-        ownership: "public",
-        definition: {
-            modelToolName: "coldTransfer",
-            description: "Transfer the call immediately (cold transfer).",
+            modelToolName: "hangUp",
+            description: "End the current call.",
         },
     },
     {
         talkrixToolId: "builtin-leave-voicemail",
         name: "leaveVoicemail",
+        displayName: "Leave a Voicemail",
         ownership: "public",
         definition: {
             modelToolName: "leaveVoicemail",
@@ -102,7 +102,9 @@ const BUILT_IN_TOOLS: Tool[] = [
     {
         talkrixToolId: "builtin-query-corpus",
         name: "queryCorpus",
+        displayName: "Query Corpus",
         ownership: "public",
+        requiresRag: true,
         definition: {
             modelToolName: "queryCorpus",
             description: "Search through a knowledge base or document corpus.",
@@ -111,6 +113,7 @@ const BUILT_IN_TOOLS: Tool[] = [
     {
         talkrixToolId: "builtin-play-dtmf",
         name: "playDtmfSounds",
+        displayName: "Play DTMF",
         ownership: "public",
         definition: {
             modelToolName: "playDtmfSounds",
@@ -118,12 +121,25 @@ const BUILT_IN_TOOLS: Tool[] = [
         },
     },
     {
-        talkrixToolId: "builtin-hang-up",
-        name: "hangUp",
+        talkrixToolId: "builtin-warm-transfer",
+        name: "warmTransfer",
+        displayName: "Warm Transfer",
         ownership: "public",
+        isComingSoon: true,
         definition: {
-            modelToolName: "hangUp",
-            description: "End the current call.",
+            modelToolName: "warmTransfer",
+            description: "Transfer the call with a warm handoff.",
+        },
+    },
+    {
+        talkrixToolId: "builtin-cold-transfer",
+        name: "coldTransfer",
+        displayName: "Cold Transfer",
+        ownership: "public",
+        isComingSoon: true,
+        definition: {
+            modelToolName: "coldTransfer",
+            description: "Transfer the call immediately (cold transfer).",
         },
     },
 ];
@@ -185,6 +201,7 @@ export default function AgentBuilder({
     const [toolsLoading, setToolsLoading] = useState(false);
     const [toolsTab, setToolsTab] = useState<'builtin' | 'custom'>('builtin');
     const [hoveredTool, setHoveredTool] = useState<string | null>(null);
+    const [showRagRequiredMessage, setShowRagRequiredMessage] = useState(false);
     
     // RAG (Corpus) state
     const [corpora, setCorpora] = useState<Corpus[]>([]);
@@ -1253,6 +1270,25 @@ Key responsibilities:
                                     </button>
                                 </div>
 
+                                {/* RAG Required Info Message */}
+                                {showRagRequiredMessage && (
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '10px',
+                                        padding: '12px 16px',
+                                        background: 'rgba(245, 158, 11, 0.1)',
+                                        border: '1px solid rgba(245, 158, 11, 0.3)',
+                                        borderRadius: '10px',
+                                        marginBottom: '16px',
+                                    }}>
+                                        <AlertCircle size={18} style={{ color: '#f59e0b', flexShrink: 0 }} />
+                                        <span style={{ fontSize: '13px', color: '#f59e0b' }}>
+                                            Please select a RAG Knowledge Base in the Settings tab before choosing this tool.
+                                        </span>
+                                    </div>
+                                )}
+
                                 {/* Tools List */}
                                 <div style={{ 
                                     display: 'grid', 
@@ -1263,11 +1299,29 @@ Key responsibilities:
                                         BUILT_IN_TOOLS.map(tool => {
                                             const selected = isToolSelected(tool);
                                             const isHovered = hoveredTool === tool.talkrixToolId;
+                                            const isComingSoon = tool.isComingSoon;
+                                            const requiresRag = tool.requiresRag && !formData.corpusId;
+                                            const isDisabled = isComingSoon || requiresRag;
+                                            
+                                            const handleClick = () => {
+                                                if (isComingSoon) {
+                                                    // Coming soon tools are not clickable
+                                                    return;
+                                                }
+                                                if (requiresRag) {
+                                                    // Show info message when trying to select queryCorpus without RAG
+                                                    setShowRagRequiredMessage(true);
+                                                    setTimeout(() => setShowRagRequiredMessage(false), 3000);
+                                                    return;
+                                                }
+                                                toggleToolSelection(tool);
+                                            };
+                                            
                                             return (
                                                 <button
                                                     key={tool.talkrixToolId}
                                                     type="button"
-                                                    onClick={() => toggleToolSelection(tool)}
+                                                    onClick={handleClick}
                                                     onMouseEnter={() => setHoveredTool(tool.talkrixToolId || null)}
                                                     onMouseLeave={() => setHoveredTool(null)}
                                                     style={{
@@ -1275,26 +1329,33 @@ Key responsibilities:
                                                         alignItems: 'center',
                                                         gap: '12px',
                                                         padding: '16px',
-                                                        background: selected 
-                                                            ? 'rgba(0, 200, 255, 0.15)' 
-                                                            : isHovered 
-                                                                ? 'rgba(0, 200, 255, 0.08)' 
-                                                                : 'rgba(255, 255, 255, 0.03)',
-                                                        border: `1px solid ${selected 
-                                                            ? 'rgba(0, 200, 255, 0.5)' 
-                                                            : isHovered 
-                                                                ? 'rgba(0, 200, 255, 0.3)' 
-                                                                : 'rgba(255, 255, 255, 0.1)'}`,
+                                                        background: isDisabled
+                                                            ? 'rgba(255, 255, 255, 0.02)'
+                                                            : selected 
+                                                                ? 'rgba(0, 200, 255, 0.15)' 
+                                                                : isHovered 
+                                                                    ? 'rgba(0, 200, 255, 0.08)' 
+                                                                    : 'rgba(255, 255, 255, 0.03)',
+                                                        border: `1px solid ${isDisabled
+                                                            ? 'rgba(255, 255, 255, 0.08)'
+                                                            : selected 
+                                                                ? 'rgba(0, 200, 255, 0.5)' 
+                                                                : isHovered 
+                                                                    ? 'rgba(0, 200, 255, 0.3)' 
+                                                                    : 'rgba(255, 255, 255, 0.1)'}`,
                                                         borderRadius: '12px',
-                                                        cursor: 'pointer',
+                                                        cursor: isDisabled ? 'not-allowed' : 'pointer',
                                                         textAlign: 'left',
                                                         transition: 'all 0.2s ease',
-                                                        transform: isHovered && !selected ? 'translateY(-2px)' : 'translateY(0)',
-                                                        boxShadow: selected 
-                                                            ? '0 0 20px rgba(0, 200, 255, 0.2)' 
-                                                            : isHovered 
-                                                                ? '0 4px 12px rgba(0, 200, 255, 0.15)' 
-                                                                : 'none',
+                                                        transform: !isDisabled && isHovered && !selected ? 'translateY(-2px)' : 'translateY(0)',
+                                                        boxShadow: isDisabled 
+                                                            ? 'none'
+                                                            : selected 
+                                                                ? '0 0 20px rgba(0, 200, 255, 0.2)' 
+                                                                : isHovered 
+                                                                    ? '0 4px 12px rgba(0, 200, 255, 0.15)' 
+                                                                    : 'none',
+                                                        opacity: isDisabled ? 0.5 : 1,
                                                     }}
                                                 >
                                                     <div style={{
@@ -1304,12 +1365,14 @@ Key responsibilities:
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'center',
-                                                        background: selected 
-                                                            ? '#00C8FF' 
-                                                            : isHovered 
-                                                                ? 'rgba(0, 200, 255, 0.25)' 
-                                                                : 'rgba(0, 200, 255, 0.15)',
-                                                        color: selected ? '#000' : '#00C8FF',
+                                                        background: isDisabled
+                                                            ? 'rgba(255, 255, 255, 0.1)'
+                                                            : selected 
+                                                                ? '#00C8FF' 
+                                                                : isHovered 
+                                                                    ? 'rgba(0, 200, 255, 0.25)' 
+                                                                    : 'rgba(0, 200, 255, 0.15)',
+                                                        color: isDisabled ? 'rgba(255, 255, 255, 0.4)' : selected ? '#000' : '#00C8FF',
                                                         flexShrink: 0,
                                                         transition: 'all 0.2s ease',
                                                     }}>
@@ -1317,17 +1380,44 @@ Key responsibilities:
                                                     </div>
                                                     <div style={{ flex: 1, minWidth: 0 }}>
                                                         <div style={{ 
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '8px',
                                                             fontWeight: '500', 
-                                                            color: selected || isHovered ? 'white' : 'rgba(255, 255, 255, 0.9)', 
+                                                            color: isDisabled ? 'rgba(255, 255, 255, 0.5)' : selected || isHovered ? 'white' : 'rgba(255, 255, 255, 0.9)', 
                                                             fontSize: '14px',
                                                             marginBottom: '4px',
                                                             transition: 'color 0.2s ease',
                                                         }}>
-                                                            {tool.name}
+                                                            {(tool as ExtendedTool).displayName || tool.name}
+                                                            {isComingSoon && (
+                                                                <span style={{
+                                                                    fontSize: '10px',
+                                                                    padding: '2px 6px',
+                                                                    borderRadius: '4px',
+                                                                    background: 'rgba(245, 158, 11, 0.15)',
+                                                                    color: '#f59e0b',
+                                                                    fontWeight: '500',
+                                                                }}>
+                                                                    Coming Soon
+                                                                </span>
+                                                            )}
+                                                            {requiresRag && !isComingSoon && (
+                                                                <span style={{
+                                                                    fontSize: '10px',
+                                                                    padding: '2px 6px',
+                                                                    borderRadius: '4px',
+                                                                    background: 'rgba(245, 158, 11, 0.15)',
+                                                                    color: '#f59e0b',
+                                                                    fontWeight: '500',
+                                                                }}>
+                                                                    Requires RAG
+                                                                </span>
+                                                            )}
                                                         </div>
                                                         <div style={{ 
                                                             fontSize: '12px', 
-                                                            color: selected || isHovered ? 'rgba(255, 255, 255, 0.7)' : 'rgba(255, 255, 255, 0.5)',
+                                                            color: isDisabled ? 'rgba(255, 255, 255, 0.3)' : selected || isHovered ? 'rgba(255, 255, 255, 0.7)' : 'rgba(255, 255, 255, 0.5)',
                                                             overflow: 'hidden',
                                                             textOverflow: 'ellipsis',
                                                             whiteSpace: 'nowrap',
