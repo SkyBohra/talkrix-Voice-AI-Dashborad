@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Settings, User, Bell, Shield, Key, Globe, Palette, Save, Check, Phone, Server, Copy, RefreshCw, Eye, EyeOff, Plus, Trash2 } from "lucide-react";
 import { getSettings, updateGeneralSettings, updateTelephonySettings, regenerateApiKey, getApiKey, TelephonyProvider, UserSettings } from "@/lib/settingsApi";
 import { useToast } from "@/components/ui/toast";
@@ -48,6 +49,7 @@ interface SettingsState {
 
 export default function SettingsSection() {
     const toast = useToast();
+    const searchParams = useSearchParams();
     const [activeTab, setActiveTab] = useState("profile");
     const [saved, setSaved] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -55,6 +57,14 @@ export default function SettingsSection() {
     const [showApiKey, setShowApiKey] = useState(false);
     const [showTelephonySecrets, setShowTelephonySecrets] = useState(false);
     const [copied, setCopied] = useState(false);
+
+    // Set active tab from URL query parameter
+    useEffect(() => {
+        const tab = searchParams.get("tab");
+        if (tab && ["profile", "telephony", "limits", "notifications", "security", "preferences"].includes(tab)) {
+            setActiveTab(tab);
+        }
+    }, [searchParams]);
     const [settings, setSettings] = useState<SettingsState>({
         profile: {
             name: "",
@@ -243,11 +253,32 @@ export default function SettingsSection() {
     };
 
     const copyToClipboard = async (text: string) => {
-        if (!text) return;
+        let textToCopy = text;
+        
+        // If trying to copy API key and it's not loaded yet, fetch it first
+        if (!textToCopy && !showApiKey) {
+            try {
+                const res = await getApiKey();
+                if (res.success && res.data) {
+                    textToCopy = res.data.apiKey;
+                    setSettings(prev => ({ ...prev, apiKey: res.data!.apiKey }));
+                }
+            } catch (err) {
+                console.error("Failed to fetch API key:", err);
+                toast.error("Copy Failed", "Could not fetch API key.");
+                return;
+            }
+        }
+        
+        if (!textToCopy) {
+            toast.error("Copy Failed", "No API key available.");
+            return;
+        }
+        
         try {
-            await navigator.clipboard.writeText(text);
+            await navigator.clipboard.writeText(textToCopy);
             setCopied(true);
-            toast.success("Copied!", "Text copied to clipboard.");
+            toast.success("Copied!", "API key copied to clipboard.");
             setTimeout(() => setCopied(false), 2000);
         } catch (err) {
             console.error("Failed to copy to clipboard:", err);
@@ -921,10 +952,11 @@ export default function SettingsSection() {
                 <h3 style={{ fontSize: "16px", fontWeight: "600", color: "white", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
                     <Key size={18} style={{ color: "#00C8FF" }} /> API Key
                 </h3>
-                <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
                     <div style={{ 
-                        flex: 1, 
-                        maxWidth: "400px",
+                        flex: "1 1 300px",
+                        minWidth: "200px",
+                        maxWidth: "100%",
                         padding: "12px 16px",
                         borderRadius: "10px",
                         border: "1px solid rgba(0, 200, 255, 0.1)",
@@ -932,52 +964,61 @@ export default function SettingsSection() {
                         color: "white",
                         fontSize: "14px",
                         fontFamily: "monospace",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        wordBreak: "break-all",
                     }}>
                         {showApiKey ? settings.apiKey : "••••••••••••••••••••••••"}
                     </div>
-                    <button
-                        onClick={handleShowApiKey}
-                        style={{
-                            padding: "12px",
-                            borderRadius: "10px",
-                            border: "1px solid rgba(0, 200, 255, 0.1)",
-                            background: "rgba(255, 255, 255, 0.05)",
-                            color: "rgba(255, 255, 255, 0.6)",
-                            cursor: "pointer",
-                        }}
-                        title={showApiKey ? "Hide API Key" : "Show API Key"}
-                    >
-                        {showApiKey ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                    <button
-                        onClick={() => copyToClipboard(settings.apiKey)}
-                        style={{
-                            padding: "12px",
-                            borderRadius: "10px",
-                            border: copied ? "1px solid rgba(0, 255, 100, 0.3)" : "1px solid rgba(0, 200, 255, 0.1)",
-                            background: copied ? "rgba(0, 255, 100, 0.1)" : "rgba(255, 255, 255, 0.05)",
-                            color: copied ? "#00FF64" : "rgba(255, 255, 255, 0.6)",
-                            cursor: "pointer",
-                            transition: "all 0.2s ease",
-                        }}
-                        title={copied ? "Copied!" : "Copy API Key"}
-                    >
-                        {copied ? <Check size={18} /> : <Copy size={18} />}
-                    </button>
-                    <button
-                        onClick={handleRegenerateApiKey}
-                        style={{
-                            padding: "12px",
-                            borderRadius: "10px",
-                            border: "1px solid rgba(255, 60, 100, 0.3)",
-                            background: "rgba(255, 60, 100, 0.1)",
-                            color: "#FF3C64",
-                            cursor: "pointer",
-                        }}
-                        title="Regenerate API Key"
-                    >
-                        <RefreshCw size={18} />
-                    </button>
+                    <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+                        <button
+                            onClick={handleShowApiKey}
+                            style={{
+                                padding: "12px",
+                                borderRadius: "10px",
+                                border: "1px solid rgba(0, 200, 255, 0.1)",
+                                background: "rgba(255, 255, 255, 0.05)",
+                                color: "rgba(255, 255, 255, 0.6)",
+                                cursor: "pointer",
+                                flexShrink: 0,
+                            }}
+                            title={showApiKey ? "Hide API Key" : "Show API Key"}
+                        >
+                            {showApiKey ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                        <button
+                            onClick={() => copyToClipboard(settings.apiKey)}
+                            style={{
+                                padding: "12px",
+                                borderRadius: "10px",
+                                border: copied ? "1px solid rgba(0, 255, 100, 0.3)" : "1px solid rgba(0, 200, 255, 0.1)",
+                                background: copied ? "rgba(0, 255, 100, 0.1)" : "rgba(255, 255, 255, 0.05)",
+                                color: copied ? "#00FF64" : "rgba(255, 255, 255, 0.6)",
+                                cursor: "pointer",
+                                transition: "all 0.2s ease",
+                                flexShrink: 0,
+                            }}
+                            title={copied ? "Copied!" : "Copy API Key"}
+                        >
+                            {copied ? <Check size={18} /> : <Copy size={18} />}
+                        </button>
+                        <button
+                            onClick={handleRegenerateApiKey}
+                            style={{
+                                padding: "12px",
+                                borderRadius: "10px",
+                                border: "1px solid rgba(255, 60, 100, 0.3)",
+                                background: "rgba(255, 60, 100, 0.1)",
+                                color: "#FF3C64",
+                                cursor: "pointer",
+                                flexShrink: 0,
+                            }}
+                            title="Regenerate API Key"
+                        >
+                            <RefreshCw size={18} />
+                        </button>
+                    </div>
                 </div>
                 <p style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.4)", marginTop: "12px" }}>
                     Use this API key to authenticate requests. Keep it secret!

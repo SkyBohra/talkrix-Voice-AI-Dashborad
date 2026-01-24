@@ -77,6 +77,7 @@ export default function CampaignSection() {
     timezone: string;
     outboundProvider: TelephonyProvider | '';
     outboundPhoneNumber: string;
+    apiTriggerEnabled: boolean;
   }>({
     name: '',
     type: 'outbound',
@@ -86,7 +87,8 @@ export default function CampaignSection() {
     endTime: '',
     timezone: 'Asia/Kolkata',
     outboundProvider: '',
-    outboundPhoneNumber: ''
+    outboundPhoneNumber: '',
+    apiTriggerEnabled: false
   });
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -236,6 +238,7 @@ export default function CampaignSection() {
         name: formData.name,
         type: formData.type,
         agentId: formData.agentId,
+        apiTriggerEnabled: formData.apiTriggerEnabled,
       };
 
       if (formData.type === 'outbound') {
@@ -281,7 +284,8 @@ export default function CampaignSection() {
         endTime: '',
         timezone: 'Asia/Kolkata',
         outboundProvider: '',
-        outboundPhoneNumber: ''
+        outboundPhoneNumber: '',
+        apiTriggerEnabled: false
       });
       setSelectedFile(null);
       setShowCreateModal(false);

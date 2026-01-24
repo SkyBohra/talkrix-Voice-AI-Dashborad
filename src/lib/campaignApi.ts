@@ -42,6 +42,7 @@ export interface Campaign {
   inboundPhoneNumber?: string;
   outboundProvider?: 'twilio' | 'plivo' | 'telnyx';
   outboundPhoneNumber?: string;
+  apiTriggerEnabled?: boolean;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -56,6 +57,7 @@ export interface CreateCampaignData {
   contacts?: { name: string; phoneNumber: string }[];
   outboundProvider?: 'twilio' | 'plivo' | 'telnyx';
   outboundPhoneNumber?: string;
+  apiTriggerEnabled?: boolean;
 }
 
 export interface PaginatedCampaigns {

@@ -7,7 +7,7 @@ import {
     ArrowLeft, Users, Plus, Upload, Edit, Trash2, Phone, CheckCircle,
     XCircle, Clock, Search, Download, MoreHorizontal, Loader,
     PhoneOutgoing, PhoneIncoming, Zap, Calendar, Globe, Save, X,
-    AlertCircle, PhoneMissed
+    AlertCircle, PhoneMissed, Code, Copy, Check
 } from "lucide-react";
 import {
     Campaign, CampaignContact, fetchCampaign, updateCampaign,
@@ -34,6 +34,21 @@ export default function CampaignDetailPage() {
     const [stats, setStats] = useState<any>(null);
     const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
     const [triggeringCalls, setTriggeringCalls] = useState(false);
+    const [copiedUrl, setCopiedUrl] = useState(false);
+
+    // Get API URL for this campaign
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+    const apiTriggerUrl = `${apiBaseUrl}/campaigns/${campaignId}/generate-instant-call`;
+
+    const copyToClipboard = async (text: string) => {
+        try {
+            await navigator.clipboard.writeText(text);
+            setCopiedUrl(true);
+            setTimeout(() => setCopiedUrl(false), 2000);
+        } catch (err) {
+            console.error('Failed to copy:', err);
+        }
+    };
 
     useEffect(() => {
         const token = localStorage.getItem("token");
@@ -351,6 +366,87 @@ export default function CampaignDetailPage() {
                             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}><Calendar size={16} style={{ color: "#00C8FF" }} /><span style={{ color: "rgba(255, 255, 255, 0.7)" }}>Scheduled: {new Date(campaign.schedule.scheduledDate).toLocaleDateString()}</span></div>
                             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}><Clock size={16} style={{ color: "#00C8FF" }} /><span style={{ color: "rgba(255, 255, 255, 0.7)" }}>{campaign.schedule.scheduledTime}</span></div>
                             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}><Globe size={16} style={{ color: "#00C8FF" }} /><span style={{ color: "rgba(255, 255, 255, 0.7)" }}>{campaign.schedule.timezone}</span></div>
+                        </div>
+                    )}
+
+                    {/* API Integration Info */}
+                    {campaign.apiTriggerEnabled && (campaign.type === "outbound" || campaign.type === "ondemand") && (
+                        <div style={{ marginBottom: "24px", padding: "20px", background: "rgba(120, 0, 255, 0.05)", border: "1px solid rgba(120, 0, 255, 0.2)", borderRadius: "12px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
+                                <Code size={18} style={{ color: "#a855f7" }} />
+                                <h3 style={{ fontSize: "15px", fontWeight: "600", color: "#a855f7", margin: 0 }}>API Integration Enabled</h3>
+                            </div>
+                            <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.6)", marginBottom: "16px" }}>
+                                Use this endpoint to add contacts and trigger calls instantly via API.
+                            </p>
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                <div style={{ 
+                                    flex: 1, 
+                                    display: "flex", 
+                                    alignItems: "center", 
+                                    gap: "8px",
+                                    background: "rgba(0, 0, 0, 0.3)", 
+                                    borderRadius: "8px", 
+                                    padding: "12px 16px", 
+                                    border: "1px solid rgba(255, 255, 255, 0.1)" 
+                                }}>
+                                    <span style={{ 
+                                        color: "#22c55e", 
+                                        fontWeight: "600",
+                                        fontSize: "11px",
+                                        background: "rgba(34, 197, 94, 0.15)",
+                                        padding: "2px 8px",
+                                        borderRadius: "4px"
+                                    }}>POST</span>
+                                    <code style={{ color: "#E5E7EB", fontSize: "13px", fontFamily: "monospace", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                        {apiTriggerUrl}
+                                    </code>
+                                </div>
+                                <button
+                                    onClick={() => copyToClipboard(apiTriggerUrl)}
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "8px",
+                                        padding: "12px 20px",
+                                        borderRadius: "8px",
+                                        border: "none",
+                                        background: copiedUrl 
+                                            ? "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)" 
+                                            : "linear-gradient(135deg, #7800FF 0%, #a855f7 100%)",
+                                        color: "white",
+                                        cursor: "pointer",
+                                        fontWeight: "600",
+                                        fontSize: "13px",
+                                        transition: "all 0.2s"
+                                    }}
+                                >
+                                    {copiedUrl ? (
+                                        <>
+                                            <Check size={16} />
+                                            Copied!
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Copy size={16} />
+                                            Copy URL
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                            <p style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.4)", marginTop: "12px" }}>
+                                Header: <code style={{ color: "#a855f7" }}>x-api-key: YOUR_API_KEY</code> &nbsp;|&nbsp; 
+                                Body: <code style={{ color: "#a855f7" }}>{`{"name": "...", "phoneNumber": "..."}`}</code>
+                            </p>
+                            <p style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.5)", marginTop: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
+                                💡 Find your API key in{" "}
+                                <span 
+                                    onClick={() => router.push("/dashboard/settings?tab=limits")}
+                                    style={{ color: "#a855f7", cursor: "pointer", textDecoration: "underline" }}
+                                >
+                                    Settings → Limits & API
+                                </span>
+                            </p>
                         </div>
                     )}
 

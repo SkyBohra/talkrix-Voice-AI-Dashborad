@@ -20,7 +20,10 @@ import {
   PhoneIncoming,
   MousePointer,
   FileSpreadsheet,
-  CheckCircle2
+  CheckCircle2,
+  Code,
+  Copy,
+  ExternalLink
 } from 'lucide-react';
 import { TelephonyProvider, PhoneNumberOption } from '@/lib/settingsApi';
 
@@ -43,6 +46,7 @@ interface FormData {
   timezone: string;
   outboundProvider: TelephonyProvider | '';
   outboundPhoneNumber: string;
+  apiTriggerEnabled: boolean; // Enable API endpoint for this campaign
 }
 
 interface CreateCampaignWizardProps {
@@ -68,7 +72,8 @@ const STEPS = [
   { id: 2, title: 'Type', icon: Target, description: 'Choose campaign type' },
   { id: 3, title: 'Agent', icon: Bot, description: 'Select AI agent' },
   { id: 4, title: 'Settings', icon: Phone, description: 'Configure details' },
-  { id: 5, title: 'Contacts', icon: Upload, description: 'Import contacts' },
+  { id: 5, title: 'API', icon: Code, description: 'API integration' },
+  { id: 6, title: 'Contacts', icon: Upload, description: 'Import contacts' },
 ];
 
 const CAMPAIGN_TYPES = [
@@ -198,6 +203,9 @@ export default function CreateCampaignWizard({
         }
         return true;
       case 5:
+        // API Integration step - always can proceed (optional)
+        return true;
+      case 6:
         // File upload is required for outbound campaigns
         if (formData.type === 'outbound') {
           return selectedFile !== null;
@@ -219,6 +227,8 @@ export default function CreateCampaignWizard({
       case 4:
         return { title: 'Configure Settings', subtitle: formData.type === 'outbound' ? 'Set up scheduling and phone settings' : 'Configure phone settings' };
       case 5:
+        return { title: 'API Integration', subtitle: 'Connect your systems to trigger calls via API' };
+      case 6:
         return { title: 'Import Contacts', subtitle: 'Upload your contact list to get started' };
       default:
         return { title: '', subtitle: '' };
@@ -1329,8 +1339,309 @@ export default function CreateCampaignWizard({
             </div>
           )}
 
-          {/* Step 5: File Upload */}
+          {/* Step 5: API Integration */}
           {currentStep === 5 && (
+            <div key="step5" className="wizard-content">
+              {/* Only show for outbound and ondemand campaigns */}
+              {(formData.type === 'outbound' || formData.type === 'ondemand') ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                  {/* Enable API Toggle */}
+                  <div 
+                    onClick={() => setFormData({ ...formData, apiTriggerEnabled: !formData.apiTriggerEnabled })}
+                    style={{
+                      background: formData.apiTriggerEnabled 
+                        ? 'rgba(0, 200, 255, 0.08)' 
+                        : 'rgba(255, 255, 255, 0.02)',
+                      borderRadius: '16px',
+                      padding: '24px',
+                      border: formData.apiTriggerEnabled 
+                        ? '2px solid rgba(0, 200, 255, 0.3)' 
+                        : '2px solid rgba(255, 255, 255, 0.08)',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+                      <div style={{
+                        width: '48px',
+                        height: '48px',
+                        borderRadius: '12px',
+                        background: formData.apiTriggerEnabled 
+                          ? 'linear-gradient(135deg, #00C8FF 0%, #7800FF 100%)'
+                          : 'rgba(255, 255, 255, 0.05)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        transition: 'all 0.3s'
+                      }}>
+                        <Code size={24} color={formData.apiTriggerEnabled ? 'white' : '#6B7280'} />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                          <h4 style={{ 
+                            color: formData.apiTriggerEnabled ? '#00C8FF' : '#9CA3AF', 
+                            fontSize: '16px', 
+                            fontWeight: '600', 
+                            margin: 0 
+                          }}>
+                            Enable API Integration
+                          </h4>
+                          <div style={{
+                            width: '48px',
+                            height: '26px',
+                            borderRadius: '13px',
+                            background: formData.apiTriggerEnabled 
+                              ? 'linear-gradient(135deg, #00C8FF 0%, #7800FF 100%)'
+                              : 'rgba(255, 255, 255, 0.1)',
+                            position: 'relative',
+                            transition: 'all 0.3s'
+                          }}>
+                            <div style={{
+                              width: '22px',
+                              height: '22px',
+                              borderRadius: '50%',
+                              background: 'white',
+                              position: 'absolute',
+                              top: '2px',
+                              left: formData.apiTriggerEnabled ? '24px' : '2px',
+                              transition: 'all 0.3s',
+                              boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                            }} />
+                          </div>
+                        </div>
+                        <p style={{ color: '#6B7280', fontSize: '13px', margin: 0, lineHeight: '1.6' }}>
+                          Allow external systems to add contacts and trigger calls instantly via API
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* API Documentation when enabled */}
+                  {formData.apiTriggerEnabled && (
+                    <div style={{
+                      background: 'rgba(0, 0, 0, 0.3)',
+                      borderRadius: '16px',
+                      padding: '24px',
+                      border: '1px solid rgba(0, 200, 255, 0.15)'
+                    }}>
+                      <h4 style={{ 
+                        color: '#00C8FF', 
+                        fontSize: '15px', 
+                        fontWeight: '600', 
+                        margin: '0 0 16px 0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}>
+                        <Code size={18} />
+                        API Endpoint Documentation
+                      </h4>
+
+                      {/* Endpoint Info */}
+                      <div style={{ marginBottom: '20px' }}>
+                        <label style={{ 
+                          color: '#9CA3AF', 
+                          fontSize: '12px', 
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                          display: 'block',
+                          marginBottom: '8px'
+                        }}>
+                          Endpoint
+                        </label>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          background: 'rgba(0, 0, 0, 0.4)',
+                          borderRadius: '8px',
+                          padding: '12px 16px',
+                          border: '1px solid rgba(255, 255, 255, 0.1)'
+                        }}>
+                          <span style={{ 
+                            color: '#22c55e', 
+                            fontWeight: '600',
+                            fontSize: '12px',
+                            background: 'rgba(34, 197, 94, 0.1)',
+                            padding: '2px 8px',
+                            borderRadius: '4px'
+                          }}>POST</span>
+                          <code style={{ color: '#E5E7EB', fontSize: '13px', fontFamily: 'monospace' }}>
+                            /campaigns/&#123;campaignId&#125;/generate-instant-call
+                          </code>
+                        </div>
+                      </div>
+
+                      {/* Authentication */}
+                      <div style={{ marginBottom: '20px' }}>
+                        <label style={{ 
+                          color: '#9CA3AF', 
+                          fontSize: '12px', 
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                          display: 'block',
+                          marginBottom: '8px'
+                        }}>
+                          Authentication
+                        </label>
+                        <div style={{
+                          background: 'rgba(0, 0, 0, 0.4)',
+                          borderRadius: '8px',
+                          padding: '12px 16px',
+                          border: '1px solid rgba(255, 255, 255, 0.1)'
+                        }}>
+                          <code style={{ color: '#E5E7EB', fontSize: '13px', fontFamily: 'monospace' }}>
+                            x-api-key: YOUR_API_KEY
+                          </code>
+                        </div>
+                        <p style={{ color: '#6B7280', fontSize: '11px', margin: '6px 0 0' }}>
+                          Get your API key from Settings → API Keys
+                        </p>
+                      </div>
+
+                      {/* Request Body */}
+                      <div style={{ marginBottom: '20px' }}>
+                        <label style={{ 
+                          color: '#9CA3AF', 
+                          fontSize: '12px', 
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                          display: 'block',
+                          marginBottom: '8px'
+                        }}>
+                          Request Body (JSON)
+                        </label>
+                        <div style={{
+                          background: 'rgba(0, 0, 0, 0.4)',
+                          borderRadius: '8px',
+                          padding: '16px',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          fontFamily: 'monospace',
+                          fontSize: '12px'
+                        }}>
+                          <pre style={{ margin: 0, color: '#E5E7EB', whiteSpace: 'pre-wrap' }}>
+{`{
+  "name": "John Doe",
+  "phoneNumber": "+1234567890",
+  "metadata": {  // optional
+    "source": "crm",
+    "leadId": "123"
+  }
+}`}
+                          </pre>
+                        </div>
+                      </div>
+
+                      {/* Response */}
+                      <div style={{ marginBottom: '20px' }}>
+                        <label style={{ 
+                          color: '#9CA3AF', 
+                          fontSize: '12px', 
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                          display: 'block',
+                          marginBottom: '8px'
+                        }}>
+                          Response (Success)
+                        </label>
+                        <div style={{
+                          background: 'rgba(0, 0, 0, 0.4)',
+                          borderRadius: '8px',
+                          padding: '16px',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          fontFamily: 'monospace',
+                          fontSize: '12px'
+                        }}>
+                          <pre style={{ margin: 0, color: '#E5E7EB', whiteSpace: 'pre-wrap' }}>
+{`{
+  "success": true,
+  "data": {
+    "contactId": "...",
+    "callId": "...",
+    "joinUrl": "...",
+    "campaignId": "..."
+  },
+  "message": "Call triggered successfully"
+}`}
+                          </pre>
+                        </div>
+                      </div>
+
+                      {/* Features List */}
+                      <div style={{
+                        background: 'rgba(0, 200, 255, 0.05)',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        border: '1px solid rgba(0, 200, 255, 0.15)'
+                      }}>
+                        <h5 style={{ color: '#00C8FF', fontSize: '13px', fontWeight: '600', margin: '0 0 12px 0' }}>
+                          What happens when you call this API:
+                        </h5>
+                        <ul style={{ margin: 0, paddingLeft: '20px', color: '#9CA3AF', fontSize: '12px', lineHeight: '1.8' }}>
+                          <li>Contact is automatically added to this campaign</li>
+                          <li>AI agent immediately initiates an outbound call</li>
+                          <li>Call is tracked in call history with campaign context</li>
+                          <li>Contact status is updated in real-time</li>
+                          <li>Custom metadata is preserved for your reference</li>
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Disabled state message */}
+                  {!formData.apiTriggerEnabled && (
+                    <div style={{
+                      background: 'rgba(255, 255, 255, 0.02)',
+                      borderRadius: '12px',
+                      padding: '20px',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px'
+                    }}>
+                      <Sparkles size={18} color="#6B7280" />
+                      <p style={{ color: '#6B7280', fontSize: '13px', margin: 0 }}>
+                        Enable API integration to allow external systems (CRM, webhooks, etc.) to trigger calls via API.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Inbound campaigns don't support API trigger */
+                <div style={{
+                  background: 'rgba(107, 114, 128, 0.1)',
+                  borderRadius: '16px',
+                  padding: '32px',
+                  textAlign: 'center',
+                  border: '1px solid rgba(107, 114, 128, 0.2)'
+                }}>
+                  <div style={{
+                    width: '64px',
+                    height: '64px',
+                    borderRadius: '16px',
+                    background: 'rgba(107, 114, 128, 0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    margin: '0 auto 16px'
+                  }}>
+                    <PhoneIncoming size={28} color="#6B7280" />
+                  </div>
+                  <h4 style={{ color: '#9CA3AF', fontSize: '16px', fontWeight: '600', margin: '0 0 8px 0' }}>
+                    Not Available for Inbound Campaigns
+                  </h4>
+                  <p style={{ color: '#6B7280', fontSize: '13px', margin: 0, maxWidth: '400px', marginLeft: 'auto', marginRight: 'auto' }}>
+                    API integration is available for Outbound and On-Demand campaigns only. 
+                    Inbound campaigns handle incoming calls automatically.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step 6: File Upload */}
+          {currentStep === 6 && (
             <div key="step5" className="wizard-content">
               <div
                 onClick={() => fileInputRef.current?.click()}
