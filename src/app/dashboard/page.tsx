@@ -4,9 +4,11 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/dashboard/Sidebar";
 import DashboardSection from "@/components/dashboard/DashboardSection";
+import DashboardTour, { useDashboardTour } from "@/components/dashboard/DashboardTour";
 
 export default function Dashboard() {
     const router = useRouter();
+    const { showTour, closeTour, completeTour } = useDashboardTour();
 
     useEffect(() => {
         const token = localStorage.getItem("token");
@@ -23,8 +25,24 @@ export default function Dashboard() {
         router.push("/login");
     };
 
+    const handleTourNavigate = (section: string) => {
+        if (section === "dashboard") {
+            router.push("/dashboard");
+        } else {
+            router.push(`/dashboard/${section}`);
+        }
+    };
+
     return (
         <div className="dashboard-container">
+            {/* Dashboard Tour */}
+            <DashboardTour
+                isOpen={showTour}
+                onClose={closeTour}
+                onComplete={completeTour}
+                onNavigate={handleTourNavigate}
+            />
+
             {/* Dot Pattern Overlay */}
             <div
                 style={{

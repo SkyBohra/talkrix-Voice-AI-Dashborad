@@ -1,23 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { User, Lock, Loader2, Check } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { User, Lock, Loader2, Check, AlertCircle } from "lucide-react";
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
+    const [sessionExpired, setSessionExpired] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [rememberMe, setRememberMe] = useState(true);
     const router = useRouter();
+    const searchParams = useSearchParams();
+
+    // Check if session expired
+    useEffect(() => {
+        if (searchParams.get('expired') === 'true') {
+            setSessionExpired(true);
+        }
+    }, [searchParams]);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError("");
+        setSessionExpired(false);
         setIsLoading(true);
         try {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
@@ -35,7 +45,21 @@ export default function LoginPage() {
             localStorage.setItem("userId", tokenPayload.sub);
             localStorage.setItem("userName", data.data.name || "");
             localStorage.setItem("userEmail", data.data.email || "");
-            router.push("/dashboard");
+            // Use backend value for tour completion status
+            if (!data.data.hasCompletedTour) {
+                localStorage.setItem("isFirstLogin", "true");
+            } else {
+                localStorage.setItem("dashboardTourCompleted", "true");
+            }
+            
+            // Check for redirect path after session expiry
+            const redirectPath = sessionStorage.getItem('redirectAfterLogin');
+            if (redirectPath) {
+                sessionStorage.removeItem('redirectAfterLogin');
+                router.push(redirectPath);
+            } else {
+                router.push("/dashboard");
+            }
         } catch (err: unknown) {
             const errorMessage = err instanceof Error ? err.message : "Login failed.";
             setError(errorMessage);
@@ -141,6 +165,21 @@ export default function LoginPage() {
                     </label>
                     <Link href="#" style={{ fontSize: '13px', color: '#00C8FF', textDecoration: 'none' }}>Forgot password?</Link>
                 </div>
+                {sessionExpired && (
+                    <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '10px', 
+                        padding: '12px 16px', 
+                        background: 'rgba(255, 165, 0, 0.1)', 
+                        border: '1px solid rgba(255, 165, 0, 0.3)', 
+                        borderRadius: '10px', 
+                        marginBottom: '18px' 
+                    }}>
+                        <AlertCircle style={{ width: '18px', height: '18px', color: '#FFA500', flexShrink: 0 }} />
+                        <p style={{ color: '#FFA500', fontSize: '13px', margin: 0 }}>Your session has expired. Please login again.</p>
+                    </div>
+                )}
                 {error && <p style={{ color: '#FF3C64', textAlign: 'center', marginBottom: '18px', fontSize: '14px' }}>{error}</p>}
                 <div style={{ textAlign: 'center' }}>
                     <Button type="submit" disabled={isLoading} style={{ 

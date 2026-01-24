@@ -35,6 +35,9 @@ export default function SignupPage() {
             localStorage.setItem("userId", tokenPayload.sub);
             localStorage.setItem("userName", data.data.name || "");
             localStorage.setItem("userEmail", data.data.email || "");
+            // New users always see the tour - clear any old tour data and set first login
+            localStorage.removeItem("dashboardTourCompleted");
+            localStorage.setItem("isFirstLogin", "true");
             router.push("/dashboard");
         } catch (err: unknown) {
             const errorMessage = err instanceof Error ? err.message : "Signup failed.";
