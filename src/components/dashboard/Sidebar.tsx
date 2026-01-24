@@ -13,6 +13,8 @@ import {
     Megaphone,
     Menu,
     X,
+    Book,
+    ExternalLink,
 } from "lucide-react";
 
 type SidebarItem = {
@@ -398,6 +400,49 @@ export default function Sidebar({ activeSection, onSectionChange, onLogout }: Si
                         </button>
                     ))}
                 </nav>
+
+                {/* Documentation Link */}
+                <a
+                    href="https://talkrix.com/docs"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "12px",
+                        padding: (collapsed && !isMobile) ? "14px" : "14px 16px",
+                        borderRadius: "12px",
+                        border: "1px solid rgba(168, 85, 247, 0.3)",
+                        background: "linear-gradient(135deg, rgba(168, 85, 247, 0.1) 0%, rgba(99, 102, 241, 0.1) 100%)",
+                        color: "#a855f7",
+                        cursor: "pointer",
+                        transition: "all 0.2s ease",
+                        justifyContent: (collapsed && !isMobile) ? "center" : "flex-start",
+                        marginTop: "16px",
+                        flexShrink: 0,
+                        boxShadow: "0 0 15px rgba(168, 85, 247, 0.1)",
+                        minHeight: isMobile ? "48px" : "auto",
+                        textDecoration: "none",
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.background = "linear-gradient(135deg, rgba(168, 85, 247, 0.2) 0%, rgba(99, 102, 241, 0.2) 100%)";
+                        e.currentTarget.style.boxShadow = "0 0 25px rgba(168, 85, 247, 0.2)";
+                        e.currentTarget.style.borderColor = "rgba(168, 85, 247, 0.5)";
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "linear-gradient(135deg, rgba(168, 85, 247, 0.1) 0%, rgba(99, 102, 241, 0.1) 100%)";
+                        e.currentTarget.style.boxShadow = "0 0 15px rgba(168, 85, 247, 0.1)";
+                        e.currentTarget.style.borderColor = "rgba(168, 85, 247, 0.3)";
+                    }}
+                >
+                    <Book size={20} />
+                    {((!collapsed || isMobile)) && (
+                        <span style={{ fontSize: "14px", fontWeight: "500", display: "flex", alignItems: "center", gap: "6px" }}>
+                            Documentation
+                            <ExternalLink size={14} style={{ opacity: 0.7 }} />
+                        </span>
+                    )}
+                </a>
 
                 {/* Logout Button */}
                 <button
