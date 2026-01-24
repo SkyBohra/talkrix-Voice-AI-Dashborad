@@ -13,6 +13,7 @@ export interface CampaignContact {
   calledAt?: string;
   callDuration?: number;
   callNotes?: string;
+  isLocked?: boolean; // When true, contact cannot be updated or deleted
 }
 
 export interface CampaignSchedule {

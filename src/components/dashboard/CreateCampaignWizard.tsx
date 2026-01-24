@@ -74,6 +74,7 @@ const STEPS = [
   { id: 4, title: 'Settings', icon: Phone, description: 'Configure details' },
   { id: 5, title: 'API', icon: Code, description: 'API integration' },
   { id: 6, title: 'Contacts', icon: Upload, description: 'Import contacts' },
+  { id: 7, title: 'Review', icon: CheckCircle2, description: 'Review & launch' },
 ];
 
 const CAMPAIGN_TYPES = [
@@ -211,6 +212,9 @@ export default function CreateCampaignWizard({
           return selectedFile !== null;
         }
         return true;
+      case 7:
+        // Review step - always can proceed
+        return true;
       default:
         return true;
     }
@@ -230,6 +234,8 @@ export default function CreateCampaignWizard({
         return { title: 'API Integration', subtitle: 'Connect your systems to trigger calls via API' };
       case 6:
         return { title: 'Import Contacts', subtitle: 'Upload your contact list to get started' };
+      case 7:
+        return { title: 'Review Campaign', subtitle: 'Verify your settings before launching' };
       default:
         return { title: '', subtitle: '' };
     }
@@ -1559,8 +1565,9 @@ export default function CreateCampaignWizard({
   "data": {
     "contactId": "...",
     "callId": "...",
-    "joinUrl": "...",
-    "campaignId": "..."
+    "callHistoryId": "...",
+    "campaignId": "...",
+    "campaignName": "..."
   },
   "message": "Call triggered successfully"
 }`}
@@ -1731,6 +1738,327 @@ export default function CreateCampaignWizard({
                   : 'This step is optional. You can always add contacts later from the campaign details page.'
                 }
               </p>
+            </div>
+          )}
+
+          {/* Step 7: Review */}
+          {currentStep === 7 && (
+            <div key="step7" className="wizard-content">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {/* Campaign Name */}
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  border: '1px solid rgba(255, 255, 255, 0.08)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                    <div style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '10px',
+                      background: 'rgba(0, 200, 255, 0.1)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <Sparkles size={18} color="#00C8FF" />
+                    </div>
+                    <span style={{ color: '#6B7280', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Campaign Name
+                    </span>
+                  </div>
+                  <p style={{ color: '#FFFFFF', fontSize: '18px', fontWeight: '600', margin: 0 }}>
+                    {formData.name || 'Not set'}
+                  </p>
+                </div>
+
+                {/* Campaign Type */}
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  border: '1px solid rgba(255, 255, 255, 0.08)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                    <div style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '10px',
+                      background: formData.type === 'outbound' 
+                        ? 'rgba(34, 197, 94, 0.1)' 
+                        : formData.type === 'inbound'
+                        ? 'rgba(59, 130, 246, 0.1)'
+                        : 'rgba(168, 85, 247, 0.1)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      {formData.type === 'outbound' ? (
+                        <PhoneCall size={18} color="#22c55e" />
+                      ) : formData.type === 'inbound' ? (
+                        <PhoneIncoming size={18} color="#3b82f6" />
+                      ) : (
+                        <MousePointer size={18} color="#a855f7" />
+                      )}
+                    </div>
+                    <span style={{ color: '#6B7280', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Campaign Type
+                    </span>
+                  </div>
+                  <p style={{ 
+                    color: formData.type === 'outbound' 
+                      ? '#22c55e' 
+                      : formData.type === 'inbound'
+                      ? '#3b82f6'
+                      : '#a855f7', 
+                    fontSize: '16px', 
+                    fontWeight: '600', 
+                    margin: 0,
+                    textTransform: 'capitalize'
+                  }}>
+                    {formData.type === 'ondemand' ? 'On-Demand' : formData.type}
+                  </p>
+                </div>
+
+                {/* AI Agent */}
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  border: '1px solid rgba(255, 255, 255, 0.08)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                    <div style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '10px',
+                      background: 'rgba(120, 0, 255, 0.1)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <Bot size={18} color="#7800FF" />
+                    </div>
+                    <span style={{ color: '#6B7280', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      AI Agent
+                    </span>
+                  </div>
+                  <p style={{ color: '#FFFFFF', fontSize: '16px', fontWeight: '600', margin: 0 }}>
+                    {agents.find(a => a._id === formData.agentId)?.name || 'Not selected'}
+                  </p>
+                </div>
+
+                {/* Schedule (for outbound) */}
+                {formData.type === 'outbound' && (
+                  <div style={{
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    borderRadius: '12px',
+                    padding: '20px',
+                    border: '1px solid rgba(255, 255, 255, 0.08)'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                      <div style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '10px',
+                        background: 'rgba(251, 191, 36, 0.1)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <Calendar size={18} color="#fbbf24" />
+                      </div>
+                      <span style={{ color: '#6B7280', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Schedule
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+                      <div>
+                        <span style={{ color: '#6B7280', fontSize: '12px', display: 'block', marginBottom: '4px' }}>Date</span>
+                        <p style={{ color: '#FFFFFF', fontSize: '15px', fontWeight: '500', margin: 0 }}>
+                          {formData.scheduledDate ? new Date(formData.scheduledDate).toLocaleDateString('en-US', { 
+                            weekday: 'short', 
+                            year: 'numeric', 
+                            month: 'short', 
+                            day: 'numeric' 
+                          }) : 'Not set'}
+                        </p>
+                      </div>
+                      <div>
+                        <span style={{ color: '#6B7280', fontSize: '12px', display: 'block', marginBottom: '4px' }}>Time Window</span>
+                        <p style={{ color: '#FFFFFF', fontSize: '15px', fontWeight: '500', margin: 0 }}>
+                          {formData.scheduledTime || '--:--'} - {formData.endTime || '--:--'}
+                        </p>
+                      </div>
+                      <div>
+                        <span style={{ color: '#6B7280', fontSize: '12px', display: 'block', marginBottom: '4px' }}>Timezone</span>
+                        <p style={{ color: '#FFFFFF', fontSize: '15px', fontWeight: '500', margin: 0 }}>
+                          {formData.timezone || 'Not set'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Phone Number */}
+                {(formData.type === 'outbound' || formData.type === 'ondemand') && formData.outboundPhoneNumber && (
+                  <div style={{
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    borderRadius: '12px',
+                    padding: '20px',
+                    border: '1px solid rgba(255, 255, 255, 0.08)'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                      <div style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '10px',
+                        background: 'rgba(0, 200, 255, 0.1)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <Phone size={18} color="#00C8FF" />
+                      </div>
+                      <span style={{ color: '#6B7280', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Outbound Phone Number
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <p style={{ color: '#FFFFFF', fontSize: '16px', fontWeight: '600', margin: 0 }}>
+                        {phoneNumbers.find(p => p.number === formData.outboundPhoneNumber)?.number || formData.outboundPhoneNumber}
+                      </p>
+                      {formData.outboundProvider && (
+                        <span style={{
+                          fontSize: '11px',
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          background: 'rgba(0, 200, 255, 0.1)',
+                          color: '#00C8FF',
+                          textTransform: 'uppercase'
+                        }}>
+                          {formData.outboundProvider}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* API Integration Status */}
+                {(formData.type === 'outbound' || formData.type === 'ondemand') && (
+                  <div style={{
+                    background: formData.apiTriggerEnabled 
+                      ? 'rgba(0, 200, 255, 0.05)' 
+                      : 'rgba(255, 255, 255, 0.02)',
+                    borderRadius: '12px',
+                    padding: '20px',
+                    border: formData.apiTriggerEnabled 
+                      ? '1px solid rgba(0, 200, 255, 0.2)' 
+                      : '1px solid rgba(255, 255, 255, 0.08)'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                      <div style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '10px',
+                        background: formData.apiTriggerEnabled 
+                          ? 'rgba(0, 200, 255, 0.15)' 
+                          : 'rgba(255, 255, 255, 0.05)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <Code size={18} color={formData.apiTriggerEnabled ? '#00C8FF' : '#6B7280'} />
+                      </div>
+                      <span style={{ color: '#6B7280', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        API Integration
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        background: formData.apiTriggerEnabled ? '#22c55e' : '#6B7280'
+                      }} />
+                      <p style={{ 
+                        color: formData.apiTriggerEnabled ? '#22c55e' : '#6B7280', 
+                        fontSize: '15px', 
+                        fontWeight: '500', 
+                        margin: 0 
+                      }}>
+                        {formData.apiTriggerEnabled ? 'Enabled' : 'Disabled'}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Contacts / File */}
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  border: '1px solid rgba(255, 255, 255, 0.08)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                    <div style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '10px',
+                      background: selectedFile ? 'rgba(34, 197, 94, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      {selectedFile ? (
+                        <CheckCircle2 size={18} color="#22c55e" />
+                      ) : (
+                        <Upload size={18} color="#6B7280" />
+                      )}
+                    </div>
+                    <span style={{ color: '#6B7280', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Contact List
+                    </span>
+                  </div>
+                  {selectedFile ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <FileSpreadsheet size={18} color="#22c55e" />
+                      <p style={{ color: '#FFFFFF', fontSize: '15px', fontWeight: '500', margin: 0 }}>
+                        {selectedFile.name}
+                      </p>
+                      <span style={{ 
+                        color: '#6B7280', 
+                        fontSize: '12px',
+                        marginLeft: '4px'
+                      }}>
+                        ({(selectedFile.size / 1024).toFixed(1)} KB)
+                      </span>
+                    </div>
+                  ) : (
+                    <p style={{ color: '#6B7280', fontSize: '15px', fontWeight: '500', margin: 0 }}>
+                      No file uploaded
+                    </p>
+                  )}
+                </div>
+
+                {/* Ready to Launch Message */}
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(0, 200, 255, 0.1) 100%)',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  border: '1px solid rgba(34, 197, 94, 0.2)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  marginTop: '8px'
+                }}>
+                  <Zap size={20} color="#22c55e" />
+                  <p style={{ color: '#FFFFFF', fontSize: '14px', margin: 0 }}>
+                    Your campaign is ready to launch! Click the button below to create it.
+                  </p>
+                </div>
+              </div>
             </div>
           )}
         </div>
