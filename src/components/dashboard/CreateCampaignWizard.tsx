@@ -1927,7 +1927,7 @@ export default function CreateCampaignWizard({
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <p style={{ color: '#FFFFFF', fontSize: '16px', fontWeight: '600', margin: 0 }}>
-                        {phoneNumbers.find(p => p.number === formData.outboundPhoneNumber)?.number || formData.outboundPhoneNumber}
+                        {phoneNumbers.find(p => p.phoneNumber === formData.outboundPhoneNumber)?.phoneNumber || formData.outboundPhoneNumber}
                       </p>
                       {formData.outboundProvider && (
                         <span style={{
