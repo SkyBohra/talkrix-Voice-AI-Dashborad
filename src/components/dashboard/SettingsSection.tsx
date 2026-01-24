@@ -83,7 +83,7 @@ export default function SettingsSection() {
         },
         preferences: {
             language: "English",
-            timezone: "UTC-5",
+            timezone: "UTC+5:30",
             theme: "dark",
         },
         general: {
