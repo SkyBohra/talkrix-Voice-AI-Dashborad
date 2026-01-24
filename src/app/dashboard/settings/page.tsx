@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/dashboard/Sidebar";
 import SettingsSection from "@/components/dashboard/SettingsSection";
+import { Loader2 } from "lucide-react";
 
-export default function SettingsPage() {
+function SettingsContent() {
     const router = useRouter();
 
     useEffect(() => {
@@ -55,5 +56,24 @@ export default function SettingsPage() {
                 <SettingsSection />
             </main>
         </div>
+    );
+}
+
+export default function SettingsPage() {
+    return (
+        <Suspense fallback={
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100vh',
+                width: '100%',
+                background: '#030712'
+            }}>
+                <Loader2 style={{ width: '32px', height: '32px', color: '#00C8FF', animation: 'spin 1s linear infinite' }} />
+            </div>
+        }>
+            <SettingsContent />
+        </Suspense>
     );
 }
