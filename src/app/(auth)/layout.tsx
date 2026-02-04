@@ -1,13 +1,42 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 export default function AuthLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 768);
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
     return (
-        <div style={{ minHeight: '100vh', width: '100%', display: 'flex' }}>
-            {/* Left Panel - Cyberpunk animated background */}
+        <div style={{ 
+            minHeight: '100vh', 
+            minWidth: '100vw',
+            width: '100%', 
+            display: 'flex', 
+            flexDirection: isMobile ? 'column' : 'row',
+            background: 'linear-gradient(180deg, #0a1628 0%, #051020 100%)',
+            margin: 0,
+            padding: 0,
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            overflow: 'auto'
+        }}>
+            {/* Left Panel - Hidden on mobile, visible on desktop */}
+            {!isMobile && (
             <div style={{ 
                 display: 'flex',
                 width: '55%', 
@@ -157,18 +186,62 @@ export default function AuthLayout({
                     pointerEvents: 'none'
                 }} />
             </div>
+            )}
 
-            {/* Right Panel - Dark cyberpunk form area */}
+            {/* Right Panel - Full width on mobile, 45% on desktop */}
             <div style={{ 
-                width: '45%', 
+                width: isMobile ? '100%' : '45%', 
+                minHeight: isMobile ? '100vh' : 'auto',
                 display: 'flex', 
+                flexDirection: 'column',
                 alignItems: 'center', 
                 justifyContent: 'center',
                 background: 'linear-gradient(180deg, #0a1628 0%, #051020 100%)',
-                padding: '48px',
+                padding: isMobile ? '24px 20px' : '48px',
                 position: 'relative',
                 overflow: 'hidden'
             }}>
+                {/* Mobile Header */}
+                {isMobile && (
+                    <div style={{ 
+                        width: '100%', 
+                        marginBottom: '32px',
+                        textAlign: 'center'
+                    }}>
+                        <div style={{ 
+                            width: '50px', 
+                            height: '50px', 
+                            margin: '0 auto 16px',
+                            borderRadius: '14px', 
+                            background: 'linear-gradient(135deg, #00C8FF 0%, #7800FF 100%)', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            boxShadow: '0 0 30px rgba(0, 200, 255, 0.5)'
+                        }}>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                                <line x1="12" y1="19" x2="12" y2="23"/>
+                                <line x1="8" y1="23" x2="16" y2="23"/>
+                            </svg>
+                        </div>
+                        <h1 style={{ 
+                            fontSize: '24px', 
+                            fontWeight: 'bold', 
+                            marginBottom: '8px',
+                            background: 'linear-gradient(135deg, #00C8FF, #7800FF)', 
+                            WebkitBackgroundClip: 'text', 
+                            WebkitTextFillColor: 'transparent' 
+                        }}>
+                            Talkrix
+                        </h1>
+                        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px' }}>
+                            AI Sales Operations for Loan & Real Estate
+                        </p>
+                    </div>
+                )}
+
                 {/* Subtle glow on right panel */}
                 <div style={{
                     position: 'absolute',
@@ -181,7 +254,7 @@ export default function AuthLayout({
                     background: 'radial-gradient(circle, rgba(0, 200, 255, 0.08) 0%, transparent 70%)',
                     filter: 'blur(60px)'
                 }} />
-                <div style={{ width: '100%', maxWidth: '380px', position: 'relative', zIndex: 10 }}>
+                <div style={{ width: '100%', maxWidth: isMobile ? '100%' : '380px', position: 'relative', zIndex: 10 }}>
                     {children}
                 </div>
             </div>

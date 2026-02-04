@@ -51,14 +51,15 @@
   }
 
   html, body {
-    background: transparent;
+    background: #030712;
     color: hsl(var(--foreground));
     font-feature-settings: "rlig" 1, "calt" 1;
     font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
-    height: 100vh;
+    min-height: 100vh;
+    height: 100%;
     margin: 0;
     padding: 0;
-    overflow: hidden;
+    overflow-x: hidden;
   }
   
   html {

@@ -14,8 +14,17 @@ function LoginForm() {
     const [sessionExpired, setSessionExpired] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [rememberMe, setRememberMe] = useState(true);
+    const [isMobile, setIsMobile] = useState(false);
     const router = useRouter();
     const searchParams = useSearchParams();
+
+    // Check mobile
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     // Check if session expired
     useEffect(() => {
@@ -70,8 +79,8 @@ function LoginForm() {
     return (
         <div style={{ 
             background: 'linear-gradient(135deg, rgba(5, 15, 30, 0.9) 0%, rgba(10, 20, 40, 0.95) 100%)',
-            borderRadius: '20px',
-            padding: '40px',
+            borderRadius: isMobile ? '16px' : '20px',
+            padding: isMobile ? '24px 20px' : '40px',
             border: '1px solid rgba(0, 200, 255, 0.2)',
             boxShadow: '0 0 40px rgba(0, 200, 255, 0.1), inset 0 0 60px rgba(0, 200, 255, 0.03)',
             width: '100%',
