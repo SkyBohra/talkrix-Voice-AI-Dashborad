@@ -67,7 +67,7 @@ export default function SignupPage() {
                 textAlign: 'center', 
                 marginBottom: '8px' 
             }}>
-                Join the Revolution
+                Start Converting More
             </h2>
             <p style={{ 
                 color: 'rgba(255, 255, 255, 0.5)', 
@@ -75,7 +75,7 @@ export default function SignupPage() {
                 textAlign: 'center', 
                 marginBottom: '32px' 
             }}>
-                Create your account & build AI agents in minutes 🚀
+                Create your account & go live in 48 hours 🚀
             </p>
             <form onSubmit={handleSignup}>
                 <div style={{ position: 'relative', marginBottom: '18px', width: '100%' }}>

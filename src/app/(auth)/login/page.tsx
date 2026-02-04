@@ -96,7 +96,7 @@ function LoginForm() {
                 textAlign: 'center', 
                 marginBottom: '32px' 
             }}>
-                Sign in to unleash your AI voice agents ✨
+                Sign in to convert more leads & recover more revenue 📈
             </p>
             <form onSubmit={handleLogin}>
                 <div style={{ position: 'relative', marginBottom: '18px', width: '100%' }}>

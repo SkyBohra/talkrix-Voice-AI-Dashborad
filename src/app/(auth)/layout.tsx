@@ -105,46 +105,46 @@ export default function AuthLayout({
                         </svg>
                     </div>
                     <p style={{ color: '#00C8FF', fontSize: '14px', fontWeight: 600, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '12px' }}>
-                        Welcome to the Future
+                        AI Sales Operations
                     </p>
                     <h1 style={{ fontSize: '52px', fontWeight: 'bold', color: 'white', marginBottom: '20px', lineHeight: 1.1 }}>
-                        <span style={{ background: 'linear-gradient(135deg, #00C8FF, #7800FF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Voice AI</span>
+                        <span style={{ background: 'linear-gradient(135deg, #00C8FF, #7800FF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Loan & Real Estate</span>
                         <br />
                         <span style={{ fontSize: '36px', color: 'rgba(255,255,255,0.9)' }}>Command Center</span>
                     </h1>
                     <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '17px', lineHeight: 1.9, maxWidth: '420px', marginBottom: '8px' }}>
-                        🚀 Build intelligent voice agents that speak, listen, and understand. Transform your business with AI that feels human.
+                        🚀 AI Calling + WhatsApp + CRM that converts 3x more leads and recovers 40% more revenue for DSAs, NBFCs, and Loan Agencies.
                     </p>
                     <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px', lineHeight: 1.7, maxWidth: '420px' }}>
-                        No code required. Deploy in minutes. Scale infinitely.
+                        Go live in 48 hours. No code required. Scale infinitely.
                     </p>
                     
                     {/* Feature badges - Cyberpunk style */}
                     <div style={{ display: 'flex', gap: '12px', marginTop: '32px', flexWrap: 'wrap' }}>
                         <div style={{ padding: '10px 18px', backgroundColor: 'rgba(0, 200, 255, 0.15)', borderRadius: '8px', border: '1px solid rgba(0, 200, 255, 0.4)', fontSize: '13px', color: '#00C8FF', boxShadow: '0 0 15px rgba(0, 200, 255, 0.2)' }}>
-                            🎙️ 24/7 Voice Agents
+                            📞 AI Calling
                         </div>
                         <div style={{ padding: '10px 18px', backgroundColor: 'rgba(120, 0, 255, 0.15)', borderRadius: '8px', border: '1px solid rgba(120, 0, 255, 0.4)', fontSize: '13px', color: '#a78bfa', boxShadow: '0 0 15px rgba(120, 0, 255, 0.2)' }}>
-                            🧠 GPT-4 Powered
+                            💬 WhatsApp Automation
                         </div>
                         <div style={{ padding: '10px 18px', backgroundColor: 'rgba(255, 60, 100, 0.15)', borderRadius: '8px', border: '1px solid rgba(255, 60, 100, 0.4)', fontSize: '13px', color: '#FF3C64', boxShadow: '0 0 15px rgba(255, 60, 100, 0.2)' }}>
-                            ⚡ &lt;1s Response
+                            🔗 CRM Integration
                         </div>
                     </div>
 
                     {/* Stats */}
                     <div style={{ display: 'flex', gap: '40px', marginTop: '40px' }}>
                         <div>
-                            <p style={{ fontSize: '28px', fontWeight: 'bold', color: '#00C8FF', marginBottom: '4px' }}>10K+</p>
-                            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Agents Created</p>
+                            <p style={{ fontSize: '28px', fontWeight: 'bold', color: '#00C8FF', marginBottom: '4px' }}>3x</p>
+                            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Lead Conversion</p>
                         </div>
                         <div>
-                            <p style={{ fontSize: '28px', fontWeight: 'bold', color: '#7800FF', marginBottom: '4px' }}>1M+</p>
-                            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Conversations</p>
+                            <p style={{ fontSize: '28px', fontWeight: 'bold', color: '#7800FF', marginBottom: '4px' }}>15+</p>
+                            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>NBFC Partners</p>
                         </div>
                         <div>
-                            <p style={{ fontSize: '28px', fontWeight: 'bold', color: '#FF3C64', marginBottom: '4px' }}>99.9%</p>
-                            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Uptime</p>
+                            <p style={{ fontSize: '28px', fontWeight: 'bold', color: '#FF3C64', marginBottom: '4px' }}>40%</p>
+                            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>More Recovery</p>
                         </div>
                     </div>
                 </div>
