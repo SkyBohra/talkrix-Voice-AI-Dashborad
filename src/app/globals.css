@@ -109,6 +109,20 @@
 }
 
 /* ========================================
+   AGENT BUILDER OVERLAY STYLES
+   ======================================== */
+.agent-builder-overlay {
+  z-index: 1000 !important;
+}
+
+/* Hide sidebar toggle when agent builder is open */
+body:has(.agent-builder-overlay) .sidebar-collapse-toggle {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(-50%) translateX(-20px) !important;
+}
+
+/* ========================================
    MOBILE NAVIGATION SYSTEM
    ======================================== */
 
@@ -333,6 +347,16 @@
   .floating-orb-3 {
     width: 150px;
     height: 150px;
+  }
+  
+  /* Agent Builder fullscreen on mobile */
+  .agent-builder-overlay {
+    left: 0 !important;
+    top: 64px !important;
+    bottom: 70px !important;
+    border-radius: 0 !important;
+    border: none !important;
+    z-index: 1001 !important;
   }
 }
 
