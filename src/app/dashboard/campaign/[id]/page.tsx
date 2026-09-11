@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Sidebar from "@/components/dashboard/Sidebar";
+import { clearSession } from "@/lib/session";
 import {
     ArrowLeft, Users, Plus, Upload, Edit, Trash2, Phone, CheckCircle,
     XCircle, Clock, Search, Download, MoreHorizontal, Loader,
@@ -79,10 +80,7 @@ export default function CampaignDetailPage() {
     };
 
     const handleLogout = () => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("userId");
-        localStorage.removeItem("userName");
-        localStorage.removeItem("userEmail");
+        clearSession();
         router.push("/login");
     };
 

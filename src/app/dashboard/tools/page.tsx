@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/dashboard/Sidebar";
+import SectionGate from "@/components/dashboard/SectionGate";
+import { clearSession } from "@/lib/session";
 import ToolsSection from "@/components/dashboard/ToolsSection";
 
 export default function ToolsPage() {
@@ -16,10 +18,7 @@ export default function ToolsPage() {
     }, [router]);
 
     const handleLogout = () => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("userId");
-        localStorage.removeItem("userName");
-        localStorage.removeItem("userEmail");
+        clearSession();
         router.push("/login");
     };
 
@@ -52,7 +51,9 @@ export default function ToolsPage() {
 
             {/* Main Content */}
             <main className="dashboard-main">
-                <ToolsSection />
+                <SectionGate section="tools">
+                    <ToolsSection />
+                </SectionGate>
             </main>
         </div>
     );

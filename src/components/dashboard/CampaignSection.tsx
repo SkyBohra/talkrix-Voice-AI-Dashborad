@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Users, Phone, ChevronRight, Loader2, Calendar, Clock } from 'lucide-react';
+import { usePermissions } from '@/lib/useMe';
 import {
   Campaign,
   CreateCampaignData,
@@ -47,6 +48,7 @@ export default function CampaignSection() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const toast = useToast();
+  const { can } = usePermissions();
 
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -416,6 +418,7 @@ export default function CampaignSection() {
             Manage your voice campaigns
           </p>
         </div>
+        {can('campaigns.write') && (
         <button
           onClick={() => setShowCreateModal(true)}
           style={{
@@ -435,6 +438,7 @@ export default function CampaignSection() {
           <Plus size={18} />
           Create Campaign
         </button>
+        )}
       </div>
 
       {/* Stats Cards */}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { usePermissions } from "@/lib/useMe";
 import { 
     Database, Plus, Pencil, Trash2, X, Save, FileText, Upload, RefreshCw, 
     Globe, Search, AlertCircle, Loader2, ChevronRight, ArrowLeft, Link, 
@@ -37,6 +38,7 @@ const getStatus = (status: string | undefined) => {
 
 export default function RAGSection() {
     const toast = useToast();
+    const { can } = usePermissions();
     // State
     const [corpora, setCorpora] = useState<Corpus[]>([]);
     const [selectedCorpus, setSelectedCorpus] = useState<Corpus | null>(null);
@@ -394,7 +396,7 @@ export default function RAGSection() {
                 </div>
             </div>
             <div style={{ display: "flex", gap: "12px" }}>
-                {viewMode === "list" && (
+                {viewMode === "list" && can("knowledge.write") && (
                     <>
                         <button
                             onClick={handleSync}
@@ -496,6 +498,8 @@ export default function RAGSection() {
                             <Search size={16} />
                             Test Query
                         </button>
+                        {can("knowledge.write") && (
+                        <>
                         <button
                             onClick={openCrawlModal}
                             style={{
@@ -534,6 +538,8 @@ export default function RAGSection() {
                             <Upload size={18} />
                             Upload File
                         </button>
+                        </>
+                        )}
                     </>
                 )}
                 {viewMode === "query" && (
@@ -574,6 +580,7 @@ export default function RAGSection() {
                 }}>
                     <Database size={48} style={{ color: "rgba(255, 255, 255, 0.2)", marginBottom: "16px" }} />
                     <p style={{ color: "rgba(255, 255, 255, 0.5)", marginBottom: "16px" }}>No knowledge bases yet</p>
+                    {can("knowledge.write") && (
                     <button
                         onClick={openCreateCorpusModal}
                         style={{
@@ -589,6 +596,7 @@ export default function RAGSection() {
                     >
                         Create Your First Knowledge Base
                     </button>
+                    )}
                 </div>
             )}
             {corpora.map(corpus => {

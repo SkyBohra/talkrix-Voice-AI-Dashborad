@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Wrench, Plus, Pencil, Trash2, X, Save, Code, Globe, Database, Zap, Loader2, AlertCircle, RefreshCw, Phone, PhoneOff, Voicemail, Search, Music, PhoneCall, Clock } from "lucide-react";
+import { usePermissions } from "@/lib/useMe";
 import { fetchUserTools, createTool, updateTool, deleteTool, Tool, ToolDefinition, DynamicParameter } from "@/lib/toolApi";
 import { useToast } from "@/components/ui/toast";
 
@@ -165,6 +166,7 @@ type TabType = "builtin" | "custom";
 
 export default function ToolsSection() {
     const toast = useToast();
+    const { can } = usePermissions();
     const [activeTab, setActiveTab] = useState<TabType>("builtin");
     const [customTools, setCustomTools] = useState<Tool[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -441,6 +443,7 @@ export default function ToolsSection() {
                         Configure tools for your voice AI agents.
                     </p>
                 </div>
+                {can("agents.write") && (
                 <button
                     onClick={openCreateModal}
                     style={{
@@ -460,6 +463,7 @@ export default function ToolsSection() {
                     <Plus size={18} />
                     Create Custom Tool
                 </button>
+                )}
             </div>
 
             {/* Tabs */}
@@ -811,6 +815,7 @@ export default function ToolsSection() {
                             <p style={{ fontSize: "14px", color: "rgba(255, 255, 255, 0.5)", marginBottom: "24px" }}>
                                 Create your first custom tool to extend your agent&apos;s capabilities with external APIs.
                             </p>
+                            {can("agents.write") && (
                             <button
                                 onClick={openCreateModal}
                                 style={{
@@ -830,6 +835,7 @@ export default function ToolsSection() {
                                 <Plus size={18} />
                                 Create Custom Tool
                             </button>
+                            )}
                         </div>
                     )}
 

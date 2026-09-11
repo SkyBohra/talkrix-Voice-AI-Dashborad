@@ -6,10 +6,13 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 // Types
 export type TelephonyProvider = 'plivo' | 'twilio' | 'telnyx' | 'none';
 
+// The organization's limits; set by Talkrix, read-only here
 export interface GeneralSettings {
   maxConcurrentCalls: number;
   maxRagDocuments: number;
   maxAgents: number;
+  maxCorpora: number;
+  maxSeats: number;
 }
 
 export interface TelephonySettings {
@@ -29,12 +32,13 @@ export interface TelephonySettings {
   telnyxPhoneNumbers: string[];
   telnyxPhoneNumber?: string | null; // backwards compatibility
   telnyxConnectionId: string | null;
+  telnyxPublicKey?: string | null; // verifies Telnyx call-status webhooks
 }
 
 export interface UserSettings {
   general: GeneralSettings;
   telephony: TelephonySettings;
-  apiKey: string | null;
+  apiKey: string | null; // newest key's prefix only; keys are managed under /org/api-keys
   maxCorpusLimit: number;
 }
 
@@ -52,20 +56,6 @@ export const updateTelephonySettings = async (
   settings: Partial<TelephonySettings>
 ): Promise<ApiResponse> => {
   return safeApiCall(() => axios.put(`${API_BASE}/settings/telephony`, settings, { headers: getAuthHeaders() }));
-};
-
-/**
- * Regenerate API key
- */
-export const regenerateApiKey = async (): Promise<ApiResponse<{ apiKey: string }>> => {
-  return safeApiCall(() => axios.put(`${API_BASE}/settings/regenerate-api-key`, {}, { headers: getAuthHeaders() }));
-};
-
-/**
- * Get full API key
- */
-export const getApiKey = async (): Promise<ApiResponse<{ apiKey: string }>> => {
-  return safeApiCall(() => axios.get(`${API_BASE}/settings/api-key`, { headers: getAuthHeaders() }));
 };
 
 /**

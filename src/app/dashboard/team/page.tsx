@@ -1,14 +1,13 @@
 "use client";
 
-import { useEffect, Suspense } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/dashboard/Sidebar";
 import SectionGate from "@/components/dashboard/SectionGate";
+import TeamSection from "@/components/dashboard/TeamSection";
 import { clearSession } from "@/lib/session";
-import SettingsSection from "@/components/dashboard/SettingsSection";
-import { Loader2 } from "lucide-react";
 
-function SettingsContent() {
+export default function TeamPage() {
     const router = useRouter();
 
     useEffect(() => {
@@ -37,9 +36,8 @@ function SettingsContent() {
                 }}
             />
 
-            {/* Sidebar */}
             <Sidebar
-                activeSection="settings"
+                activeSection="team"
                 onSectionChange={(section) => {
                     if (section === "dashboard") {
                         router.push("/dashboard");
@@ -50,31 +48,11 @@ function SettingsContent() {
                 onLogout={handleLogout}
             />
 
-            {/* Main Content */}
             <main className="dashboard-main">
-                <SectionGate section="settings">
-                    <SettingsSection />
+                <SectionGate section="team">
+                    <TeamSection />
                 </SectionGate>
             </main>
         </div>
-    );
-}
-
-export default function SettingsPage() {
-    return (
-        <Suspense fallback={
-            <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: '100vh',
-                width: '100%',
-                background: '#030712'
-            }}>
-                <Loader2 style={{ width: '32px', height: '32px', color: '#00C8FF', animation: 'spin 1s linear infinite' }} />
-            </div>
-        }>
-            <SettingsContent />
-        </Suspense>
     );
 }

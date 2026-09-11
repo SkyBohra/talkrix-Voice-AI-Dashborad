@@ -3,12 +3,17 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/dashboard/Sidebar";
+import SectionGate from "@/components/dashboard/SectionGate";
+import { clearSession } from "@/lib/session";
+import { usePermissions } from "@/lib/useMe";
 import DashboardSection from "@/components/dashboard/DashboardSection";
 import DashboardTour, { useDashboardTour } from "@/components/dashboard/DashboardTour";
 
 export default function Dashboard() {
     const router = useRouter();
     const { showTour, closeTour, completeTour } = useDashboardTour();
+    // The tour walks through building agents and campaigns, so only people who can build see it
+    const { can } = usePermissions();
 
     useEffect(() => {
         const token = localStorage.getItem("token");
@@ -18,10 +23,7 @@ export default function Dashboard() {
     }, [router]);
 
     const handleLogout = () => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("userId");
-        localStorage.removeItem("userName");
-        localStorage.removeItem("userEmail");
+        clearSession();
         router.push("/login");
     };
 
@@ -37,7 +39,7 @@ export default function Dashboard() {
         <div className="dashboard-container">
             {/* Dashboard Tour */}
             <DashboardTour
-                isOpen={showTour}
+                isOpen={showTour && can("agents.write")}
                 onClose={closeTour}
                 onComplete={completeTour}
                 onNavigate={handleTourNavigate}
@@ -70,7 +72,9 @@ export default function Dashboard() {
 
             {/* Main Content */}
             <main className="dashboard-main">
-                <DashboardSection />
+                <SectionGate section="dashboard">
+                    <DashboardSection />
+                </SectionGate>
             </main>
         </div>
     );

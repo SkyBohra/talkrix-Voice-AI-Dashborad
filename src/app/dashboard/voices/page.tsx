@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/dashboard/Sidebar";
+import SectionGate from "@/components/dashboard/SectionGate";
+import { clearSession } from "@/lib/session";
 import VoicesSection from "@/components/dashboard/VoicesSection";
 
 export default function VoicesPage() {
@@ -16,10 +18,7 @@ export default function VoicesPage() {
     }, [router]);
 
     const handleLogout = () => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("userId");
-        localStorage.removeItem("userName");
-        localStorage.removeItem("userEmail");
+        clearSession();
         router.push("/login");
     };
 
@@ -52,7 +51,9 @@ export default function VoicesPage() {
 
             {/* Main Content */}
             <main className="dashboard-main">
-                <VoicesSection />
+                <SectionGate section="voices">
+                    <VoicesSection />
+                </SectionGate>
             </main>
         </div>
     );

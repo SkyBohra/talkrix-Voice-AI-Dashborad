@@ -2,9 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { Settings, User, Bell, Shield, Key, Globe, Palette, Save, Check, Phone, Server, Copy, RefreshCw, Eye, EyeOff, Plus, Trash2 } from "lucide-react";
-import { getSettings, updateTelephonySettings, regenerateApiKey, getApiKey, TelephonyProvider, UserSettings } from "@/lib/settingsApi";
+import { User, Bell, Shield, Key, Palette, Save, Check, Phone, Server, Eye, EyeOff, Plus, Trash2, Lock, LogOut, Loader2 } from "lucide-react";
+import { getSettings, updateTelephonySettings, TelephonyProvider } from "@/lib/settingsApi";
 import { useToast } from "@/components/ui/toast";
+import ApiKeysCard from "./ApiKeysCard";
+import { usePermissions } from "@/lib/useMe";
+import { logoutEverywhere } from "@/lib/orgApi";
+import { clearSession } from "@/lib/session";
 
 interface SettingsState {
     profile: {
@@ -31,6 +35,8 @@ interface SettingsState {
         maxConcurrentCalls: number;
         maxRagDocuments: number;
         maxAgents: number;
+        maxCorpora: number;
+        maxSeats: number;
     };
     telephony: {
         provider: TelephonyProvider;
@@ -43,20 +49,22 @@ interface SettingsState {
         telnyxApiKey: string;
         telnyxPhoneNumbers: string[];
         telnyxConnectionId: string;
+        telnyxPublicKey: string;
     };
-    apiKey: string;
 }
 
 export default function SettingsSection() {
     const toast = useToast();
     const searchParams = useSearchParams();
+    const { can, known } = usePermissions();
+    const canManageTelephony = can("telephony.manage");
+    const canManageKeys = can("apikeys.manage");
     const [activeTab, setActiveTab] = useState("profile");
     const [saved, setSaved] = useState(false);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [showApiKey, setShowApiKey] = useState(false);
     const [showTelephonySecrets, setShowTelephonySecrets] = useState(false);
-    const [copied, setCopied] = useState(false);
+    const [signingOutEverywhere, setSigningOutEverywhere] = useState(false);
 
     // Set active tab from URL query parameter
     useEffect(() => {
@@ -87,9 +95,11 @@ export default function SettingsSection() {
             theme: "dark",
         },
         general: {
-            maxConcurrentCalls: 2,
-            maxRagDocuments: 1,
-            maxAgents: 10,
+            maxConcurrentCalls: 0,
+            maxRagDocuments: 0,
+            maxAgents: 0,
+            maxCorpora: 0,
+            maxSeats: 0,
         },
         telephony: {
             provider: "none",
@@ -102,9 +112,11 @@ export default function SettingsSection() {
             telnyxApiKey: "",
             telnyxPhoneNumbers: [""],
             telnyxConnectionId: "",
+            telnyxPublicKey: "",
         },
-        apiKey: "",
     });
+    // Identifiers as loaded (masked, e.g. "AC12****cdef"); sent back only when someone types a new one
+    const [loadedIds, setLoadedIds] = useState({ plivoAuthId: "", twilioAccountSid: "" });
 
     // Load settings from API
     useEffect(() => {
@@ -119,12 +131,18 @@ export default function SettingsSection() {
                         return [""];
                     };
 
+                    setLoadedIds({
+                        plivoAuthId: res.data!.telephony.plivoAuthId || "",
+                        twilioAccountSid: res.data!.telephony.twilioAccountSid || "",
+                    });
                     setSettings(prev => ({
                         ...prev,
                         general: {
                             maxConcurrentCalls: res.data!.general.maxConcurrentCalls,
                             maxRagDocuments: res.data!.general.maxRagDocuments,
                             maxAgents: res.data!.general.maxAgents,
+                            maxCorpora: res.data!.general.maxCorpora ?? res.data!.maxCorpusLimit ?? 0,
+                            maxSeats: res.data!.general.maxSeats ?? 0,
                         },
                         telephony: {
                             provider: res.data!.telephony.provider,
@@ -137,12 +155,13 @@ export default function SettingsSection() {
                             telnyxApiKey: "",
                             telnyxPhoneNumbers: parsePhoneNumbers(res.data!.telephony.telnyxPhoneNumbers || res.data!.telephony.telnyxPhoneNumber),
                             telnyxConnectionId: res.data!.telephony.telnyxConnectionId || "",
+                            telnyxPublicKey: res.data!.telephony.telnyxPublicKey || "",
                         },
-                        apiKey: res.data!.apiKey || "",
                         profile: {
                             ...prev.profile,
                             name: localStorage.getItem("userName") || "",
                             email: localStorage.getItem("userEmail") || "",
+                            company: localStorage.getItem("orgName") || "",
                         },
                     }));
                 }
@@ -175,25 +194,31 @@ export default function SettingsSection() {
                 // Filter out empty phone numbers
                 const filterPhones = (phones: string[]) => phones.filter(p => p.trim() !== "");
 
-                // Only include non-empty values
-                if (settings.telephony.plivoAuthId) telephonyData.plivoAuthId = settings.telephony.plivoAuthId;
+                // Only include non-empty values; identifiers are shown masked, so send them only when retyped
+                const changedId = (value: string, loaded: string) => value && value !== loaded;
+                if (changedId(settings.telephony.plivoAuthId, loadedIds.plivoAuthId)) telephonyData.plivoAuthId = settings.telephony.plivoAuthId;
                 if (settings.telephony.plivoAuthToken) telephonyData.plivoAuthToken = settings.telephony.plivoAuthToken;
                 const plivoPhones = filterPhones(settings.telephony.plivoPhoneNumbers);
                 if (plivoPhones.length > 0) telephonyData.plivoPhoneNumbers = plivoPhones;
-                
-                if (settings.telephony.twilioAccountSid) telephonyData.twilioAccountSid = settings.telephony.twilioAccountSid;
+
+                if (changedId(settings.telephony.twilioAccountSid, loadedIds.twilioAccountSid)) telephonyData.twilioAccountSid = settings.telephony.twilioAccountSid;
                 if (settings.telephony.twilioAuthToken) telephonyData.twilioAuthToken = settings.telephony.twilioAuthToken;
                 const twilioPhones = filterPhones(settings.telephony.twilioPhoneNumbers);
                 if (twilioPhones.length > 0) telephonyData.twilioPhoneNumbers = twilioPhones;
-                
+
                 if (settings.telephony.telnyxApiKey) telephonyData.telnyxApiKey = settings.telephony.telnyxApiKey;
                 const telnyxPhones = filterPhones(settings.telephony.telnyxPhoneNumbers);
                 if (telnyxPhones.length > 0) telephonyData.telnyxPhoneNumbers = telnyxPhones;
                 if (settings.telephony.telnyxConnectionId) telephonyData.telnyxConnectionId = settings.telephony.telnyxConnectionId;
+                if (settings.telephony.telnyxPublicKey.trim()) telephonyData.telnyxPublicKey = settings.telephony.telnyxPublicKey.trim();
 
                 const res = await updateTelephonySettings(telephonyData);
                 if (res.success) {
                     toast.success("Settings Saved", "Telephony settings updated successfully.");
+                    setLoadedIds({
+                        plivoAuthId: telephonyData.plivoAuthId ?? loadedIds.plivoAuthId,
+                        twilioAccountSid: telephonyData.twilioAccountSid ?? loadedIds.twilioAccountSid,
+                    });
                 } else {
                     toast.error("Save Failed", res.message || "Failed to update telephony settings.");
                     return;
@@ -209,69 +234,17 @@ export default function SettingsSection() {
         }
     };
 
-    const handleRegenerateApiKey = async () => {
-        if (!confirm("Are you sure you want to regenerate your API key? This will invalidate the current key.")) return;
-        try {
-            const res = await regenerateApiKey();
-            if (res.success && res.data) {
-                setSettings(prev => ({ ...prev, apiKey: res.data!.apiKey }));
-                setShowApiKey(true);
-                toast.success("API Key Regenerated", "Your new API key has been generated. Make sure to save it.");
-            } else {
-                toast.error("Regeneration Failed", res.message || "Failed to regenerate API key.");
-            }
-        } catch (err: any) {
-            console.error("Failed to regenerate API key:", err);
-            toast.error("Error", err?.message || "Failed to regenerate API key.");
-        }
-    };
-
-    const handleShowApiKey = async () => {
-        if (!showApiKey) {
-            try {
-                const res = await getApiKey();
-                if (res.success && res.data) {
-                    setSettings(prev => ({ ...prev, apiKey: res.data!.apiKey }));
-                }
-            } catch (err) {
-                console.error("Failed to fetch API key:", err);
-            }
-        }
-        setShowApiKey(!showApiKey);
-    };
-
-    const copyToClipboard = async (text: string) => {
-        let textToCopy = text;
-        
-        // If trying to copy API key and it's not loaded yet, fetch it first
-        if (!textToCopy && !showApiKey) {
-            try {
-                const res = await getApiKey();
-                if (res.success && res.data) {
-                    textToCopy = res.data.apiKey;
-                    setSettings(prev => ({ ...prev, apiKey: res.data!.apiKey }));
-                }
-            } catch (err) {
-                console.error("Failed to fetch API key:", err);
-                toast.error("Copy Failed", "Could not fetch API key.");
-                return;
-            }
-        }
-        
-        if (!textToCopy) {
-            toast.error("Copy Failed", "No API key available.");
+    const handleLogoutEverywhere = async () => {
+        if (!confirm("Sign out of Talkrix on every device, including this one?")) return;
+        setSigningOutEverywhere(true);
+        const res = await logoutEverywhere();
+        if (res.success) {
+            clearSession();
+            window.location.href = "/login";
             return;
         }
-        
-        try {
-            await navigator.clipboard.writeText(textToCopy);
-            setCopied(true);
-            toast.success("Copied!", "API key copied to clipboard.");
-            setTimeout(() => setCopied(false), 2000);
-        } catch (err) {
-            console.error("Failed to copy to clipboard:", err);
-            toast.error("Copy Failed", "Could not copy to clipboard.");
-        }
+        toast.error("Couldn't sign out everywhere", res.message);
+        setSigningOutEverywhere(false);
     };
 
     // Phone number management helpers
@@ -453,6 +426,64 @@ export default function SettingsSection() {
 
     const renderSecurityTab = () => (
         <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+            <div
+                style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: "16px",
+                    flexWrap: "wrap",
+                    padding: "20px",
+                    background: "rgba(255, 255, 255, 0.03)",
+                    border: "1px solid rgba(0, 200, 255, 0.15)",
+                    borderRadius: "12px",
+                }}
+            >
+                <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                    <div
+                        style={{
+                            width: "44px",
+                            height: "44px",
+                            borderRadius: "10px",
+                            background: "rgba(0, 200, 255, 0.1)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "#00C8FF",
+                            flexShrink: 0,
+                        }}
+                    >
+                        <LogOut size={20} />
+                    </div>
+                    <div>
+                        <p style={{ fontSize: "14px", fontWeight: "500", color: "white", marginBottom: "4px" }}>Sign out everywhere</p>
+                        <p style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.5)" }}>
+                            Ends every session on every device. Use it if you lost a device or shared your password.
+                        </p>
+                    </div>
+                </div>
+                <button
+                    onClick={handleLogoutEverywhere}
+                    disabled={signingOutEverywhere}
+                    style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        padding: "10px 20px",
+                        borderRadius: "8px",
+                        border: "1px solid rgba(255, 60, 100, 0.3)",
+                        background: "rgba(255, 60, 100, 0.1)",
+                        color: "#FF3C64",
+                        fontSize: "13px",
+                        fontWeight: "500",
+                        cursor: signingOutEverywhere ? "default" : "pointer",
+                    }}
+                >
+                    {signingOutEverywhere && <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} />}
+                    Sign out everywhere
+                </button>
+            </div>
+
             <div
                 style={{
                     display: "flex",
@@ -724,7 +755,17 @@ export default function SettingsSection() {
         );
 
         return (
+            // Only people who manage telephony can change it; everyone else sees it read-only
+            <fieldset disabled={!canManageTelephony} style={{ border: "none", padding: 0, margin: 0, minWidth: 0 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                {known && !canManageTelephony && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "12px 16px", borderRadius: "10px", background: "rgba(0, 200, 255, 0.06)", border: "1px solid rgba(0, 200, 255, 0.2)" }}>
+                        <Lock size={16} style={{ color: "#00C8FF", flexShrink: 0 }} />
+                        <p style={{ margin: 0, fontSize: "13px", color: "rgba(255, 255, 255, 0.7)" }}>
+                            Only owners and admins can change telephony. You can see the provider and numbers.
+                        </p>
+                    </div>
+                )}
                 {/* Provider Selection */}
                 <div>
                     <label style={{ display: "block", fontSize: "13px", color: "rgba(255, 255, 255, 0.6)", marginBottom: "8px" }}>
@@ -921,97 +962,49 @@ export default function SettingsSection() {
                                     style={inputStyle}
                                 />
                             </div>
+                            <div>
+                                <label style={{ display: "block", fontSize: "13px", color: "rgba(255, 255, 255, 0.6)", marginBottom: "8px" }}>
+                                    Public Key
+                                </label>
+                                <input
+                                    type="text"
+                                    value={settings.telephony.telnyxPublicKey}
+                                    onChange={(e) => setSettings({ ...settings, telephony: { ...settings.telephony, telnyxPublicKey: e.target.value } })}
+                                    placeholder="From Telnyx Mission Control → Keys & Credentials"
+                                    style={inputStyle}
+                                />
+                                <p style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.4)", marginTop: "8px", maxWidth: "400px" }}>
+                                    Talkrix uses it to check that call updates really come from Telnyx. Without it, Telnyx call statuses are rejected.
+                                </p>
+                            </div>
                         </div>
                     </div>
                 )}
             </div>
+            </fieldset>
         );
     };
 
     const renderLimitsTab = () => (
         <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-            {/* API Key Section */}
-            <div style={{ 
-                padding: "20px", 
-                background: "rgba(255, 255, 255, 0.03)", 
-                border: "1px solid rgba(0, 200, 255, 0.15)", 
-                borderRadius: "12px" 
-            }}>
-                <h3 style={{ fontSize: "16px", fontWeight: "600", color: "white", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-                    <Key size={18} style={{ color: "#00C8FF" }} /> API Key
-                </h3>
-                <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
-                    <div style={{ 
-                        flex: "1 1 300px",
-                        minWidth: "200px",
-                        maxWidth: "100%",
-                        padding: "12px 16px",
-                        borderRadius: "10px",
-                        border: "1px solid rgba(0, 200, 255, 0.1)",
-                        background: "rgba(255, 255, 255, 0.05)",
-                        color: "white",
-                        fontSize: "14px",
-                        fontFamily: "monospace",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                        wordBreak: "break-all",
-                    }}>
-                        {showApiKey ? settings.apiKey : "••••••••••••••••••••••••"}
-                    </div>
-                    <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
-                        <button
-                            onClick={handleShowApiKey}
-                            style={{
-                                padding: "12px",
-                                borderRadius: "10px",
-                                border: "1px solid rgba(0, 200, 255, 0.1)",
-                                background: "rgba(255, 255, 255, 0.05)",
-                                color: "rgba(255, 255, 255, 0.6)",
-                                cursor: "pointer",
-                                flexShrink: 0,
-                            }}
-                            title={showApiKey ? "Hide API Key" : "Show API Key"}
-                        >
-                            {showApiKey ? <EyeOff size={18} /> : <Eye size={18} />}
-                        </button>
-                        <button
-                            onClick={() => copyToClipboard(settings.apiKey)}
-                            style={{
-                                padding: "12px",
-                                borderRadius: "10px",
-                                border: copied ? "1px solid rgba(0, 255, 100, 0.3)" : "1px solid rgba(0, 200, 255, 0.1)",
-                                background: copied ? "rgba(0, 255, 100, 0.1)" : "rgba(255, 255, 255, 0.05)",
-                                color: copied ? "#00FF64" : "rgba(255, 255, 255, 0.6)",
-                                cursor: "pointer",
-                                transition: "all 0.2s ease",
-                                flexShrink: 0,
-                            }}
-                            title={copied ? "Copied!" : "Copy API Key"}
-                        >
-                            {copied ? <Check size={18} /> : <Copy size={18} />}
-                        </button>
-                        <button
-                            onClick={handleRegenerateApiKey}
-                            style={{
-                                padding: "12px",
-                                borderRadius: "10px",
-                                border: "1px solid rgba(255, 60, 100, 0.3)",
-                                background: "rgba(255, 60, 100, 0.1)",
-                                color: "#FF3C64",
-                                cursor: "pointer",
-                                flexShrink: 0,
-                            }}
-                            title="Regenerate API Key"
-                        >
-                            <RefreshCw size={18} />
-                        </button>
-                    </div>
+            {/* API keys belong to the organization; owners and admins manage them */}
+            {canManageKeys ? (
+                <ApiKeysCard />
+            ) : known ? (
+                <div style={{
+                    padding: "20px",
+                    background: "rgba(255, 255, 255, 0.03)",
+                    border: "1px solid rgba(0, 200, 255, 0.15)",
+                    borderRadius: "12px"
+                }}>
+                    <h3 style={{ fontSize: "16px", fontWeight: "600", color: "white", marginBottom: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
+                        <Key size={18} style={{ color: "#00C8FF" }} /> API keys
+                    </h3>
+                    <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.55)", margin: 0 }}>
+                        Owners and admins create and revoke this organization&apos;s API keys.
+                    </p>
                 </div>
-                <p style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.4)", marginTop: "12px" }}>
-                    Use this API key to authenticate requests. Keep it secret!
-                </p>
-            </div>
+            ) : null}
 
             {/* Limits Section */}
             <div style={{ 
@@ -1026,8 +1019,10 @@ export default function SettingsSection() {
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                     {[
                         { label: "Concurrent calls", value: settings.general.maxConcurrentCalls, hint: "Calls that can be live at the same time, across all campaigns" },
-                        { label: "Agents", value: settings.general.maxAgents, hint: "Agents you can create" },
+                        { label: "Agents", value: settings.general.maxAgents, hint: "Agents your organization can create" },
+                        { label: "Knowledge bases", value: settings.general.maxCorpora, hint: "RAG knowledge bases" },
                         { label: "RAG documents", value: settings.general.maxRagDocuments, hint: "Documents per knowledge base" },
+                        { label: "Team seats", value: settings.general.maxSeats, hint: "Members plus pending invitations" },
                     ].map((limit) => (
                         <div
                             key={limit.label}
@@ -1182,7 +1177,7 @@ export default function SettingsSection() {
                             {activeTab === "preferences" && renderPreferencesTab()}
 
                             {/* Save Button - Only show for tabs that save to backend */}
-                            {activeTab === "telephony" && (
+                            {activeTab === "telephony" && canManageTelephony && (
                                 <div style={{ marginTop: "24px", paddingTop: "20px", borderTop: "1px solid rgba(255, 255, 255, 0.05)" }}>
                                     <button
                                         onClick={handleSave}

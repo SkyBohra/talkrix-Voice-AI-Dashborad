@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/dashboard/Sidebar";
+import SectionGate from "@/components/dashboard/SectionGate";
+import { clearSession } from "@/lib/session";
 import RAGSection from "@/components/dashboard/RAGSection";
 
 export default function RAGPage() {
@@ -16,10 +18,7 @@ export default function RAGPage() {
     }, [router]);
 
     const handleLogout = () => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("userId");
-        localStorage.removeItem("userName");
-        localStorage.removeItem("userEmail");
+        clearSession();
         router.push("/login");
     };
 
@@ -52,7 +51,9 @@ export default function RAGPage() {
 
             {/* Main Content */}
             <main className="dashboard-main">
-                <RAGSection />
+                <SectionGate section="rag">
+                    <RAGSection />
+                </SectionGate>
             </main>
         </div>
     );

@@ -15,7 +15,13 @@ import {
     X,
     Book,
     ExternalLink,
+    Users,
 } from "lucide-react";
+import OrgSwitcher from "./OrgSwitcher";
+import OrgSuspendedNotice from "./OrgSuspendedNotice";
+import { SECTION_PERMISSIONS } from "./SectionGate";
+import { usePermissions } from "@/lib/useMe";
+import { clearSession } from "@/lib/session";
 
 type SidebarItem = {
     id: string;
@@ -32,13 +38,13 @@ const sidebarItems: SidebarItem[] = [
     { id: "voices", label: "Voices", icon: <Mic size={20} />, mobileIcon: <Mic size={22} /> },
     { id: "tools", label: "Tools", icon: <Wrench size={20} />, mobileIcon: <Wrench size={22} /> },
     { id: "rag", label: "RAG", icon: <Database size={20} />, mobileIcon: <Database size={22} /> },
+    { id: "team", label: "Team", icon: <Users size={20} />, mobileIcon: <Users size={22} /> },
     { id: "settings", label: "Settings", icon: <Settings size={20} />, mobileIcon: <Settings size={22} /> },
 ];
 
-// Bottom nav items - show only 5 most important
-const mobileNavItems = sidebarItems.filter(item => 
-    ["dashboard", "agents", "campaign", "call-history", "settings"].includes(item.id)
-);
+// Bottom nav shows at most 5; Team fills in for roles that don't see the calling sections
+const MOBILE_NAV_IDS = ["dashboard", "campaign", "call-history", "agents", "settings"];
+const MOBILE_NAV_LIMIT = 5;
 
 interface SidebarProps {
     activeSection: string;
@@ -51,6 +57,23 @@ export default function Sidebar({ activeSection, onSectionChange, onLogout }: Si
     const [mounted, setMounted] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const { can, known } = usePermissions();
+
+    // Until permissions are known every item shows; the server refuses what the role can't do anyway
+    const visibleItems = sidebarItems.filter((item) => {
+        const permission = SECTION_PERMISSIONS[item.id];
+        return !known || !permission || can(permission);
+    });
+    let mobileNavItems = visibleItems.filter((item) => MOBILE_NAV_IDS.includes(item.id));
+    const teamItem = visibleItems.find((item) => item.id === "team");
+    if (mobileNavItems.length < MOBILE_NAV_LIMIT && teamItem) {
+        mobileNavItems = [...mobileNavItems.slice(0, -1), teamItem, ...mobileNavItems.slice(-1)];
+    }
+
+    const handleLogout = () => {
+        clearSession();
+        onLogout();
+    };
 
     // Check if we're on mobile
     const checkMobile = useCallback(() => {
@@ -194,6 +217,8 @@ export default function Sidebar({ activeSection, onSectionChange, onLogout }: Si
 
     return (
         <>
+            <OrgSuspendedNotice />
+
             {/* Mobile Elements */}
             {isMobile && (
                 <>
@@ -209,6 +234,8 @@ export default function Sidebar({ activeSection, onSectionChange, onLogout }: Si
                 className={`dashboard-sidebar sidebar-desktop ${mobileMenuOpen ? 'open' : ''}`}
                 style={{
                     width: isMobile ? "280px" : (collapsed ? "80px" : "260px"),
+                    // On mobile the drawer hides at left: -280px, so padding must fit inside the 280px
+                    boxSizing: isMobile ? "border-box" : undefined,
                     height: "100vh",
                     background: "linear-gradient(180deg, rgba(5, 15, 30, 0.98) 0%, rgba(10, 20, 40, 0.95) 50%, rgba(5, 15, 35, 0.98) 100%)",
                     borderRight: "1px solid rgba(0, 200, 255, 0.15)",
@@ -233,7 +260,7 @@ export default function Sidebar({ activeSection, onSectionChange, onLogout }: Si
                             display: "flex",
                             alignItems: "center",
                             gap: "12px",
-                            marginBottom: "40px",
+                            marginBottom: "24px",
                             paddingLeft: "8px",
                         }}
                     >
@@ -339,8 +366,10 @@ export default function Sidebar({ activeSection, onSectionChange, onLogout }: Si
                 )}
 
                 {/* Navigation Items */}
+                <OrgSwitcher collapsed={collapsed && !isMobile} />
+
                 <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: "8px", overflowY: "auto", overflowX: "hidden", minHeight: 0 }}>
-                    {sidebarItems.map((item) => (
+                    {visibleItems.map((item) => (
                         <button
                             key={item.id}
                             onClick={() => handleSectionChange(item.id)}
@@ -446,7 +475,7 @@ export default function Sidebar({ activeSection, onSectionChange, onLogout }: Si
 
                 {/* Logout Button */}
                 <button
-                    onClick={onLogout}
+                    onClick={handleLogout}
                     style={{
                         display: "flex",
                         alignItems: "center",

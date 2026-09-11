@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Bot, Plus, Pencil, Trash2, X, Save, Play, Pause, Loader2, Search, Mic, Phone, PhoneOff, MicOff, Copy, Check } from "lucide-react";
+import { usePermissions } from "@/lib/useMe";
 import { createAgent, fetchAgentsByUser, updateAgent, deleteAgent, fetchVoices, createAgentCall, endAgentCall } from "../../lib/agentApi";
 import { fetchUserTools, Tool } from "../../lib/toolApi";
 import AgentBuilder from "./AgentBuilder";
@@ -2339,6 +2340,7 @@ Remember: Technical issues can be frustrating. Your patience and clarity can tur
 
 export default function AgentsSection() {
     const toast = useToast();
+    const { can } = usePermissions();
     const [agents, setAgents] = useState<Agent[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [showAgentBuilder, setShowAgentBuilder] = useState(false);
@@ -3008,6 +3010,7 @@ export default function AgentsSection() {
                         Manage your voice agents and their configurations.
                     </p>
                 </div>
+                {can("agents.write") && (
                 <button
                     onClick={openCreateModal}
                     style={{
@@ -3028,6 +3031,7 @@ export default function AgentsSection() {
                     <Plus size={18} />
                     Create Agent
                 </button>
+                )}
             </div>
 
             {/* Loading State */}

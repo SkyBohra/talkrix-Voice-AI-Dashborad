@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/dashboard/Sidebar";
+import SectionGate from "@/components/dashboard/SectionGate";
+import { clearSession } from "@/lib/session";
 import AgentsSection from "@/components/dashboard/AgentsSection";
 
 export default function AgentsPage() {
@@ -16,10 +18,7 @@ export default function AgentsPage() {
     }, [router]);
 
     const handleLogout = () => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("userId");
-        localStorage.removeItem("userName");
-        localStorage.removeItem("userEmail");
+        clearSession();
         router.push("/login");
     };
 
@@ -52,7 +51,9 @@ export default function AgentsPage() {
 
             {/* Main Content */}
             <main className="dashboard-main">
-                <AgentsSection />
+                <SectionGate section="agents">
+                    <AgentsSection />
+                </SectionGate>
             </main>
         </div>
     );

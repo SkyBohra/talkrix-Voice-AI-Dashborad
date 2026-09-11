@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/dashboard/Sidebar";
+import SectionGate from "@/components/dashboard/SectionGate";
+import { clearSession } from "@/lib/session";
 import CampaignSection from "@/components/dashboard/CampaignSection";
 
 export default function CampaignPage() {
@@ -16,10 +18,7 @@ export default function CampaignPage() {
     }, [router]);
 
     const handleLogout = () => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("userId");
-        localStorage.removeItem("userName");
-        localStorage.removeItem("userEmail");
+        clearSession();
         router.push("/login");
     };
 
@@ -52,7 +51,9 @@ export default function CampaignPage() {
 
             {/* Main Content */}
             <main className="dashboard-main">
-                <CampaignSection />
+                <SectionGate section="campaign">
+                    <CampaignSection />
+                </SectionGate>
             </main>
         </div>
     );

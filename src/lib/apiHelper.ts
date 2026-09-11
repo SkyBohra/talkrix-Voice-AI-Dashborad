@@ -1,4 +1,5 @@
 import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
+import { clearSession } from './session';
 
 export interface ApiResponse<T = any> {
     success: boolean;
@@ -53,13 +54,11 @@ apiClient.interceptors.response.use(
 export const handleTokenExpiration = () => {
     if (typeof window !== 'undefined') {
         // Clear all auth-related data
-        localStorage.removeItem('token');
-        localStorage.removeItem('userId');
-        localStorage.removeItem('userName');
-        localStorage.removeItem('userEmail');
-        
-        // Only redirect if not already on login page
-        if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/signup')) {
+        clearSession();
+
+        // Only redirect if not already on a sign-in, sign-up or invitation page
+        const path = window.location.pathname;
+        if (!path.includes('/login') && !path.includes('/signup') && !path.startsWith('/invite')) {
             // Store the current path to redirect back after login
             const currentPath = window.location.pathname;
             if (currentPath !== '/' && currentPath !== '/login') {

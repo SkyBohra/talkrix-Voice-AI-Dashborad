@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { User, Lock, Loader2, Check, AlertCircle } from "lucide-react";
+import { User, Lock, Loader2, Check, AlertCircle, Users } from "lucide-react";
+import { previewInvitation, type InvitationPreview } from "@/lib/orgApi";
+import { roleLabel, saveSession } from "@/lib/session";
 
 function LoginForm() {
     const [email, setEmail] = useState("");
@@ -15,8 +17,21 @@ function LoginForm() {
     const [isLoading, setIsLoading] = useState(false);
     const [rememberMe, setRememberMe] = useState(true);
     const [isMobile, setIsMobile] = useState(false);
+    const [invite, setInvite] = useState<InvitationPreview | null>(null);
     const router = useRouter();
     const searchParams = useSearchParams();
+    const inviteToken = searchParams.get("invite");
+
+    // Signing in from an invite link joins that organization as part of the sign-in
+    useEffect(() => {
+        if (!inviteToken) return;
+        previewInvitation(inviteToken).then((res) => {
+            if (res.success && res.data?.status === "pending") {
+                setInvite(res.data);
+                setEmail((current) => current || res.data!.email);
+            }
+        });
+    }, [inviteToken]);
 
     // Check mobile
     useEffect(() => {
@@ -42,29 +57,24 @@ function LoginForm() {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify(invite && inviteToken ? { email, password, inviteToken } : { email, password }),
             });
             const data = await res.json();
             if (!res.ok || data.statusCode >= 400) {
                 throw new Error(data.error || data.message || "Invalid credentials");
             }
-            localStorage.setItem("token", data.data.access_token);
-            // Decode JWT to get userId
-            const tokenPayload = JSON.parse(atob(data.data.access_token.split('.')[1]));
-            localStorage.setItem("userId", tokenPayload.sub);
-            localStorage.setItem("userName", data.data.name || "");
-            localStorage.setItem("userEmail", data.data.email || "");
+            saveSession(data.data);
             // Use backend value for tour completion status
             if (!data.data.hasCompletedTour) {
                 localStorage.setItem("isFirstLogin", "true");
             } else {
                 localStorage.setItem("dashboardTourCompleted", "true");
             }
-            
-            // Check for redirect path after session expiry
+
+            // Check for redirect path after session expiry (not after joining an organization)
             const redirectPath = sessionStorage.getItem('redirectAfterLogin');
-            if (redirectPath) {
-                sessionStorage.removeItem('redirectAfterLogin');
+            sessionStorage.removeItem('redirectAfterLogin');
+            if (redirectPath && !invite) {
                 router.push(redirectPath);
             } else {
                 router.push("/dashboard");
@@ -97,16 +107,34 @@ function LoginForm() {
                 textAlign: 'center', 
                 marginBottom: '8px' 
             }}>
-                Welcome Back
+                {invite ? "Sign in to join" : "Welcome Back"}
             </h2>
-            <p style={{ 
-                color: 'rgba(255, 255, 255, 0.5)', 
-                fontSize: '14px', 
-                textAlign: 'center', 
-                marginBottom: '32px' 
-            }}>
-                Sign in to convert more leads & recover more revenue 📈
-            </p>
+            {invite ? (
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '12px 14px',
+                    margin: '12px 0 28px',
+                    borderRadius: '12px',
+                    background: 'rgba(0, 200, 255, 0.06)',
+                    border: '1px solid rgba(0, 200, 255, 0.25)',
+                }}>
+                    <Users style={{ width: '20px', height: '20px', color: '#00C8FF', flexShrink: 0 }} />
+                    <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.5, color: 'rgba(255, 255, 255, 0.75)' }}>
+                        <strong style={{ color: 'white' }}>{invite.orgName}</strong> invited {invite.email} as {roleLabel(invite.role)}. Sign in with that address to join.
+                    </p>
+                </div>
+            ) : (
+                <p style={{
+                    color: 'rgba(255, 255, 255, 0.5)',
+                    fontSize: '14px',
+                    textAlign: 'center',
+                    marginBottom: '32px'
+                }}>
+                    Sign in to convert more leads & recover more revenue 📈
+                </p>
+            )}
             <form onSubmit={handleLogin}>
                 <div style={{ position: 'relative', marginBottom: '18px', width: '100%' }}>
                     <User style={{ position: 'absolute', left: '18px', top: '50%', transform: 'translateY(-50%)', width: '20px', height: '20px', color: '#00C8FF', zIndex: 1 }} />
@@ -210,7 +238,7 @@ function LoginForm() {
                     </Button>
                 </div>
                 <p style={{ textAlign: 'center', marginTop: '28px', fontSize: '13px', color: 'rgba(255, 255, 255, 0.5)' }}>
-                    Don't have an account? <Link href="/signup" style={{ color: '#00C8FF', fontWeight: 600 }}>Sign up</Link>
+                    Don't have an account? <Link href={invite && inviteToken ? `/signup?invite=${encodeURIComponent(inviteToken)}` : "/signup"} style={{ color: '#00C8FF', fontWeight: 600 }}>Sign up</Link>
                 </p>
             </form>
         </div>
