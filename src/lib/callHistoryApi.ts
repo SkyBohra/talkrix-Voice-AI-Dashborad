@@ -105,9 +105,8 @@ export const fetchCallHistoryById = async (id: string): Promise<ApiResponse> => 
 export const updateCallHistory = async (
   id: string,
   data: {
-    status?: string;
-    durationSeconds?: number;
-    recordingUrl?: string;
+    customerName?: string;
+    customerPhone?: string;
   }
 ): Promise<ApiResponse> => {
   return safeApiCall(() => axios.put(`${API_BASE}/${id}`, data, { headers: getAuthHeaders() }));
@@ -121,21 +120,16 @@ export const deleteCallHistory = async (id: string): Promise<ApiResponse> => {
 };
 
 /**
- * End a call and update its status
+ * Tell the server a call has ended. Duration and status come from Ultravox on the server.
  */
 export const endCall = async (
   agentId: string,
   callHistoryId: string,
-  data: {
-    status?: 'completed' | 'missed' | 'failed';
-    durationSeconds?: number;
-    recordingUrl?: string;
-  }
 ): Promise<ApiResponse> => {
   return safeApiCall(() => 
     axios.put(
       `${process.env.NEXT_PUBLIC_API_URL}/agents/${agentId}/call/${callHistoryId}/end`,
-      data,
+      {},
       { headers: getAuthHeaders() }
     )
   );

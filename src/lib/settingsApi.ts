@@ -46,15 +46,6 @@ export const getSettings = async (): Promise<ApiResponse<UserSettings>> => {
 };
 
 /**
- * Update general settings (maxConcurrentCalls, maxRagDocuments, maxAgents)
- */
-export const updateGeneralSettings = async (
-  settings: Partial<GeneralSettings>
-): Promise<ApiResponse<GeneralSettings>> => {
-  return safeApiCall(() => axios.put(`${API_BASE}/settings/general`, settings, { headers: getAuthHeaders() }));
-};
-
-/**
  * Update telephony settings (provider credentials)
  */
 export const updateTelephonySettings = async (

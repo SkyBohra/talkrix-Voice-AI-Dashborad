@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Settings, User, Bell, Shield, Key, Globe, Palette, Save, Check, Phone, Server, Copy, RefreshCw, Eye, EyeOff, Plus, Trash2 } from "lucide-react";
-import { getSettings, updateGeneralSettings, updateTelephonySettings, regenerateApiKey, getApiKey, TelephonyProvider, UserSettings } from "@/lib/settingsApi";
+import { getSettings, updateTelephonySettings, regenerateApiKey, getApiKey, TelephonyProvider, UserSettings } from "@/lib/settingsApi";
 import { useToast } from "@/components/ui/toast";
 
 interface SettingsState {
@@ -196,18 +196,6 @@ export default function SettingsSection() {
                     toast.success("Settings Saved", "Telephony settings updated successfully.");
                 } else {
                     toast.error("Save Failed", res.message || "Failed to update telephony settings.");
-                    return;
-                }
-            } else if (activeTab === "limits") {
-                const res = await updateGeneralSettings({
-                    maxConcurrentCalls: settings.general.maxConcurrentCalls,
-                    maxRagDocuments: settings.general.maxRagDocuments,
-                    maxAgents: settings.general.maxAgents,
-                });
-                if (res.success) {
-                    toast.success("Settings Saved", "Limits updated successfully.");
-                } else {
-                    toast.error("Save Failed", res.message || "Failed to update settings.");
                     return;
                 }
             }
@@ -1035,88 +1023,37 @@ export default function SettingsSection() {
                 <h3 style={{ fontSize: "16px", fontWeight: "600", color: "white", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
                     <Server size={18} style={{ color: "#00C8FF" }} /> Usage Limits
                 </h3>
-                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                    <div>
-                        <label style={{ display: "block", fontSize: "13px", color: "rgba(255, 255, 255, 0.6)", marginBottom: "8px" }}>
-                            Max Concurrent Calls
-                        </label>
-                        <input
-                            type="number"
-                            min={1}
-                            max={100}
-                            value={settings.general.maxConcurrentCalls}
-                            onChange={(e) => setSettings({ ...settings, general: { ...settings.general, maxConcurrentCalls: parseInt(e.target.value) || 2 } })}
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                    {[
+                        { label: "Concurrent calls", value: settings.general.maxConcurrentCalls, hint: "Calls that can be live at the same time, across all campaigns" },
+                        { label: "Agents", value: settings.general.maxAgents, hint: "Agents you can create" },
+                        { label: "RAG documents", value: settings.general.maxRagDocuments, hint: "Documents per knowledge base" },
+                    ].map((limit) => (
+                        <div
+                            key={limit.label}
                             style={{
-                                width: "100%",
-                                maxWidth: "200px",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                gap: "16px",
                                 padding: "12px 16px",
                                 borderRadius: "10px",
                                 border: "1px solid rgba(0, 200, 255, 0.1)",
-                                background: "rgba(255, 255, 255, 0.05)",
-                                color: "white",
-                                fontSize: "14px",
-                                outline: "none",
-                                boxSizing: "border-box",
+                                background: "rgba(255, 255, 255, 0.03)",
                             }}
-                        />
-                        <p style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.4)", marginTop: "4px" }}>
-                            Maximum number of simultaneous calls (1-100)
-                        </p>
-                    </div>
-                    <div>
-                        <label style={{ display: "block", fontSize: "13px", color: "rgba(255, 255, 255, 0.6)", marginBottom: "8px" }}>
-                            Max RAG Documents
-                        </label>
-                        <input
-                            type="number"
-                            min={1}
-                            max={100}
-                            value={settings.general.maxRagDocuments}
-                            onChange={(e) => setSettings({ ...settings, general: { ...settings.general, maxRagDocuments: parseInt(e.target.value) || 1 } })}
-                            style={{
-                                width: "100%",
-                                maxWidth: "200px",
-                                padding: "12px 16px",
-                                borderRadius: "10px",
-                                border: "1px solid rgba(0, 200, 255, 0.1)",
-                                background: "rgba(255, 255, 255, 0.05)",
-                                color: "white",
-                                fontSize: "14px",
-                                outline: "none",
-                                boxSizing: "border-box",
-                            }}
-                        />
-                        <p style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.4)", marginTop: "4px" }}>
-                            Maximum number of RAG documents per corpus (1-100)
-                        </p>
-                    </div>
-                    <div>
-                        <label style={{ display: "block", fontSize: "13px", color: "rgba(255, 255, 255, 0.6)", marginBottom: "8px" }}>
-                            Max Agents
-                        </label>
-                        <input
-                            type="number"
-                            min={1}
-                            max={50}
-                            value={settings.general.maxAgents}
-                            onChange={(e) => setSettings({ ...settings, general: { ...settings.general, maxAgents: parseInt(e.target.value) || 10 } })}
-                            style={{
-                                width: "100%",
-                                maxWidth: "200px",
-                                padding: "12px 16px",
-                                borderRadius: "10px",
-                                border: "1px solid rgba(0, 200, 255, 0.1)",
-                                background: "rgba(255, 255, 255, 0.05)",
-                                color: "white",
-                                fontSize: "14px",
-                                outline: "none",
-                                boxSizing: "border-box",
-                            }}
-                        />
-                        <p style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.4)", marginTop: "4px" }}>
-                            Maximum number of agents you can create (1-50)
-                        </p>
-                    </div>
+                        >
+                            <div>
+                                <div style={{ fontSize: "14px", color: "white" }}>{limit.label}</div>
+                                <div style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.4)", marginTop: "2px" }}>{limit.hint}</div>
+                            </div>
+                            <div style={{ fontSize: "18px", fontWeight: 600, color: "#00C8FF", fontVariantNumeric: "tabular-nums" }}>
+                                {limit.value}
+                            </div>
+                        </div>
+                    ))}
+                    <p style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.4)", margin: "4px 0 0" }}>
+                        Limits come with your Talkrix plan. To change them, contact support.
+                    </p>
                 </div>
             </div>
         </div>
@@ -1245,7 +1182,7 @@ export default function SettingsSection() {
                             {activeTab === "preferences" && renderPreferencesTab()}
 
                             {/* Save Button - Only show for tabs that save to backend */}
-                            {(activeTab === "telephony" || activeTab === "limits") && (
+                            {activeTab === "telephony" && (
                                 <div style={{ marginTop: "24px", paddingTop: "20px", borderTop: "1px solid rgba(255, 255, 255, 0.05)" }}>
                                     <button
                                         onClick={handleSave}

@@ -2373,7 +2373,6 @@ export default function AgentsSection() {
     const [callStatus, setCallStatus] = useState<'idle' | 'connecting' | 'connected' | 'ended'>('idle');
     const [joinUrl, setJoinUrl] = useState<string | null>(null);
     const [callHistoryId, setCallHistoryId] = useState<string | null>(null);
-    const [callStartTime, setCallStartTime] = useState<Date | null>(null);
     const [callError, setCallError] = useState<string | null>(null);
     const [transcript, setTranscript] = useState<Array<{ role: string; text: string }>>([]);
     const [isMuted, setIsMuted] = useState(false);
@@ -2799,7 +2798,6 @@ export default function AgentsSection() {
         setCallStatus('idle');
         setJoinUrl(null);
         setCallHistoryId(null);
-        setCallStartTime(null);
         setCallError(null);
         setTranscript([]);
         setAgentStatus('');
@@ -2833,7 +2831,6 @@ export default function AgentsSection() {
             if (response.data.callHistoryId) {
                 setCallHistoryId(response.data.callHistoryId);
             }
-            setCallStartTime(new Date());
 
             // Dynamically import the Ultravox client
             const { UltravoxSession } = await import('ultravox-client');
@@ -2885,14 +2882,10 @@ export default function AgentsSection() {
                 ultravoxSessionRef.current = null;
             }
             
-            // Update call history with completed status and duration
-            if (testingAgent && callHistoryId && callStartTime) {
-                const durationSeconds = Math.round((new Date().getTime() - callStartTime.getTime()) / 1000);
+            // Let the server close out the call record (it reads duration from Ultravox)
+            if (testingAgent && callHistoryId) {
                 try {
-                    await endAgentCall(testingAgent._id, callHistoryId, {
-                        status: 'completed',
-                        durationSeconds,
-                    });
+                    await endAgentCall(testingAgent._id, callHistoryId);
                 } catch (err) {
                     console.error('Error updating call history:', err);
                 }
@@ -2924,14 +2917,10 @@ export default function AgentsSection() {
             }
             ultravoxSessionRef.current = null;
             
-            // Update call history with completed status and duration
-            if (testingAgent && callHistoryId && callStartTime) {
-                const durationSeconds = Math.round((new Date().getTime() - callStartTime.getTime()) / 1000);
+            // Let the server close out the call record (it reads duration from Ultravox)
+            if (testingAgent && callHistoryId) {
                 try {
-                    await endAgentCall(testingAgent._id, callHistoryId, {
-                        status: 'completed',
-                        durationSeconds,
-                    });
+                    await endAgentCall(testingAgent._id, callHistoryId);
                 } catch (err) {
                     console.error('Error updating call history:', err);
                 }
@@ -2942,7 +2931,6 @@ export default function AgentsSection() {
         setCallStatus('idle');
         setJoinUrl(null);
         setCallHistoryId(null);
-        setCallStartTime(null);
         setCallError(null);
         setTranscript([]);
         setAgentStatus('');

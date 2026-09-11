@@ -67,21 +67,17 @@ export const createAgentCall = async (agentId: string, options?: {
 };
 
 /**
- * End a call and update its status
+ * Tell the server a test call has ended. Duration, status and summary come from Ultravox on the
+ * server; the browser no longer reports them.
  */
 export const endAgentCall = async (
   agentId: string,
   callHistoryId: string,
-  data: {
-    status?: 'completed' | 'missed' | 'failed';
-    durationSeconds?: number;
-    recordingUrl?: string;
-  }
 ): Promise<ApiResponse> => {
   return safeApiCall(() => 
     axios.put(
       `${API_BASE}/${agentId}/call/${callHistoryId}/end`,
-      data,
+      {},
       { headers: getAuthHeaders() }
     )
   );
