@@ -1,16 +1,14 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Sidebar from "@/components/dashboard/Sidebar";
 import SectionGate from "@/components/dashboard/SectionGate";
-import CampaignDetail from "@/components/dashboard/CampaignDetail";
+import DoNotCallSection from "@/components/dashboard/DoNotCallSection";
 import { clearSession } from "@/lib/session";
 
-export default function CampaignDetailPage() {
+export default function DoNotCallPage() {
     const router = useRouter();
-    const params = useParams();
-    const campaignId = params.id as string;
 
     useEffect(() => {
         if (!localStorage.getItem("token")) router.push("/login");
@@ -31,7 +29,7 @@ export default function CampaignDetailPage() {
             />
             <main className="dashboard-main">
                 <SectionGate section="campaign">
-                    <CampaignDetail campaignId={campaignId} />
+                    <DoNotCallSection />
                 </SectionGate>
             </main>
         </div>

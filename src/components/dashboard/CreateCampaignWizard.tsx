@@ -23,9 +23,21 @@ import {
   CheckCircle2,
   Code,
   Copy,
-  ExternalLink
+  ExternalLink,
+  Repeat
 } from 'lucide-react';
 import { TelephonyProvider, PhoneNumberOption } from '@/lib/settingsApi';
+import type { RetryOutcome } from '@/lib/campaignApi';
+import { RETRY_OUTCOME_LABELS, retrySummary } from '@/lib/campaignStatus';
+
+const RETRY_WAITS = [
+  { minutes: 15, label: '15 minutes' },
+  { minutes: 30, label: '30 minutes' },
+  { minutes: 60, label: '1 hour' },
+  { minutes: 120, label: '2 hours' },
+  { minutes: 240, label: '4 hours' },
+  { minutes: 1440, label: '1 day' },
+];
 
 // Type alias for campaign types
 type CampaignType = 'outbound' | 'inbound' | 'ondemand';
@@ -47,6 +59,11 @@ interface FormData {
   outboundProvider: TelephonyProvider | '';
   outboundPhoneNumber: string;
   apiTriggerEnabled: boolean; // Enable API endpoint for this campaign
+  // Outbound: call a contact again when a call doesn't connect
+  retryEnabled: boolean;
+  retryMaxAttempts: number; // total calls per contact
+  retryAfterMinutes: number;
+  retryOn: RetryOutcome[];
 }
 
 interface CreateCampaignWizardProps {
@@ -195,6 +212,9 @@ export default function CreateCampaignWizard({
             return false;
           }
           if (phoneNumbers.length > 0 && !formData.outboundPhoneNumber) {
+            return false;
+          }
+          if (formData.retryEnabled && formData.retryOn.length === 0) {
             return false;
           }
           return true;
@@ -1308,6 +1328,138 @@ export default function CreateCampaignWizard({
                   </div>
                 )}
 
+                {/* Retries (Only for Outbound) */}
+                {formData.type === 'outbound' && (
+                  <div style={{
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    borderRadius: '16px',
+                    padding: '24px',
+                    border: '1px solid rgba(255, 255, 255, 0.05)'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: formData.retryEnabled ? '20px' : 0 }}>
+                      <div style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '10px',
+                        background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}>
+                        <Repeat size={18} color="white" />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <h4 style={{ color: 'white', fontSize: '15px', fontWeight: '600', margin: 0 }}>
+                          Call again if the call doesn&apos;t connect
+                        </h4>
+                        <p style={{ color: '#6B7280', fontSize: '12px', margin: 0, marginTop: '2px' }}>
+                          Retries happen within the calling hours
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={formData.retryEnabled}
+                        aria-label="Call again if the call doesn't connect"
+                        onClick={() => setFormData({ ...formData, retryEnabled: !formData.retryEnabled })}
+                        style={{
+                          width: '44px',
+                          height: '24px',
+                          borderRadius: '12px',
+                          border: 'none',
+                          padding: '2px',
+                          background: formData.retryEnabled ? 'linear-gradient(135deg, #00C8FF 0%, #7800FF 100%)' : 'rgba(255, 255, 255, 0.15)',
+                          cursor: 'pointer',
+                          flexShrink: 0,
+                          display: 'flex',
+                          justifyContent: formData.retryEnabled ? 'flex-end' : 'flex-start',
+                          transition: 'background 0.2s'
+                        }}
+                      >
+                        <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'white', display: 'block' }} />
+                      </button>
+                    </div>
+
+                    {formData.retryEnabled && (
+                      <>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                          <div>
+                            <label htmlFor="retry-attempts" style={{ display: 'block', color: '#6B7280', fontSize: '12px', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                              Calls per contact
+                            </label>
+                            <select
+                              id="retry-attempts"
+                              value={formData.retryMaxAttempts}
+                              onChange={(e) => setFormData({ ...formData, retryMaxAttempts: Number(e.target.value) })}
+                              style={{ width: '100%', padding: '12px 14px', background: 'rgba(0, 0, 0, 0.3)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '10px', color: '#FFFFFF', fontSize: '14px', outline: 'none', cursor: 'pointer', boxSizing: 'border-box' }}
+                            >
+                              {[2, 3, 4, 5].map((n) => (
+                                <option key={n} value={n} style={{ background: '#1A1A2E' }}>Up to {n} calls</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label htmlFor="retry-wait" style={{ display: 'block', color: '#6B7280', fontSize: '12px', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                              Wait between calls
+                            </label>
+                            <select
+                              id="retry-wait"
+                              value={formData.retryAfterMinutes}
+                              onChange={(e) => setFormData({ ...formData, retryAfterMinutes: Number(e.target.value) })}
+                              style={{ width: '100%', padding: '12px 14px', background: 'rgba(0, 0, 0, 0.3)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '10px', color: '#FFFFFF', fontSize: '14px', outline: 'none', cursor: 'pointer', boxSizing: 'border-box' }}
+                            >
+                              {RETRY_WAITS.map((w) => (
+                                <option key={w.minutes} value={w.minutes} style={{ background: '#1A1A2E' }}>{w.label}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                        <span style={{ display: 'block', color: '#6B7280', fontSize: '12px', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          Call again when
+                        </span>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '14px' }}>
+                          {(Object.keys(RETRY_OUTCOME_LABELS) as RetryOutcome[]).map((outcome) => {
+                            const on = formData.retryOn.includes(outcome);
+                            return (
+                              <button
+                                key={outcome}
+                                type="button"
+                                aria-pressed={on}
+                                onClick={() => setFormData({
+                                  ...formData,
+                                  retryOn: on ? formData.retryOn.filter((o) => o !== outcome) : [...formData.retryOn, outcome]
+                                })}
+                                style={{
+                                  padding: '8px 14px',
+                                  borderRadius: '999px',
+                                  border: on ? '1px solid rgba(0, 200, 255, 0.5)' : '1px solid rgba(255, 255, 255, 0.12)',
+                                  background: on ? 'rgba(0, 200, 255, 0.12)' : 'transparent',
+                                  color: on ? '#00C8FF' : '#9CA3AF',
+                                  fontSize: '13px',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  textTransform: 'capitalize'
+                                }}
+                              >
+                                {on && <Check size={13} />}
+                                {RETRY_OUTCOME_LABELS[outcome]}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <p style={{ color: formData.retryOn.length ? '#9CA3AF' : '#fbbf24', fontSize: '13px', margin: 0 }}>
+                          {formData.retryOn.length
+                            ? retrySummary({ maxAttempts: formData.retryMaxAttempts, retryAfterMinutes: formData.retryAfterMinutes, retryOn: formData.retryOn })
+                            : 'Pick at least one, or turn retries off.'}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                )}
+
                 {/* Inbound info */}
                 {formData.type === 'inbound' && (
                   <div style={{
@@ -1895,6 +2047,14 @@ export default function CreateCampaignWizard({
                         <span style={{ color: '#6B7280', fontSize: '12px', display: 'block', marginBottom: '4px' }}>Timezone</span>
                         <p style={{ color: '#FFFFFF', fontSize: '15px', fontWeight: '500', margin: 0 }}>
                           {formData.timezone || 'Not set'}
+                        </p>
+                      </div>
+                      <div>
+                        <span style={{ color: '#6B7280', fontSize: '12px', display: 'block', marginBottom: '4px' }}>Retries</span>
+                        <p style={{ color: '#FFFFFF', fontSize: '15px', fontWeight: '500', margin: 0 }}>
+                          {retrySummary(formData.retryEnabled
+                            ? { maxAttempts: formData.retryMaxAttempts, retryAfterMinutes: formData.retryAfterMinutes, retryOn: formData.retryOn }
+                            : null)}
                         </p>
                       </div>
                     </div>

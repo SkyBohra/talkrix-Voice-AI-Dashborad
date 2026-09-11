@@ -2,15 +2,19 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Users, Phone, ChevronRight, Loader2, Calendar, Clock } from 'lucide-react';
+import { Plus, Users, Phone, ChevronRight, Loader2, Calendar, Clock, Activity, Ban } from 'lucide-react';
 import { usePermissions } from '@/lib/useMe';
 import {
   Campaign,
   CreateCampaignData,
+  OrgCallState,
+  RetryOutcome,
   fetchCampaigns,
+  fetchOrgCallState,
   createCampaign,
   uploadCampaignContacts
 } from '@/lib/campaignApi';
+import { campaignStatusColor, campaignStatusLabel, DEFAULT_RETRY } from '@/lib/campaignStatus';
 import { fetchAgentsByUser } from '@/lib/agentApi';
 import { getAvailablePhoneNumbers, PhoneNumberOption, TelephonyProvider } from '@/lib/settingsApi';
 import Pagination from '@/components/ui/Pagination';
@@ -68,6 +72,9 @@ export default function CampaignSection() {
   const [totalItems, setTotalItems] = useState(0);
   const itemsPerPage = 10;
 
+  // Lines in use across the organization
+  const [callState, setCallState] = useState<OrgCallState | null>(null);
+
   // Form state
   const [formData, setFormData] = useState<{
     name: string;
@@ -80,6 +87,10 @@ export default function CampaignSection() {
     outboundProvider: TelephonyProvider | '';
     outboundPhoneNumber: string;
     apiTriggerEnabled: boolean;
+    retryEnabled: boolean;
+    retryMaxAttempts: number;
+    retryAfterMinutes: number;
+    retryOn: RetryOutcome[];
   }>({
     name: '',
     type: 'outbound',
@@ -90,7 +101,11 @@ export default function CampaignSection() {
     timezone: 'Asia/Kolkata',
     outboundProvider: '',
     outboundPhoneNumber: '',
-    apiTriggerEnabled: false
+    apiTriggerEnabled: false,
+    retryEnabled: true,
+    retryMaxAttempts: DEFAULT_RETRY.maxAttempts,
+    retryAfterMinutes: DEFAULT_RETRY.retryAfterMinutes,
+    retryOn: DEFAULT_RETRY.retryOn
   });
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -204,6 +219,23 @@ export default function CampaignSection() {
     loadData();
   }, [loadData]);
 
+  // Lines in use: refreshed while anything is dialing
+  const loadCallState = useCallback(async () => {
+    const res = await fetchOrgCallState();
+    if (res.success && res.data) setCallState(res.data);
+  }, []);
+
+  useEffect(() => {
+    void loadCallState();
+  }, [loadCallState]);
+
+  const dialing = !!callState && (callState.activeCalls > 0 || callState.activeCampaigns.length > 0);
+  useEffect(() => {
+    if (!dialing) return;
+    const timer = setInterval(loadCallState, 5000);
+    return () => clearInterval(timer);
+  }, [dialing, loadCallState]);
+
   // Load phone numbers separately (non-blocking)
   useEffect(() => {
     loadPhoneNumbers();
@@ -250,6 +282,9 @@ export default function CampaignSection() {
           endTime: formData.endTime, // Required end time
           timezone: formData.timezone
         };
+        createData.retry = formData.retryEnabled && formData.retryOn.length > 0
+          ? { maxAttempts: formData.retryMaxAttempts, retryAfterMinutes: formData.retryAfterMinutes, retryOn: formData.retryOn }
+          : { maxAttempts: 1, retryAfterMinutes: DEFAULT_RETRY.retryAfterMinutes, retryOn: [] };
       }
 
       // Add outbound phone number if selected
@@ -267,12 +302,18 @@ export default function CampaignSection() {
       
       const newCampaign = response.data;
 
-      // If file is selected, upload contacts
+      // If file is selected, upload contacts (an outbound campaign is scheduled once it has them)
+      let uploadProblem: string | null = null;
       if (selectedFile && newCampaign?._id) {
         setUploadingFile(true);
         const uploadRes = await uploadCampaignContacts(newCampaign._id, selectedFile);
         if (!uploadRes.success) {
-          toast.warning('Campaign Created', 'Campaign created but failed to upload contacts');
+          uploadProblem = uploadRes.message || 'The contacts file could not be imported';
+        } else if (uploadRes.data?.invalidCount) {
+          toast.warning(
+            'Some contacts skipped',
+            `${uploadRes.data.invalidCount} numbers couldn't be read. Include the country code.`
+          );
         }
       }
 
@@ -287,12 +328,22 @@ export default function CampaignSection() {
         timezone: 'Asia/Kolkata',
         outboundProvider: '',
         outboundPhoneNumber: '',
-        apiTriggerEnabled: false
+        apiTriggerEnabled: false,
+        retryEnabled: true,
+        retryMaxAttempts: DEFAULT_RETRY.maxAttempts,
+        retryAfterMinutes: DEFAULT_RETRY.retryAfterMinutes,
+        retryOn: DEFAULT_RETRY.retryOn
       });
       setSelectedFile(null);
       setShowCreateModal(false);
 
-      toast.success('Campaign Created', `"${formData.name}" has been created successfully.`);
+      if (uploadProblem && formData.type === 'outbound') {
+        toast.warning('Campaign saved as a draft', `${uploadProblem}. Upload contacts from the campaign page to schedule it.`);
+      } else if (uploadProblem) {
+        toast.warning('Campaign created without contacts', `${uploadProblem}. Upload them from the campaign page.`);
+      } else {
+        toast.success('Campaign Created', `"${formData.name}" has been created successfully.`);
+      }
 
       // Reload campaigns
       await loadData();
@@ -317,21 +368,6 @@ export default function CampaignSection() {
       }
       setSelectedFile(file);
       setError(null);
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return '#10B981';
-      case 'completed':
-        return '#6B7280';
-      case 'scheduled':
-        return '#F59E0B';
-      case 'paused':
-        return '#EF4444';
-      default:
-        return '#6B7280';
     }
   };
 
@@ -374,8 +410,11 @@ export default function CampaignSection() {
             gap: 16px !important;
             align-items: flex-start !important;
           }
-          .campaign-header button {
+          .campaign-header-actions {
             width: 100%;
+          }
+          .campaign-header-actions > * {
+            flex: 1 1 auto;
             justify-content: center;
           }
           .campaign-stats-grid {
@@ -418,27 +457,69 @@ export default function CampaignSection() {
             Manage your voice campaigns
           </p>
         </div>
-        {can('campaigns.write') && (
-        <button
-          onClick={() => setShowCreateModal(true)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '10px 20px',
-            background: 'linear-gradient(135deg, #00C8FF 0%, #7800FF 100%)',
-            border: 'none',
-            borderRadius: '8px',
-            color: '#FFFFFF',
-            fontWeight: '600',
-            cursor: 'pointer',
-            transition: 'opacity 0.2s'
-          }}
-        >
-          <Plus size={18} />
-          Create Campaign
-        </button>
-        )}
+        <div className="campaign-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          {callState && (
+            <div
+              title="Every call in your organization (campaigns, test calls, API calls) uses one of these lines"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '9px 14px',
+                borderRadius: '8px',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                background: 'rgba(255, 255, 255, 0.04)',
+                color: '#9CA3AF',
+                fontSize: '13px',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <Activity size={15} color={callState.activeCalls > 0 ? '#10B981' : '#6B7280'} />
+              Lines in use
+              <strong style={{ color: '#FFFFFF' }}>{callState.activeCalls} / {callState.maxConcurrentCalls}</strong>
+            </div>
+          )}
+          <button
+            onClick={() => router.push('/dashboard/campaign/do-not-call')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '9px 14px',
+              background: 'transparent',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              borderRadius: '8px',
+              color: '#D1D5DB',
+              fontSize: '13px',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            <Ban size={15} />
+            Do-not-call list
+          </button>
+          {can('campaigns.write') && (
+          <button
+            onClick={() => setShowCreateModal(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 20px',
+              background: 'linear-gradient(135deg, #00C8FF 0%, #7800FF 100%)',
+              border: 'none',
+              borderRadius: '8px',
+              color: '#FFFFFF',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'opacity 0.2s'
+            }}
+          >
+            <Plus size={18} />
+            Create Campaign
+          </button>
+          )}
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -449,7 +530,7 @@ export default function CampaignSection() {
         marginBottom: '24px'
       }}>
         {[
-          { label: 'Total Campaigns', value: campaigns.length, icon: Users },
+          { label: 'Total Campaigns', value: totalItems, icon: Users },
           { label: 'Active', value: campaigns.filter(c => c.status === 'active').length, icon: Phone },
           { label: 'Scheduled', value: campaigns.filter(c => c.status === 'scheduled').length, icon: Calendar },
           { label: 'Completed', value: campaigns.filter(c => c.status === 'completed').length, icon: Clock }
@@ -550,11 +631,11 @@ export default function CampaignSection() {
                   fontSize: '12px',
                   padding: '4px 12px',
                   borderRadius: '20px',
-                  background: `${getStatusColor(campaign.status)}20`,
-                  color: getStatusColor(campaign.status),
-                  textTransform: 'capitalize'
+                  background: `${campaignStatusColor(campaign.status)}20`,
+                  color: campaignStatusColor(campaign.status),
+                  whiteSpace: 'nowrap'
                 }}>
-                  {campaign.status}
+                  {campaignStatusLabel(campaign.status)}
                 </span>
                 <ChevronRight size={20} color="#6B7280" />
               </div>

@@ -13,6 +13,9 @@ export interface CampaignContact {
   calledAt?: string;
   callDuration?: number;
   callNotes?: string;
+  endReason?: string; // e.g. "do_not_call", "invalid_number", "no_answer"
+  attempts?: number; // calls made so far (retries included)
+  nextAttemptAt?: string; // a pending contact is dialed once this has passed
   isLocked?: boolean; // When true, contact cannot be updated or deleted
 }
 
@@ -23,6 +26,26 @@ export interface CampaignSchedule {
   timezone: string;
 }
 
+export type RetryOutcome = 'no_answer' | 'busy' | 'failed';
+
+// Call a contact again when a call doesn't connect
+export interface CampaignRetry {
+  maxAttempts: number; // total calls per contact, 1 = no retry
+  retryAfterMinutes: number;
+  retryOn: RetryOutcome[];
+}
+
+export interface ContactStats {
+  total: number;
+  pending: number;
+  inProgress: number;
+  completed: number;
+  failed: number;
+  noAnswer: number;
+}
+
+export type CampaignStatus = 'draft' | 'active' | 'paused' | 'completed' | 'scheduled' | 'paused-time-window';
+
 export interface Campaign {
   _id: string;
   name: string;
@@ -30,9 +53,14 @@ export interface Campaign {
   type: 'outbound' | 'inbound' | 'ondemand';
   agentId: string;
   agentName?: string;
-  status: 'draft' | 'active' | 'paused' | 'completed' | 'scheduled';
-  contacts: CampaignContact[];
+  status: CampaignStatus;
+  pausedReason?: string | null; // "manual", "end-time-reached", or why dialing stopped
+  contacts: CampaignContact[]; // the first 500 only; page through fetchCampaignContacts
+  contactStats?: ContactStats;
+  contactsTruncated?: boolean;
   schedule?: CampaignSchedule;
+  retry?: CampaignRetry | null;
+  maxLines?: number | null;
   description?: string;
   totalContacts: number;
   completedCalls: number;
@@ -55,10 +83,25 @@ export interface CreateCampaignData {
   agentId: string;
   description?: string;
   schedule?: CampaignSchedule;
+  retry?: CampaignRetry;
   contacts?: { name: string; phoneNumber: string }[];
   outboundProvider?: 'twilio' | 'plivo' | 'telnyx';
   outboundPhoneNumber?: string;
   apiTriggerEnabled?: boolean;
+}
+
+export interface ContactsPage {
+  contacts: CampaignContact[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
+// Lines are shared by every call of the organization (test calls, campaigns, API calls)
+export interface OrgCallState {
+  activeCalls: number;
+  maxConcurrentCalls: number;
+  activeCampaigns: string[];
 }
 
 export interface PaginatedCampaigns {
@@ -125,18 +168,24 @@ export const deleteCampaign = async (id: string): Promise<ApiResponse> => {
   return safeApiCall(() => axios.delete(`${API_BASE}/${id}`, { headers: getAuthHeaders() }));
 };
 
-// Get contacts for a campaign with pagination
+// Get contacts for a campaign with pagination (search matches name or number)
 export const fetchCampaignContacts = async (
   campaignId: string,
   page: number = 1,
-  limit: number = 50
-): Promise<ApiResponse> => {
-  return safeApiCall(() => 
+  limit: number = 50,
+  search?: string
+): Promise<ApiResponse<ContactsPage>> => {
+  return safeApiCall(() =>
     axios.get(`${API_BASE}/${campaignId}/contacts`, {
       headers: getAuthHeaders(),
-      params: { page, limit },
+      params: { page, limit, ...(search ? { search } : {}) },
     })
   );
+};
+
+// Lines in use across the organization
+export const fetchOrgCallState = async (): Promise<ApiResponse<OrgCallState>> => {
+  return safeApiCall(() => axios.get(`${API_BASE}/call-state`, { headers: getAuthHeaders() }));
 };
 
 // Add contacts to a campaign
@@ -218,6 +267,7 @@ export interface TriggerCallResult {
   callId?: string;
   joinUrl?: string;
   error?: string;
+  code?: string; // e.g. LINES_BUSY, DO_NOT_CALL, INVALID_NUMBER
 }
 
 export interface TriggerCallsResponse {
@@ -243,16 +293,16 @@ export const triggerCampaignCalls = async (
 export interface CampaignState {
   campaignId: string;
   status: Campaign['status'];
-  concurrency: number;
-  activeCalls: number;
-  maxConcurrency: number;
-  isProcessing: boolean;
+  activeCalls: number; // the organization's lines in use (all its calls)
+  maxConcurrentCalls: number;
+  campaignActiveCalls: number; // this campaign's contacts on a call now
+  isActive: boolean;
   contactStats: {
     total: number;
     pending: number;
     inProgress: number;
     completed: number;
-    failed: number;
+    failed: number; // failed + no answer
   };
 }
 
