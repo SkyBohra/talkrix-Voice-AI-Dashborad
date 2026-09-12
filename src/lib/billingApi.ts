@@ -30,6 +30,8 @@ export interface BillingSummary {
     low: boolean;
     // False while Talkrix has charging switched off: calls are priced but nothing is deducted
     charging: boolean;
+    // Whether Talkrix shows customers the per-minute rates; off unless staff turn it on
+    showRates: boolean;
     plan: {
         name: string;
         code: string;
@@ -37,7 +39,8 @@ export interface BillingSummary {
         custom: boolean;
         pulseSec: number;
         minBillableSec: number;
-        rates: PlanRates;
+        // Only sent when showRates is on
+        rates?: PlanRates;
     };
     minutesLeft: number | null;
 }

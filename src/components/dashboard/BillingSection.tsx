@@ -16,7 +16,7 @@ import {
 import TopUpCard from "./TopUpCard";
 import BillingProfileCard from "./BillingProfileCard";
 import InvoicesCard from "./InvoicesCard";
-import { formatDuration, formatInr, paiseFromRupees } from "@/lib/money";
+import { formatDuration, formatInr, formatRate, paiseFromRupees } from "@/lib/money";
 import { usePermissions } from "@/lib/useMe";
 import { useToast } from "@/components/ui/toast";
 import Pagination from "@/components/ui/Pagination";
@@ -181,6 +181,8 @@ export default function BillingSection() {
     }
 
     const empty = summary.availablePaise <= 0;
+    // Staff decide whether customers see what a minute costs; the API simply leaves the rates out
+    const rates = summary.showRates ? summary.plan.rates : undefined;
 
     return (
         <div style={{ padding: "clamp(16px, 4vw, 32px)", boxSizing: "border-box" }}>
@@ -198,7 +200,7 @@ export default function BillingSection() {
                     <Info size={18} style={{ color: "#00C8FF", flexShrink: 0, marginTop: "2px" }} />
                     <p style={{ margin: 0, color: "rgba(255, 255, 255, 0.75)", fontSize: "14px", lineHeight: 1.6 }}>
                         Calls aren&apos;t being charged yet. Your credits stay where they are until charging
-                        starts.
+                        starts.{rates ? " Every call is still priced, so you can see what it would cost." : ""}
                     </p>
                 </div>
             )}
@@ -254,9 +256,27 @@ export default function BillingSection() {
                         {summary.minutesLeft === null ? "Unlimited" : `${summary.minutesLeft.toLocaleString("en-IN")} min`}
                     </p>
                     <p style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.45)", margin: "8px 0 0" }}>
-                        On outbound calls
+                        {rates ? <>At {formatRate(rates.outbound)} for outbound calls</> : "On outbound calls"}
                     </p>
                 </div>
+
+                {rates && (
+                    <div style={panel}>
+                        <span style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.5)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                            Your rates
+                        </span>
+                        <p style={{ fontSize: "15px", color: "white", margin: "10px 0 0", lineHeight: 1.8 }}>
+                            Outbound <strong>{formatRate(rates.outbound)}</strong>
+                            <br />
+                            Inbound <strong>{formatRate(rates.inbound)}</strong> · Web <strong>{formatRate(rates.web)}</strong>
+                        </p>
+                        <p style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.45)", margin: "8px 0 0", lineHeight: 1.6 }}>
+                            {summary.plan.custom ? "Your own rates" : summary.plan.name} ·{" "}
+                            {summary.plan.pulseSec === 60 ? "charged per minute" : `charged every ${summary.plan.pulseSec}s`}
+                            {summary.plan.minBillableSec > 0 && ` · minimum ${summary.plan.minBillableSec}s`}
+                        </p>
+                    </div>
+                )}
 
                 <div style={panel}>
                     <span style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.5)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
