@@ -15,6 +15,7 @@ export const SECTION_PERMISSIONS: Record<string, string> = {
     tools: "agents.read",
     rag: "knowledge.read",
     team: "members.read",
+    billing: "billing.read",
 };
 
 const SECTION_NAMES: Record<string, string> = {
@@ -26,6 +27,7 @@ const SECTION_NAMES: Record<string, string> = {
     tools: "tools",
     rag: "knowledge bases",
     team: "the team",
+    billing: "billing",
 };
 
 /**

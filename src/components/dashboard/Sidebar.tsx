@@ -16,6 +16,7 @@ import {
     Book,
     ExternalLink,
     Users,
+    Wallet,
 } from "lucide-react";
 import OrgSwitcher from "./OrgSwitcher";
 import OrgSuspendedNotice from "./OrgSuspendedNotice";
@@ -39,6 +40,7 @@ const sidebarItems: SidebarItem[] = [
     { id: "tools", label: "Tools", icon: <Wrench size={20} />, mobileIcon: <Wrench size={22} /> },
     { id: "rag", label: "RAG", icon: <Database size={20} />, mobileIcon: <Database size={22} /> },
     { id: "team", label: "Team", icon: <Users size={20} />, mobileIcon: <Users size={22} /> },
+    { id: "billing", label: "Billing", icon: <Wallet size={20} />, mobileIcon: <Wallet size={22} /> },
     { id: "settings", label: "Settings", icon: <Settings size={20} />, mobileIcon: <Settings size={22} /> },
 ];
 

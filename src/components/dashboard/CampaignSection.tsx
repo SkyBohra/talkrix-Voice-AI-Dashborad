@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Users, Phone, ChevronRight, Loader2, Calendar, Clock, Activity, Ban } from 'lucide-react';
+import { Plus, Users, Phone, ChevronRight, Loader2, Calendar, Clock, Activity, Ban, Wallet } from 'lucide-react';
 import { usePermissions } from '@/lib/useMe';
 import {
   Campaign,
@@ -15,6 +15,8 @@ import {
   uploadCampaignContacts
 } from '@/lib/campaignApi';
 import { campaignStatusColor, campaignStatusLabel, DEFAULT_RETRY } from '@/lib/campaignStatus';
+import { BillingSummary, fetchBilling } from '@/lib/billingApi';
+import { formatInr } from '@/lib/money';
 import { fetchAgentsByUser } from '@/lib/agentApi';
 import { getAvailablePhoneNumbers, PhoneNumberOption, TelephonyProvider } from '@/lib/settingsApi';
 import Pagination from '@/components/ui/Pagination';
@@ -74,6 +76,8 @@ export default function CampaignSection() {
 
   // Lines in use across the organization
   const [callState, setCallState] = useState<OrgCallState | null>(null);
+  // Credits, for the people allowed to see them
+  const [billing, setBilling] = useState<BillingSummary | null>(null);
 
   // Form state
   const [formData, setFormData] = useState<{
@@ -228,6 +232,14 @@ export default function CampaignSection() {
   useEffect(() => {
     void loadCallState();
   }, [loadCallState]);
+
+  const canReadBilling = can('billing.read');
+  useEffect(() => {
+    if (!canReadBilling) return;
+    void fetchBilling().then((res) => {
+      if (res.success && res.data?.charging) setBilling(res.data);
+    });
+  }, [canReadBilling]);
 
   const dialing = !!callState && (callState.activeCalls > 0 || callState.activeCampaigns.length > 0);
   useEffect(() => {
@@ -478,6 +490,35 @@ export default function CampaignSection() {
               Lines in use
               <strong style={{ color: '#FFFFFF' }}>{callState.activeCalls} / {callState.maxConcurrentCalls}</strong>
             </div>
+          )}
+          {billing && (
+            <button
+              onClick={() => router.push('/dashboard/billing')}
+              title={
+                billing.availablePaise <= 0
+                  ? 'Your credits have run out: calls are refused until they are topped up'
+                  : 'Credits available for calls'
+              }
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '9px 14px',
+                borderRadius: '8px',
+                border: `1px solid ${billing.low ? 'rgba(251, 191, 36, 0.4)' : 'rgba(255, 255, 255, 0.1)'}`,
+                background: billing.low ? 'rgba(251, 191, 36, 0.08)' : 'rgba(255, 255, 255, 0.04)',
+                color: billing.availablePaise <= 0 ? '#FF3C64' : billing.low ? '#fbbf24' : '#9CA3AF',
+                fontSize: '13px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <Wallet size={15} />
+              Credits
+              <strong style={{ color: billing.availablePaise <= 0 ? '#FF3C64' : '#FFFFFF' }}>
+                {formatInr(billing.availablePaise)}
+              </strong>
+            </button>
           )}
           <button
             onClick={() => router.push('/dashboard/campaign/do-not-call')}

@@ -27,6 +27,7 @@ export const CONTACT_STATUS_LABELS: Record<CampaignContact['callStatus'], string
 
 const REASONS: Record<string, string> = {
     do_not_call: 'On the do-not-call list',
+    insufficient_credits: 'Out of credits',
     invalid_number: "Number can't be dialed",
     no_answer: 'No answer',
     'no-answer': 'No answer',
