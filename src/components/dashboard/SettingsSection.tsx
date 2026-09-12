@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { User, Bell, Shield, Key, Palette, Save, Check, Phone, Server, Eye, EyeOff, Plus, Trash2, Lock, LogOut, Loader2 } from "lucide-react";
-import { getSettings, updateTelephonySettings, TelephonyProvider } from "@/lib/settingsApi";
+import { User, Bell, Shield, Key, Palette, Phone, Server, Lock, LogOut, Loader2 } from "lucide-react";
+import { getSettings } from "@/lib/settingsApi";
+import TelephonyCard from "./TelephonyCard";
 import { useToast } from "@/components/ui/toast";
 import ApiKeysCard from "./ApiKeysCard";
 import { usePermissions } from "@/lib/useMe";
@@ -38,19 +39,6 @@ interface SettingsState {
         maxCorpora: number;
         maxSeats: number;
     };
-    telephony: {
-        provider: TelephonyProvider;
-        plivoAuthId: string;
-        plivoAuthToken: string;
-        plivoPhoneNumbers: string[];
-        twilioAccountSid: string;
-        twilioAuthToken: string;
-        twilioPhoneNumbers: string[];
-        telnyxApiKey: string;
-        telnyxPhoneNumbers: string[];
-        telnyxConnectionId: string;
-        telnyxPublicKey: string;
-    };
 }
 
 export default function SettingsSection() {
@@ -60,10 +48,7 @@ export default function SettingsSection() {
     const canManageTelephony = can("telephony.manage");
     const canManageKeys = can("apikeys.manage");
     const [activeTab, setActiveTab] = useState("profile");
-    const [saved, setSaved] = useState(false);
     const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
-    const [showTelephonySecrets, setShowTelephonySecrets] = useState(false);
     const [signingOutEverywhere, setSigningOutEverywhere] = useState(false);
 
     // Set active tab from URL query parameter
@@ -101,22 +86,7 @@ export default function SettingsSection() {
             maxCorpora: 0,
             maxSeats: 0,
         },
-        telephony: {
-            provider: "none",
-            plivoAuthId: "",
-            plivoAuthToken: "",
-            plivoPhoneNumbers: [""],
-            twilioAccountSid: "",
-            twilioAuthToken: "",
-            twilioPhoneNumbers: [""],
-            telnyxApiKey: "",
-            telnyxPhoneNumbers: [""],
-            telnyxConnectionId: "",
-            telnyxPublicKey: "",
-        },
     });
-    // Identifiers as loaded (masked, e.g. "AC12****cdef"); sent back only when someone types a new one
-    const [loadedIds, setLoadedIds] = useState({ plivoAuthId: "", twilioAccountSid: "" });
 
     // Load settings from API
     useEffect(() => {
@@ -124,18 +94,7 @@ export default function SettingsSection() {
             try {
                 const res = await getSettings();
                 if (res.success && res.data) {
-                    // Parse phone numbers - could be array or single string
-                    const parsePhoneNumbers = (data: any): string[] => {
-                        if (Array.isArray(data)) return data.length > 0 ? data : [""];
-                        if (typeof data === "string" && data) return [data];
-                        return [""];
-                    };
-
-                    setLoadedIds({
-                        plivoAuthId: res.data!.telephony.plivoAuthId || "",
-                        twilioAccountSid: res.data!.telephony.twilioAccountSid || "",
-                    });
-                    setSettings(prev => ({
+                    setSettings((prev) => ({
                         ...prev,
                         general: {
                             maxConcurrentCalls: res.data!.general.maxConcurrentCalls,
@@ -143,19 +102,6 @@ export default function SettingsSection() {
                             maxAgents: res.data!.general.maxAgents,
                             maxCorpora: res.data!.general.maxCorpora ?? res.data!.maxCorpusLimit ?? 0,
                             maxSeats: res.data!.general.maxSeats ?? 0,
-                        },
-                        telephony: {
-                            provider: res.data!.telephony.provider,
-                            plivoAuthId: res.data!.telephony.plivoAuthId || "",
-                            plivoAuthToken: "",
-                            plivoPhoneNumbers: parsePhoneNumbers(res.data!.telephony.plivoPhoneNumbers || res.data!.telephony.plivoPhoneNumber),
-                            twilioAccountSid: res.data!.telephony.twilioAccountSid || "",
-                            twilioAuthToken: "",
-                            twilioPhoneNumbers: parsePhoneNumbers(res.data!.telephony.twilioPhoneNumbers || res.data!.telephony.twilioPhoneNumber),
-                            telnyxApiKey: "",
-                            telnyxPhoneNumbers: parsePhoneNumbers(res.data!.telephony.telnyxPhoneNumbers || res.data!.telephony.telnyxPhoneNumber),
-                            telnyxConnectionId: res.data!.telephony.telnyxConnectionId || "",
-                            telnyxPublicKey: res.data!.telephony.telnyxPublicKey || "",
                         },
                         profile: {
                             ...prev.profile,
@@ -183,57 +129,6 @@ export default function SettingsSection() {
         { id: "preferences", label: "Preferences", icon: <Palette size={18} /> },
     ];
 
-    const handleSave = async () => {
-        setSaving(true);
-        try {
-            if (activeTab === "telephony") {
-                const telephonyData: any = {
-                    provider: settings.telephony.provider,
-                };
-                
-                // Filter out empty phone numbers
-                const filterPhones = (phones: string[]) => phones.filter(p => p.trim() !== "");
-
-                // Only include non-empty values; identifiers are shown masked, so send them only when retyped
-                const changedId = (value: string, loaded: string) => value && value !== loaded;
-                if (changedId(settings.telephony.plivoAuthId, loadedIds.plivoAuthId)) telephonyData.plivoAuthId = settings.telephony.plivoAuthId;
-                if (settings.telephony.plivoAuthToken) telephonyData.plivoAuthToken = settings.telephony.plivoAuthToken;
-                const plivoPhones = filterPhones(settings.telephony.plivoPhoneNumbers);
-                if (plivoPhones.length > 0) telephonyData.plivoPhoneNumbers = plivoPhones;
-
-                if (changedId(settings.telephony.twilioAccountSid, loadedIds.twilioAccountSid)) telephonyData.twilioAccountSid = settings.telephony.twilioAccountSid;
-                if (settings.telephony.twilioAuthToken) telephonyData.twilioAuthToken = settings.telephony.twilioAuthToken;
-                const twilioPhones = filterPhones(settings.telephony.twilioPhoneNumbers);
-                if (twilioPhones.length > 0) telephonyData.twilioPhoneNumbers = twilioPhones;
-
-                if (settings.telephony.telnyxApiKey) telephonyData.telnyxApiKey = settings.telephony.telnyxApiKey;
-                const telnyxPhones = filterPhones(settings.telephony.telnyxPhoneNumbers);
-                if (telnyxPhones.length > 0) telephonyData.telnyxPhoneNumbers = telnyxPhones;
-                if (settings.telephony.telnyxConnectionId) telephonyData.telnyxConnectionId = settings.telephony.telnyxConnectionId;
-                if (settings.telephony.telnyxPublicKey.trim()) telephonyData.telnyxPublicKey = settings.telephony.telnyxPublicKey.trim();
-
-                const res = await updateTelephonySettings(telephonyData);
-                if (res.success) {
-                    toast.success("Settings Saved", "Telephony settings updated successfully.");
-                    setLoadedIds({
-                        plivoAuthId: telephonyData.plivoAuthId ?? loadedIds.plivoAuthId,
-                        twilioAccountSid: telephonyData.twilioAccountSid ?? loadedIds.twilioAccountSid,
-                    });
-                } else {
-                    toast.error("Save Failed", res.message || "Failed to update telephony settings.");
-                    return;
-                }
-            }
-            setSaved(true);
-            setTimeout(() => setSaved(false), 2000);
-        } catch (err: any) {
-            console.error("Failed to save settings:", err);
-            toast.error("Error", err?.message || "Failed to save settings.");
-        } finally {
-            setSaving(false);
-        }
-    };
-
     const handleLogoutEverywhere = async () => {
         if (!confirm("Sign out of Talkrix on every device, including this one?")) return;
         setSigningOutEverywhere(true);
@@ -245,40 +140,6 @@ export default function SettingsSection() {
         }
         toast.error("Couldn't sign out everywhere", res.message);
         setSigningOutEverywhere(false);
-    };
-
-    // Phone number management helpers
-    const addPhoneNumber = (provider: 'plivo' | 'twilio' | 'telnyx') => {
-        const key = `${provider}PhoneNumbers` as keyof typeof settings.telephony;
-        setSettings(prev => ({
-            ...prev,
-            telephony: {
-                ...prev.telephony,
-                [key]: [...(prev.telephony[key] as string[]), ""],
-            },
-        }));
-    };
-
-    const removePhoneNumber = (provider: 'plivo' | 'twilio' | 'telnyx', index: number) => {
-        const key = `${provider}PhoneNumbers` as keyof typeof settings.telephony;
-        setSettings(prev => ({
-            ...prev,
-            telephony: {
-                ...prev.telephony,
-                [key]: (prev.telephony[key] as string[]).filter((_, i) => i !== index),
-            },
-        }));
-    };
-
-    const updatePhoneNumber = (provider: 'plivo' | 'twilio' | 'telnyx', index: number, value: string) => {
-        const key = `${provider}PhoneNumbers` as keyof typeof settings.telephony;
-        setSettings(prev => ({
-            ...prev,
-            telephony: {
-                ...prev.telephony,
-                [key]: (prev.telephony[key] as string[]).map((p, i) => i === index ? value : p),
-            },
-        }));
     };
 
     const renderProfileTab = () => (
@@ -682,309 +543,6 @@ export default function SettingsSection() {
         </div>
     );
 
-    const renderTelephonyTab = () => {
-        const inputStyle = {
-            width: "100%",
-            maxWidth: "400px",
-            padding: "12px 16px",
-            borderRadius: "10px",
-            border: "1px solid rgba(0, 200, 255, 0.1)",
-            background: "rgba(255, 255, 255, 0.05)",
-            color: "white",
-            fontSize: "14px",
-            outline: "none",
-            boxSizing: "border-box" as const,
-        };
-
-        const renderPhoneNumbers = (provider: 'plivo' | 'twilio' | 'telnyx', phones: string[]) => (
-            <div>
-                <label style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "13px", color: "rgba(255, 255, 255, 0.6)", marginBottom: "8px", maxWidth: "400px" }}>
-                    <span>Phone Numbers</span>
-                    <button
-                        type="button"
-                        onClick={() => addPhoneNumber(provider)}
-                        style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "4px",
-                            padding: "4px 10px",
-                            borderRadius: "6px",
-                            border: "1px solid rgba(0, 200, 255, 0.3)",
-                            background: "rgba(0, 200, 255, 0.1)",
-                            color: "#00C8FF",
-                            fontSize: "12px",
-                            cursor: "pointer",
-                        }}
-                    >
-                        <Plus size={14} /> Add
-                    </button>
-                </label>
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                    {phones.map((phone, index) => (
-                        <div key={index} style={{ display: "flex", gap: "8px", maxWidth: "400px" }}>
-                            <input
-                                type="text"
-                                value={phone}
-                                onChange={(e) => updatePhoneNumber(provider, index, e.target.value)}
-                                placeholder={`+1234567890 (Phone ${index + 1})`}
-                                style={{ ...inputStyle, flex: 1, maxWidth: "unset" }}
-                            />
-                            {phones.length > 1 && (
-                                <button
-                                    type="button"
-                                    onClick={() => removePhoneNumber(provider, index)}
-                                    style={{
-                                        padding: "12px",
-                                        borderRadius: "10px",
-                                        border: "1px solid rgba(255, 60, 100, 0.3)",
-                                        background: "rgba(255, 60, 100, 0.1)",
-                                        color: "#FF3C64",
-                                        cursor: "pointer",
-                                    }}
-                                >
-                                    <Trash2 size={18} />
-                                </button>
-                            )}
-                        </div>
-                    ))}
-                </div>
-                <p style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.4)", marginTop: "8px" }}>
-                    Add multiple phone numbers to use for outbound calls
-                </p>
-            </div>
-        );
-
-        return (
-            // Only people who manage telephony can change it; everyone else sees it read-only
-            <fieldset disabled={!canManageTelephony} style={{ border: "none", padding: 0, margin: 0, minWidth: 0 }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-                {known && !canManageTelephony && (
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "12px 16px", borderRadius: "10px", background: "rgba(0, 200, 255, 0.06)", border: "1px solid rgba(0, 200, 255, 0.2)" }}>
-                        <Lock size={16} style={{ color: "#00C8FF", flexShrink: 0 }} />
-                        <p style={{ margin: 0, fontSize: "13px", color: "rgba(255, 255, 255, 0.7)" }}>
-                            Only owners and admins can change telephony. You can see the provider and numbers.
-                        </p>
-                    </div>
-                )}
-                {/* Provider Selection */}
-                <div>
-                    <label style={{ display: "block", fontSize: "13px", color: "rgba(255, 255, 255, 0.6)", marginBottom: "8px" }}>
-                        Telephony Provider
-                    </label>
-                    <select
-                        value={settings.telephony.provider}
-                        onChange={(e) => setSettings({ ...settings, telephony: { ...settings.telephony, provider: e.target.value as TelephonyProvider } })}
-                        style={{
-                            width: "100%",
-                            maxWidth: "300px",
-                            padding: "12px 16px",
-                            borderRadius: "10px",
-                            border: "1px solid rgba(0, 200, 255, 0.1)",
-                            background: "#1a1a2e",
-                            color: "white",
-                            fontSize: "14px",
-                            outline: "none",
-                            boxSizing: "border-box",
-                            cursor: "pointer",
-                        }}
-                    >
-                        <option value="none" style={{ background: "#1a1a2e", color: "white" }}>None</option>
-                        <option value="plivo" style={{ background: "#1a1a2e", color: "white" }}>Plivo</option>
-                        <option value="twilio" style={{ background: "#1a1a2e", color: "white" }}>Twilio</option>
-                        <option value="telnyx" style={{ background: "#1a1a2e", color: "white" }}>Telnyx</option>
-                    </select>
-                </div>
-
-                {/* Plivo Settings */}
-                {settings.telephony.provider === "plivo" && (
-                    <div style={{ 
-                        padding: "20px", 
-                        background: "rgba(255, 255, 255, 0.03)", 
-                        border: "1px solid rgba(0, 200, 255, 0.15)", 
-                        borderRadius: "12px" 
-                    }}>
-                        <h3 style={{ fontSize: "16px", fontWeight: "600", color: "white", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-                            <Phone size={18} style={{ color: "#00C8FF" }} /> Plivo Configuration
-                        </h3>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                            <div>
-                                <label style={{ display: "block", fontSize: "13px", color: "rgba(255, 255, 255, 0.6)", marginBottom: "8px" }}>
-                                    Auth ID
-                                </label>
-                                <input
-                                    type="text"
-                                    value={settings.telephony.plivoAuthId}
-                                    onChange={(e) => setSettings({ ...settings, telephony: { ...settings.telephony, plivoAuthId: e.target.value } })}
-                                    placeholder="Enter Plivo Auth ID"
-                                    style={inputStyle}
-                                />
-                            </div>
-                            <div>
-                                <label style={{ display: "block", fontSize: "13px", color: "rgba(255, 255, 255, 0.6)", marginBottom: "8px" }}>
-                                    Auth Token
-                                </label>
-                                <div style={{ display: "flex", gap: "8px", maxWidth: "400px" }}>
-                                    <input
-                                        type={showTelephonySecrets ? "text" : "password"}
-                                        value={settings.telephony.plivoAuthToken}
-                                        onChange={(e) => setSettings({ ...settings, telephony: { ...settings.telephony, plivoAuthToken: e.target.value } })}
-                                        placeholder="Enter Plivo Auth Token"
-                                        style={{ ...inputStyle, flex: 1, maxWidth: "unset" }}
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowTelephonySecrets(!showTelephonySecrets)}
-                                        style={{
-                                            padding: "12px",
-                                            borderRadius: "10px",
-                                            border: "1px solid rgba(0, 200, 255, 0.1)",
-                                            background: "rgba(255, 255, 255, 0.05)",
-                                            color: "rgba(255, 255, 255, 0.6)",
-                                            cursor: "pointer",
-                                        }}
-                                    >
-                                        {showTelephonySecrets ? <EyeOff size={18} /> : <Eye size={18} />}
-                                    </button>
-                                </div>
-                            </div>
-                            {renderPhoneNumbers('plivo', settings.telephony.plivoPhoneNumbers)}
-                        </div>
-                    </div>
-                )}
-
-                {/* Twilio Settings */}
-                {settings.telephony.provider === "twilio" && (
-                    <div style={{ 
-                        padding: "20px", 
-                        background: "rgba(255, 255, 255, 0.03)", 
-                        border: "1px solid rgba(0, 200, 255, 0.15)", 
-                        borderRadius: "12px" 
-                    }}>
-                        <h3 style={{ fontSize: "16px", fontWeight: "600", color: "white", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-                            <Phone size={18} style={{ color: "#00C8FF" }} /> Twilio Configuration
-                        </h3>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                            <div>
-                                <label style={{ display: "block", fontSize: "13px", color: "rgba(255, 255, 255, 0.6)", marginBottom: "8px" }}>
-                                    Account SID
-                                </label>
-                                <input
-                                    type="text"
-                                    value={settings.telephony.twilioAccountSid}
-                                    onChange={(e) => setSettings({ ...settings, telephony: { ...settings.telephony, twilioAccountSid: e.target.value } })}
-                                    placeholder="Enter Twilio Account SID"
-                                    style={inputStyle}
-                                />
-                            </div>
-                            <div>
-                                <label style={{ display: "block", fontSize: "13px", color: "rgba(255, 255, 255, 0.6)", marginBottom: "8px" }}>
-                                    Auth Token
-                                </label>
-                                <div style={{ display: "flex", gap: "8px", maxWidth: "400px" }}>
-                                    <input
-                                        type={showTelephonySecrets ? "text" : "password"}
-                                        value={settings.telephony.twilioAuthToken}
-                                        onChange={(e) => setSettings({ ...settings, telephony: { ...settings.telephony, twilioAuthToken: e.target.value } })}
-                                        placeholder="Enter Twilio Auth Token"
-                                        style={{ ...inputStyle, flex: 1, maxWidth: "unset" }}
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowTelephonySecrets(!showTelephonySecrets)}
-                                        style={{
-                                            padding: "12px",
-                                            borderRadius: "10px",
-                                            border: "1px solid rgba(0, 200, 255, 0.1)",
-                                            background: "rgba(255, 255, 255, 0.05)",
-                                            color: "rgba(255, 255, 255, 0.6)",
-                                            cursor: "pointer",
-                                        }}
-                                    >
-                                        {showTelephonySecrets ? <EyeOff size={18} /> : <Eye size={18} />}
-                                    </button>
-                                </div>
-                            </div>
-                            {renderPhoneNumbers('twilio', settings.telephony.twilioPhoneNumbers)}
-                        </div>
-                    </div>
-                )}
-
-                {/* Telnyx Settings */}
-                {settings.telephony.provider === "telnyx" && (
-                    <div style={{ 
-                        padding: "20px", 
-                        background: "rgba(255, 255, 255, 0.03)", 
-                        border: "1px solid rgba(0, 200, 255, 0.15)", 
-                        borderRadius: "12px" 
-                    }}>
-                        <h3 style={{ fontSize: "16px", fontWeight: "600", color: "white", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-                            <Phone size={18} style={{ color: "#00C8FF" }} /> Telnyx Configuration
-                        </h3>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                            <div>
-                                <label style={{ display: "block", fontSize: "13px", color: "rgba(255, 255, 255, 0.6)", marginBottom: "8px" }}>
-                                    API Key
-                                </label>
-                                <div style={{ display: "flex", gap: "8px", maxWidth: "400px" }}>
-                                    <input
-                                        type={showTelephonySecrets ? "text" : "password"}
-                                        value={settings.telephony.telnyxApiKey}
-                                        onChange={(e) => setSettings({ ...settings, telephony: { ...settings.telephony, telnyxApiKey: e.target.value } })}
-                                        placeholder="Enter Telnyx API Key"
-                                        style={{ ...inputStyle, flex: 1, maxWidth: "unset" }}
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowTelephonySecrets(!showTelephonySecrets)}
-                                        style={{
-                                            padding: "12px",
-                                            borderRadius: "10px",
-                                            border: "1px solid rgba(0, 200, 255, 0.1)",
-                                            background: "rgba(255, 255, 255, 0.05)",
-                                            color: "rgba(255, 255, 255, 0.6)",
-                                            cursor: "pointer",
-                                        }}
-                                    >
-                                        {showTelephonySecrets ? <EyeOff size={18} /> : <Eye size={18} />}
-                                    </button>
-                                </div>
-                            </div>
-                            {renderPhoneNumbers('telnyx', settings.telephony.telnyxPhoneNumbers)}
-                            <div>
-                                <label style={{ display: "block", fontSize: "13px", color: "rgba(255, 255, 255, 0.6)", marginBottom: "8px" }}>
-                                    Connection ID
-                                </label>
-                                <input
-                                    type="text"
-                                    value={settings.telephony.telnyxConnectionId}
-                                    onChange={(e) => setSettings({ ...settings, telephony: { ...settings.telephony, telnyxConnectionId: e.target.value } })}
-                                    placeholder="Enter Telnyx Connection ID"
-                                    style={inputStyle}
-                                />
-                            </div>
-                            <div>
-                                <label style={{ display: "block", fontSize: "13px", color: "rgba(255, 255, 255, 0.6)", marginBottom: "8px" }}>
-                                    Public Key
-                                </label>
-                                <input
-                                    type="text"
-                                    value={settings.telephony.telnyxPublicKey}
-                                    onChange={(e) => setSettings({ ...settings, telephony: { ...settings.telephony, telnyxPublicKey: e.target.value } })}
-                                    placeholder="From Telnyx Mission Control → Keys & Credentials"
-                                    style={inputStyle}
-                                />
-                                <p style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.4)", marginTop: "8px", maxWidth: "400px" }}>
-                                    Talkrix uses it to check that call updates really come from Telnyx. Without it, Telnyx call statuses are rejected.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
-            </fieldset>
-        );
-    };
-
     const renderLimitsTab = () => (
         <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
             {/* API keys belong to the organization; owners and admins manage them */}
@@ -1170,46 +728,14 @@ export default function SettingsSection() {
                     ) : (
                         <>
                             {activeTab === "profile" && renderProfileTab()}
-                            {activeTab === "telephony" && renderTelephonyTab()}
+                            {activeTab === "telephony" && (
+                                <TelephonyCard canManage={canManageTelephony} canAssign={can("numbers.write")} />
+                            )}
                             {activeTab === "limits" && renderLimitsTab()}
                             {activeTab === "notifications" && renderNotificationsTab()}
                             {activeTab === "security" && renderSecurityTab()}
                             {activeTab === "preferences" && renderPreferencesTab()}
 
-                            {/* Save Button - Only show for tabs that save to backend */}
-                            {activeTab === "telephony" && canManageTelephony && (
-                                <div style={{ marginTop: "24px", paddingTop: "20px", borderTop: "1px solid rgba(255, 255, 255, 0.05)" }}>
-                                    <button
-                                        onClick={handleSave}
-                                        disabled={saving}
-                                        style={{
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: "8px",
-                                            padding: "12px 20px",
-                                            borderRadius: "10px",
-                                            border: "none",
-                                            background: saved
-                                                ? "rgba(34, 197, 94, 0.2)"
-                                                : saving
-                                                    ? "rgba(0, 200, 255, 0.3)"
-                                                    : "linear-gradient(135deg, #00C8FF 0%, #7800FF 100%)",
-                                            color: saved ? "#22c55e" : "white",
-                                            fontSize: "14px",
-                                            fontWeight: "600",
-                                            cursor: saving ? "not-allowed" : "pointer",
-                                            transition: "all 0.2s ease",
-                                            opacity: saving ? 0.7 : 1,
-                                            width: "100%",
-                                            maxWidth: "200px",
-                                            justifyContent: "center",
-                                        }}
-                                    >
-                                        {saved ? <Check size={16} /> : <Save size={16} />}
-                                        {saved ? "Saved!" : saving ? "Saving..." : "Save Changes"}
-                                    </button>
-                                </div>
-                            )}
                         </>
                     )}
                 </div>
