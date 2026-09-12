@@ -1,17 +1,21 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { AlertCircle, Info, Loader, Phone, Save, Wallet } from "lucide-react";
+import { AlertCircle, Download, Info, Loader, Phone, Save, Wallet } from "lucide-react";
 import {
     BillingSummary,
     LedgerType,
     Transaction,
     UsageReport,
+    downloadBillingFile,
     fetchBilling,
     fetchTransactions,
     fetchUsage,
     updateLowBalanceAlert,
 } from "@/lib/billingApi";
+import TopUpCard from "./TopUpCard";
+import BillingProfileCard from "./BillingProfileCard";
+import InvoicesCard from "./InvoicesCard";
 import { formatDuration, formatInr, formatRate, paiseFromRupees } from "@/lib/money";
 import { usePermissions } from "@/lib/useMe";
 import { useToast } from "@/components/ui/toast";
@@ -88,6 +92,8 @@ export default function BillingSection() {
     const [to, setTo] = useState(today);
     const [alertInput, setAlertInput] = useState("");
     const [savingAlert, setSavingAlert] = useState(false);
+    // Bumped after a payment so the invoices and transactions reload
+    const [paidAt, setPaidAt] = useState(0);
 
     const showError = toast.error;
 
@@ -122,11 +128,21 @@ export default function BillingSection() {
 
     useEffect(() => {
         void loadTransactions(txPage);
-    }, [txPage, loadTransactions]);
+    }, [txPage, paidAt, loadTransactions]);
 
     useEffect(() => {
         void loadUsage(from, to);
     }, [from, to, loadUsage]);
+
+    const afterPayment = useCallback(() => {
+        setPaidAt(Date.now());
+        void loadSummary();
+    }, [loadSummary]);
+
+    const downloadCsv = async (path: string, filename: string) => {
+        const problem = await downloadBillingFile(path, filename);
+        if (problem) toast.error("Could not download the file", problem);
+    };
 
     const saveAlert = async () => {
         const paise = paiseFromRupees(alertInput);
@@ -303,9 +319,23 @@ export default function BillingSection() {
                         </p>
                     )}
                     <p style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.45)", margin: "10px 0 0", lineHeight: 1.6 }}>
-                        Credits are added by the Talkrix team for now. Online top-ups are coming next.
+                        You&apos;re warned by email and here in the app before the credits run out.
                     </p>
                 </div>
+            </div>
+
+            {canManage && (
+                <div style={{ marginBottom: "24px" }}>
+                    <TopUpCard onPaid={afterPayment} orgName={summary.plan.name} />
+                </div>
+            )}
+
+            <div style={{ marginBottom: "24px" }}>
+                <BillingProfileCard canEdit={canManage} onSaved={afterPayment} />
+            </div>
+
+            <div style={{ marginBottom: "24px" }}>
+                <InvoicesCard refreshKey={paidAt} />
             </div>
 
             {/* Usage */}
@@ -316,6 +346,13 @@ export default function BillingSection() {
                         <input aria-label="From date" type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} style={inputStyle} />
                         <span style={{ color: "rgba(255, 255, 255, 0.4)" }}>to</span>
                         <input aria-label="To date" type="date" value={to} min={from} max={today()} onChange={(e) => setTo(e.target.value)} style={inputStyle} />
+                        <button
+                            onClick={() => downloadCsv(`/usage.csv?from=${from}&to=${to}`, `talkrix-usage-${from}-to-${to}.csv`)}
+                            style={{ display: "flex", alignItems: "center", gap: "6px", padding: "10px 14px", borderRadius: "8px", border: "1px solid rgba(0, 200, 255, 0.3)", background: "transparent", color: "#00C8FF", fontSize: "13px", cursor: "pointer", whiteSpace: "nowrap" }}
+                        >
+                            <Download size={14} />
+                            CSV
+                        </button>
                     </div>
                 </div>
                 {usage && usage.days.length > 0 ? (
@@ -359,9 +396,20 @@ export default function BillingSection() {
 
             {/* Transactions */}
             <div style={panel}>
-                <h2 style={{ fontSize: "16px", fontWeight: 600, color: "white", margin: "0 0 16px" }}>
-                    Transactions {txTotal > 0 && <span style={{ color: "rgba(255,255,255,0.4)", fontWeight: 400 }}>({txTotal})</span>}
-                </h2>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexWrap: "wrap", marginBottom: "16px" }}>
+                    <h2 style={{ fontSize: "16px", fontWeight: 600, color: "white", margin: 0 }}>
+                        Transactions {txTotal > 0 && <span style={{ color: "rgba(255,255,255,0.4)", fontWeight: 400 }}>({txTotal})</span>}
+                    </h2>
+                    {transactions.length > 0 && (
+                        <button
+                            onClick={() => downloadCsv("/transactions.csv", `talkrix-transactions-${today()}.csv`)}
+                            style={{ display: "flex", alignItems: "center", gap: "6px", padding: "8px 14px", borderRadius: "8px", border: "1px solid rgba(0, 200, 255, 0.3)", background: "transparent", color: "#00C8FF", fontSize: "13px", cursor: "pointer" }}
+                        >
+                            <Download size={14} />
+                            CSV
+                        </button>
+                    )}
+                </div>
                 {transactions.length > 0 ? (
                     <>
                         <div style={{ overflowX: "auto" }}>
