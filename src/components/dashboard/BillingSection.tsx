@@ -16,7 +16,7 @@ import {
 import TopUpCard from "./TopUpCard";
 import BillingProfileCard from "./BillingProfileCard";
 import InvoicesCard from "./InvoicesCard";
-import { formatDuration, formatInr, formatRate, paiseFromRupees } from "@/lib/money";
+import { formatDuration, formatInr, paiseFromRupees } from "@/lib/money";
 import { usePermissions } from "@/lib/useMe";
 import { useToast } from "@/components/ui/toast";
 import Pagination from "@/components/ui/Pagination";
@@ -180,7 +180,6 @@ export default function BillingSection() {
         );
     }
 
-    const outbound = summary.plan.rates.outbound;
     const empty = summary.availablePaise <= 0;
 
     return (
@@ -190,7 +189,7 @@ export default function BillingSection() {
             <div style={{ marginBottom: "24px" }}>
                 <h1 style={{ fontSize: "clamp(20px, 4vw, 24px)", fontWeight: 700, color: "white", margin: 0 }}>Billing</h1>
                 <p style={{ color: "#9CA3AF", margin: "4px 0 0", fontSize: "13px" }}>
-                    Your credits, what each call costs, and where the money went
+                    Your credits, your talk time, and where the money went
                 </p>
             </div>
 
@@ -198,8 +197,8 @@ export default function BillingSection() {
                 <div style={{ ...panel, marginBottom: "20px", display: "flex", gap: "10px", alignItems: "flex-start", borderColor: "rgba(0, 200, 255, 0.25)" }}>
                     <Info size={18} style={{ color: "#00C8FF", flexShrink: 0, marginTop: "2px" }} />
                     <p style={{ margin: 0, color: "rgba(255, 255, 255, 0.75)", fontSize: "14px", lineHeight: 1.6 }}>
-                        Calls aren&apos;t being charged yet. Every call is still priced below, so you can see what it
-                        would cost once charging starts.
+                        Calls aren&apos;t being charged yet. Your credits stay where they are until charging
+                        starts.
                     </p>
                 </div>
             )}
@@ -255,24 +254,7 @@ export default function BillingSection() {
                         {summary.minutesLeft === null ? "Unlimited" : `${summary.minutesLeft.toLocaleString("en-IN")} min`}
                     </p>
                     <p style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.45)", margin: "8px 0 0" }}>
-                        At {formatRate(outbound)} for outbound calls
-                    </p>
-                </div>
-
-                <div style={panel}>
-                    <span style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.5)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                        Your rates
-                    </span>
-                    <p style={{ fontSize: "15px", color: "white", margin: "10px 0 0", lineHeight: 1.8 }}>
-                        Outbound <strong>{formatRate(summary.plan.rates.outbound)}</strong>
-                        <br />
-                        Inbound <strong>{formatRate(summary.plan.rates.inbound)}</strong> · Web{" "}
-                        <strong>{formatRate(summary.plan.rates.web)}</strong>
-                    </p>
-                    <p style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.45)", margin: "8px 0 0", lineHeight: 1.6 }}>
-                        {summary.plan.custom ? "Your own rates" : summary.plan.name} ·{" "}
-                        {summary.plan.pulseSec === 60 ? "charged per minute" : `charged every ${summary.plan.pulseSec}s`}
-                        {summary.plan.minBillableSec > 0 && ` · minimum ${summary.plan.minBillableSec}s`}
+                        On outbound calls
                     </p>
                 </div>
 
