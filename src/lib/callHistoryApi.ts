@@ -63,6 +63,65 @@ export const fetchCallHistory = async (options?: {
   return safeApiCall(() => axios.get(url, { headers: getAuthHeaders() }));
 };
 
+export interface TranscriptLine {
+  speaker: 'agent' | 'customer';
+  text: string;
+  /** Seconds from the start of the call */
+  startSec: number | null;
+  endSec: number | null;
+}
+
+export interface CallTranscript {
+  lines: TranscriptLine[];
+  available: boolean;
+  /** Why there is nothing to show, in words */
+  reason: string | null;
+}
+
+/**
+ * Who said what on a call. Read from the voice platform when asked, so it can take a moment.
+ */
+export const fetchCallTranscript = async (id: string): Promise<ApiResponse<CallTranscript>> => {
+  return safeApiCall(() => axios.get(`${API_BASE}/${id}/transcript`, { headers: getAuthHeaders() }));
+};
+
+/**
+ * A call's recording, as a URL the page's own <audio> element can play.
+ *
+ * An <audio src> cannot send the sign-in token, so the audio is fetched with it and handed to the
+ * player as a local object URL. Revoke it (URL.revokeObjectURL) when the player goes away.
+ */
+export const fetchCallRecording = async (
+  id: string,
+): Promise<{ ok: true; url: string } | { ok: false; message: string; status: number }> => {
+  try {
+    const res = await fetch(`${API_BASE}/${id}/recording`, {
+      headers: getAuthHeaders() as Record<string, string>,
+    });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => null)) as { message?: string } | null;
+      return {
+        ok: false,
+        status: res.status,
+        message:
+          res.status === 403
+            ? "Your role can't play recordings. Ask your organization's admin."
+            : body?.message || 'The recording could not be loaded.',
+      };
+    }
+    return { ok: true, url: URL.createObjectURL(await res.blob()) };
+  } catch {
+    return { ok: false, status: 0, message: "Can't reach Talkrix. Check your connection and try again." };
+  }
+};
+
+/** 83.4 → "1:23" */
+export const formatOffset = (sec: number | null): string => {
+  if (sec === null || !Number.isFinite(sec)) return '';
+  const whole = Math.floor(sec);
+  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
+};
+
 /**
  * Fetch call statistics for the current user
  */

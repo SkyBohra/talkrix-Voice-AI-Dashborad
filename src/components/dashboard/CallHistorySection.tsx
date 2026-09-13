@@ -12,6 +12,8 @@ import {
     getCallDisplayDate 
 } from "@/lib/callHistoryApi";
 import Pagination from "@/components/ui/Pagination";
+import CallRecordingPlayer from "./CallRecordingPlayer";
+import CallTranscript from "./CallTranscript";
 
 export default function CallHistorySection() {
     const [searchQuery, setSearchQuery] = useState("");
@@ -505,6 +507,9 @@ export default function CallHistorySection() {
                     const statusStyle = getStatusColor(call.status);
                     const isExpanded = expandedId === call._id;
                     const hasSummary = call.summary || call.shortSummary;
+                    // A call that connected has a transcript, and maybe a recording, even without a summary
+                    const connected = call.status === "completed" || call.status === "in-progress";
+                    const hasDetails = Boolean(hasSummary || connected);
                     return (
                         <div key={call._id}>
                             <div
@@ -516,10 +521,14 @@ export default function CallHistorySection() {
                                     alignItems: "center",
                                     gap: "16px",
                                     transition: "background 0.2s ease",
-                                    cursor: hasSummary ? "pointer" : "default",
+                                    cursor: hasDetails ? "pointer" : "default",
                                     background: isExpanded ? "rgba(0, 200, 255, 0.05)" : "transparent",
                                 }}
-                                onClick={() => hasSummary && setExpandedId(isExpanded ? null : call._id)}
+                                onClick={() => {
+                                    if (!hasDetails) return;
+                                    setExpandedId(isExpanded ? null : call._id);
+                                    if (isExpanded) setPlayingId(null);
+                                }}
                                 onMouseEnter={(e) => {
                                     if (!isExpanded) e.currentTarget.style.background = "rgba(0, 200, 255, 0.05)";
                                 }}
@@ -547,10 +556,10 @@ export default function CallHistorySection() {
                                         <span style={{ color: "white", fontWeight: "500" }}>
                                             {call.customerName || (call.callType === "test" ? "Test Call" : "Unknown")}
                                         </span>
-                                        {hasSummary && (
+                                        {hasDetails && (
                                             <span style={{ fontSize: "11px", color: "rgba(0, 200, 255, 0.6)", display: "flex", alignItems: "center", gap: "4px" }}>
                                                 <FileText size={10} />
-                                                {isExpanded ? "Hide summary" : "View summary"}
+                                                {isExpanded ? "Hide details" : "Transcript & recording"}
                                                 {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                                             </span>
                                         )}
@@ -605,11 +614,17 @@ export default function CallHistorySection() {
                                 </span>
 
                                 {/* Audio Control */}
-                                {call.status === "completed" && call.recordingUrl ? (
+                                {call.status === "completed" && call.recordingEnabled !== false ? (
                                     <button
+                                        aria-label={playingId === call._id ? "Close the recording" : "Play the recording"}
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            setPlayingId(playingId === call._id ? null : call._id);
+                                            if (playingId === call._id) {
+                                                setPlayingId(null);
+                                            } else {
+                                                setExpandedId(call._id);
+                                                setPlayingId(call._id);
+                                            }
                                         }}
                                         style={{
                                             width: "36px",
@@ -641,6 +656,29 @@ export default function CallHistorySection() {
                                         borderBottom: "1px solid rgba(0, 200, 255, 0.08)",
                                     }}
                                 >
+                                    {connected && (
+                                        <div style={{ display: "flex", flexDirection: "column", gap: "18px", marginBottom: hasSummary ? "20px" : 0 }}>
+                                            <div>
+                                                <div style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.4)", textTransform: "uppercase", marginBottom: "8px" }}>
+                                                    Recording
+                                                </div>
+                                                {call.recordingEnabled === false ? (
+                                                    <div style={{ color: "rgba(255, 255, 255, 0.5)", fontSize: "13px" }}>
+                                                        Recording was switched off for this call.
+                                                    </div>
+                                                ) : (
+                                                    <CallRecordingPlayer callId={call._id} autoPlay={playingId === call._id} />
+                                                )}
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.4)", textTransform: "uppercase", marginBottom: "8px" }}>
+                                                    Transcript
+                                                </div>
+                                                <CallTranscript callId={call._id} customerName={call.customerName} />
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
                                         {/* Left Column - Summary */}
                                         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
