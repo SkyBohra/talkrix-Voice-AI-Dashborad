@@ -110,6 +110,15 @@ export default function InvitePage() {
         );
     }
 
+    if (preview.status === "revoked" && preview.replaced) {
+        return (
+            <Notice
+                title="This link was replaced"
+                body={`A newer invitation to ${preview.orgName || "this organization"} was sent to ${preview.email}. Use the link from the latest invitation — or ask for it to be sent again.`}
+            />
+        );
+    }
+
     if (preview.status !== "pending") {
         const { title, body } = UNUSABLE[preview.status];
         return <Notice title={title} body={body} />;

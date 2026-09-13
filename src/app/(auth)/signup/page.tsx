@@ -8,6 +8,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { User, Lock, Mail, Loader2, Building2, Users, AlertCircle } from "lucide-react";
 import { previewInvitation, type InvitationPreview } from "@/lib/orgApi";
 import { roleLabel, saveSession } from "@/lib/session";
+import { apiErrorMessage } from "@/lib/apiHelper";
 
 const inputStyle: React.CSSProperties = {
     paddingLeft: '50px',
@@ -58,6 +59,8 @@ function SignupForm() {
         previewInvitation(inviteToken).then((res) => {
             if (!res.success || !res.data) {
                 setInviteProblem("This invite link isn't valid.");
+            } else if (res.data.status === "revoked" && res.data.replaced) {
+                setInviteProblem(`This link was replaced by a newer invitation to ${res.data.email}. Use the link from the latest invitation.`);
             } else if (res.data.status !== "pending") {
                 setInviteProblem(INVITE_PROBLEMS[res.data.status] ?? "This invitation can't be used.");
             } else {
@@ -83,7 +86,7 @@ function SignupForm() {
             });
             const data = await res.json();
             if (!res.ok || data.statusCode >= 400) {
-                throw new Error(data.error || data.message || "Signup failed");
+                throw new Error(apiErrorMessage(data, "Signup failed"));
             }
             saveSession(data.data);
             // New users always see the tour - clear any old tour data and set first login

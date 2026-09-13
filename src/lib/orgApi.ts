@@ -43,6 +43,9 @@ export interface Member {
     lastLoginAt: string | null;
 }
 
+/** Whether an invitation reached the person's inbox; null for ones sent before email was set up. */
+export type InvitationDelivery = 'sent' | 'failed' | 'not_configured';
+
 export interface PendingInvitation {
     id: string;
     email: string;
@@ -50,6 +53,8 @@ export interface PendingInvitation {
     expiresAt: string;
     invitedBy: string;
     createdAt: string;
+    delivery: InvitationDelivery | null;
+    emailedAt: string | null;
 }
 
 export interface InvitationPreview {
@@ -57,6 +62,8 @@ export interface InvitationPreview {
     email: string;
     role: OrgRole;
     status: 'pending' | 'accepted' | 'revoked' | 'expired';
+    /** Revoked because a newer invitation was sent to the same person, whose link is the one to use */
+    replaced?: boolean;
 }
 
 export type ApiKeyRole = 'integration' | 'read_only';
@@ -114,7 +121,7 @@ export const getMembers = async (): Promise<ApiResponse<{ members: Member[]; inv
 export const inviteMember = async (
     email: string,
     role: OrgRole,
-): Promise<ApiResponse<{ invitation: { id: string; email: string; role: OrgRole; expiresAt: string }; inviteUrl: string }>> =>
+): Promise<ApiResponse<{ invitation: { id: string; email: string; role: OrgRole; expiresAt: string }; inviteUrl: string; delivery: InvitationDelivery }>> =>
     safeApiCall(() => axios.post(`${API_BASE}/org/invitations`, { email, role }, { headers: getAuthHeaders() }));
 
 export const withdrawInvitation = async (id: string): Promise<ApiResponse> =>

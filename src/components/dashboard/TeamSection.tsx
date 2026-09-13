@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, ChevronDown, Copy, Crown, Link2, Loader2, LogOut, Mail, Pencil, UserPlus, Users, X } from "lucide-react";
+import { AlertCircle, Check, ChevronDown, Copy, Crown, Link2, Loader2, LogOut, Mail, MailCheck, Pencil, Send, UserPlus, Users, X } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { usePermissions } from "@/lib/useMe";
 import { clearSession, roleLabel, saveSession, type OrgRole } from "@/lib/session";
@@ -14,6 +14,7 @@ import {
     switchOrg,
     transferOwnership,
     withdrawInvitation,
+    type InvitationDelivery,
     type Member,
     type PendingInvitation,
 } from "@/lib/orgApi";
@@ -157,7 +158,7 @@ export default function TeamSection() {
     const [inviteEmail, setInviteEmail] = useState("");
     const [inviteRole, setInviteRole] = useState<OrgRole>("operator");
     const [inviting, setInviting] = useState(false);
-    const [lastInvite, setLastInvite] = useState<{ email: string; role: OrgRole; url: string } | null>(null);
+    const [lastInvite, setLastInvite] = useState<{ email: string; role: OrgRole; url: string; delivery: InvitationDelivery } | null>(null);
     const [copied, setCopied] = useState(false);
 
     const [editingName, setEditingName] = useState(false);
@@ -207,31 +208,37 @@ export default function TeamSection() {
         }
     };
 
-    const sendInvite = async (email: string, role: OrgRole) => {
+    const sendInvite = async (email: string, role: OrgRole): Promise<InvitationDelivery | null> => {
         const res = await inviteMember(email, role);
         if (!res.success || !res.data) {
             toast.error("Invitation not sent", res.message);
-            return false;
+            return null;
         }
-        setLastInvite({ email: res.data.invitation.email, role: res.data.invitation.role, url: res.data.inviteUrl });
+        const delivery = res.data.delivery ?? "not_configured";
+        setLastInvite({ email: res.data.invitation.email, role: res.data.invitation.role, url: res.data.inviteUrl, delivery });
         setCopied(false);
         await load();
-        return true;
+        return delivery;
     };
 
     const handleInvite = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!inviteEmail.trim()) return;
         setInviting(true);
-        const ok = await sendInvite(inviteEmail.trim(), inviteRole);
-        if (ok) setInviteEmail("");
+        const delivery = await sendInvite(inviteEmail.trim(), inviteRole);
+        if (delivery) setInviteEmail("");
         setInviting(false);
     };
 
-    const handleNewLink = async (inv: PendingInvitation) => {
+    // Sending again makes a new link — the old one stops working — and emails it
+    const handleResend = async (inv: PendingInvitation) => {
         setBusy(`link:${inv.id}`);
-        const ok = await sendInvite(inv.email, inv.role);
-        if (ok) toast.success("New link ready", "The previous link for this person no longer works.");
+        const delivery = await sendInvite(inv.email, inv.role);
+        if (delivery === "sent") {
+            toast.success("Invitation sent again", `${inv.email} has a new link in their inbox. The previous one no longer works.`);
+        } else if (delivery) {
+            toast.success("New link ready", "It couldn't be emailed, so copy it from above. The previous link no longer works.");
+        }
         setBusy(null);
     };
 
@@ -469,8 +476,8 @@ export default function TeamSection() {
                                 ))}
                             </select>
                             <button type="submit" disabled={inviting || seatsFull} style={{ ...primaryButton, opacity: inviting || seatsFull ? 0.6 : 1 }}>
-                                {inviting ? <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} /> : <UserPlus size={16} />}
-                                Create invite link
+                                {inviting ? <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} /> : <Send size={16} />}
+                                Send invite
                             </button>
                         </form>
                         <p style={{ ...muted, margin: "10px 0 0" }}>
@@ -483,41 +490,7 @@ export default function TeamSection() {
                         )}
 
                         {lastInvite && (
-                            <div
-                                style={{
-                                    marginTop: "16px",
-                                    padding: "14px 16px",
-                                    borderRadius: "10px",
-                                    border: "1px solid rgba(0, 255, 136, 0.25)",
-                                    background: "rgba(0, 255, 136, 0.05)",
-                                }}
-                            >
-                                <div style={{ fontSize: "13px", color: "white", marginBottom: "8px" }}>
-                                    Invite link for <strong>{lastInvite.email}</strong> as {roleLabel(lastInvite.role)}
-                                </div>
-                                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                                    <code
-                                        style={{
-                                            flex: "1 1 260px",
-                                            minWidth: 0,
-                                            padding: "9px 12px",
-                                            borderRadius: "8px",
-                                            background: "rgba(0, 0, 0, 0.3)",
-                                            color: "#7fe9ff",
-                                            fontSize: "12px",
-                                            overflowWrap: "anywhere",
-                                        }}
-                                    >
-                                        {lastInvite.url}
-                                    </code>
-                                    <button type="button" onClick={() => copyLink(lastInvite.url)} style={{ ...ghostButton, color: copied ? "#00FF88" : ghostButton.color }}>
-                                        {copied ? <Check size={14} /> : <Copy size={14} />} {copied ? "Copied" : "Copy link"}
-                                    </button>
-                                </div>
-                                <div style={{ ...muted, marginTop: "8px", lineHeight: 1.5 }}>
-                                    Talkrix doesn&apos;t email invitations yet, so send this link yourself. It works once, only for {lastInvite.email}, and expires in 7 days.
-                                </div>
-                            </div>
+                            <InviteResult invite={lastInvite} copied={copied} onCopy={() => copyLink(lastInvite.url)} />
                         )}
                     </div>
                 )}
@@ -602,7 +575,10 @@ export default function TeamSection() {
                         <div style={{ display: "flex", flexDirection: "column" }}>
                             {invitations.map((inv) => (
                                 <div key={inv.id} className="team-row" style={{ padding: "12px 4px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                                    <div style={{ fontSize: "14px", color: "white", overflowWrap: "anywhere" }}>{inv.email}</div>
+                                    <div style={{ minWidth: 0 }}>
+                                        <div style={{ fontSize: "14px", color: "white", overflowWrap: "anywhere" }}>{inv.email}</div>
+                                        <DeliveryNote invitation={inv} />
+                                    </div>
                                     <div>
                                         <RoleBadge role={inv.role} />
                                     </div>
@@ -610,8 +586,8 @@ export default function TeamSection() {
                                     <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", flexWrap: "wrap" }}>
                                         {canManage && (
                                             <>
-                                                <button type="button" onClick={() => handleNewLink(inv)} disabled={!!busy} style={ghostButton} title="Replaces the old link">
-                                                    {busy === `link:${inv.id}` ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Link2 size={14} />} New link
+                                                <button type="button" onClick={() => handleResend(inv)} disabled={!!busy} style={ghostButton} title="Emails a new link; the old one stops working">
+                                                    {busy === `link:${inv.id}` ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Send size={14} />} Resend
                                                 </button>
                                                 <button type="button" onClick={() => handleWithdraw(inv)} disabled={!!busy} style={dangerButton}>
                                                     {busy === `withdraw:${inv.id}` ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <X size={14} />} Withdraw
@@ -687,4 +663,91 @@ export default function TeamSection() {
             </div>
         </div>
     );
+}
+
+/** What happened to the invitation just sent, with its link either way. */
+function InviteResult({
+    invite,
+    copied,
+    onCopy,
+}: {
+    invite: { email: string; role: OrgRole; url: string; delivery: InvitationDelivery };
+    copied: boolean;
+    onCopy: () => void;
+}) {
+    const emailed = invite.delivery === "sent";
+    const tone = emailed
+        ? { border: "rgba(0, 255, 136, 0.25)", background: "rgba(0, 255, 136, 0.05)", icon: "#00FF88" }
+        : { border: "rgba(255, 165, 0, 0.3)", background: "rgba(255, 165, 0, 0.06)", icon: "#FFA500" };
+    return (
+        <div
+            role="status"
+            style={{ marginTop: "16px", padding: "14px 16px", borderRadius: "10px", border: `1px solid ${tone.border}`, background: tone.background }}
+        >
+            <div style={{ display: "flex", gap: "10px", alignItems: "flex-start", fontSize: "13px", color: "white", marginBottom: "10px", lineHeight: 1.5 }}>
+                {emailed ? (
+                    <MailCheck size={17} color={tone.icon} style={{ flexShrink: 0, marginTop: "1px" }} />
+                ) : (
+                    <AlertCircle size={17} color={tone.icon} style={{ flexShrink: 0, marginTop: "1px" }} />
+                )}
+                <span>
+                    {emailed ? (
+                        <>
+                            Invitation emailed to <strong>{invite.email}</strong> as {roleLabel(invite.role)}.
+                        </>
+                    ) : invite.delivery === "failed" ? (
+                        <>
+                            We couldn&apos;t email <strong>{invite.email}</strong>, so send them this link yourself.
+                        </>
+                    ) : (
+                        <>
+                            Send this link to <strong>{invite.email}</strong> to join as {roleLabel(invite.role)}.
+                        </>
+                    )}
+                </span>
+            </div>
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                <code
+                    style={{
+                        flex: "1 1 260px",
+                        minWidth: 0,
+                        padding: "9px 12px",
+                        borderRadius: "8px",
+                        background: "rgba(0, 0, 0, 0.3)",
+                        color: "#7fe9ff",
+                        fontSize: "12px",
+                        overflowWrap: "anywhere",
+                    }}
+                >
+                    {invite.url}
+                </code>
+                <button type="button" onClick={onCopy} style={{ ...ghostButton, color: copied ? "#00FF88" : ghostButton.color }}>
+                    {copied ? <Check size={14} /> : <Copy size={14} />} {copied ? "Copied" : "Copy link"}
+                </button>
+            </div>
+            <div style={{ ...muted, marginTop: "8px", lineHeight: 1.5 }}>
+                {emailed ? "The link is here too, if they'd rather get it from you. " : ""}
+                It works once, only for {invite.email}, and expires in 7 days.
+            </div>
+        </div>
+    );
+}
+
+/** Under a pending invitation: whether it reached their inbox. */
+function DeliveryNote({ invitation }: { invitation: PendingInvitation }) {
+    if (invitation.delivery === "sent") {
+        return (
+            <div style={{ ...muted, display: "flex", alignItems: "center", gap: "5px", marginTop: "3px" }}>
+                <MailCheck size={12} color="#00C8FF" /> Emailed {timeAgo(invitation.emailedAt).toLowerCase()}
+            </div>
+        );
+    }
+    if (invitation.delivery === "failed" || invitation.delivery === "not_configured") {
+        return (
+            <div style={{ ...muted, display: "flex", alignItems: "center", gap: "5px", marginTop: "3px", color: "#FFC46B" }}>
+                <AlertCircle size={12} /> Not emailed — resend, or share the link yourself
+            </div>
+        );
+    }
+    return null;
 }

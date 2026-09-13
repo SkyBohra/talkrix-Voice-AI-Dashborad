@@ -8,6 +8,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { User, Lock, Loader2, Check, AlertCircle, Users } from "lucide-react";
 import { previewInvitation, type InvitationPreview } from "@/lib/orgApi";
 import { roleLabel, saveSession } from "@/lib/session";
+import { apiErrorMessage } from "@/lib/apiHelper";
 
 function LoginForm() {
     const [email, setEmail] = useState("");
@@ -61,7 +62,7 @@ function LoginForm() {
             });
             const data = await res.json();
             if (!res.ok || data.statusCode >= 400) {
-                throw new Error(data.error || data.message || "Invalid credentials");
+                throw new Error(apiErrorMessage(data, "Invalid credentials"));
             }
             saveSession(data.data);
             // Use backend value for tour completion status

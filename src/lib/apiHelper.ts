@@ -98,6 +98,18 @@ export const checkTokenValidity = (): boolean => {
 };
 
 // Extract error message from various error formats
+/**
+ * What an API error says, for a person to read. Prefer `message`: `error` is often just the status
+ * text ("Bad Request"), and a validation failure's message is a list.
+ */
+export const apiErrorMessage = (data: unknown, fallback: string): string => {
+    const body = (data ?? {}) as { message?: unknown; error?: unknown };
+    const message = Array.isArray(body.message) ? body.message.filter((m) => typeof m === 'string').join('. ') : body.message;
+    if (typeof message === 'string' && message.trim()) return message;
+    if (typeof body.error === 'string' && body.error.trim()) return body.error;
+    return fallback;
+};
+
 export const extractErrorMessage = (error: unknown): string => {
     if (axios.isAxiosError(error)) {
         const axiosError = error as AxiosError<any>;
