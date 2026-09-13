@@ -34,7 +34,10 @@ const outlineButton: React.CSSProperties = { display: "flex", alignItems: "cente
 const ghostButton: React.CSSProperties = { flex: 1, padding: "12px", borderRadius: "8px", border: "1px solid rgba(255, 255, 255, 0.2)", background: "transparent", color: "white", cursor: "pointer" };
 const rowIconButton = (color: string, border: string): React.CSSProperties => ({ width: "32px", height: "32px", borderRadius: "6px", border: `1px solid ${border}`, background: "transparent", color, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 });
 
+// Contacts that can be picked and called by hand. An on-demand campaign can also call someone again
+// after a finished conversation; a contact on a live call can never be picked.
 const CALLABLE = new Set(["pending", "failed", "no-answer"]);
+const CALLABLE_ON_DEMAND = new Set([...CALLABLE, "completed"]);
 
 function statusIcon(status: string) {
     switch (status) {
@@ -205,13 +208,14 @@ export default function CampaignDetail({ campaignId }: { campaignId: string }) {
         setControlBusy(false);
     };
 
-    const handleTriggerCalls = async () => {
+    const handleTriggerCalls = async (contactIds: string[] = Array.from(selected)) => {
         if (!campaign?.outboundProvider || !campaign?.outboundPhoneNumber) {
             toast.error("No outbound number", "Choose an outbound phone number for this campaign first.");
             return;
         }
+        if (contactIds.length === 0) return;
         setTriggering(true);
-        const res = await triggerCampaignCalls(campaignId, Array.from(selected));
+        const res = await triggerCampaignCalls(campaignId, contactIds);
         if (res.success && res.data) {
             const { results, summary } = res.data;
             const busy = results.filter((r) => r.code === "LINES_BUSY" || r.code === "PLATFORM_BUSY").length;
@@ -344,7 +348,8 @@ export default function CampaignDetail({ campaignId }: { campaignId: string }) {
     const linesInUse = live?.activeCalls ?? 0;
     const lineLimit = live?.maxConcurrentCalls ?? 0;
 
-    const selectable = contacts.filter((c) => c._id && CALLABLE.has(c.callStatus));
+    const callable = campaign.type === "ondemand" ? CALLABLE_ON_DEMAND : CALLABLE;
+    const selectable = contacts.filter((c) => c._id && callable.has(c.callStatus));
     const allSelected = selectable.length > 0 && selectable.every((c) => selected.has(c._id!));
     const toggleAll = () => setSelected(allSelected ? new Set() : new Set(selectable.map((c) => c._id!)));
     const toggleOne = (id: string) => {
@@ -530,7 +535,7 @@ export default function CampaignDetail({ campaignId }: { campaignId: string }) {
                             <input type="text" placeholder="Search name or number" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} style={{ ...inputStyle, padding: "10px 12px 10px 40px", width: "220px" }} />
                         </div>
                         {campaign.type === "ondemand" && canRun && (
-                            <button onClick={handleTriggerCalls} disabled={triggering || selected.size === 0} style={{ ...primaryButton, background: selected.size === 0 ? "rgba(251, 191, 36, 0.3)" : "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)", color: selected.size === 0 ? "rgba(255, 255, 255, 0.5)" : "#000", cursor: selected.size === 0 ? "not-allowed" : "pointer" }}>
+                            <button onClick={() => handleTriggerCalls()} disabled={triggering || selected.size === 0} style={{ ...primaryButton, background: selected.size === 0 ? "rgba(251, 191, 36, 0.3)" : "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)", color: selected.size === 0 ? "rgba(255, 255, 255, 0.5)" : "#000", cursor: selected.size === 0 ? "not-allowed" : "pointer" }}>
                                 {triggering ? <Loader size={16} style={{ animation: "spin 1s linear infinite" }} /> : <Zap size={16} />}
                                 Call {selected.size > 1 ? `${selected.size} contacts` : "now"}
                             </button>
@@ -583,7 +588,7 @@ export default function CampaignDetail({ campaignId }: { campaignId: string }) {
                                             <tr key={id} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)", background: selected.has(id) ? "rgba(0, 200, 255, 0.05)" : "transparent" }}>
                                                 {campaign.type === "ondemand" && canRun && (
                                                     <td style={{ width: "48px", padding: "16px", textAlign: "center" }}>
-                                                        <input type="checkbox" aria-label={`Select ${contact.name}`} checked={selected.has(id)} disabled={!CALLABLE.has(contact.callStatus)} onChange={() => toggleOne(id)} style={{ width: "18px", height: "18px", cursor: CALLABLE.has(contact.callStatus) ? "pointer" : "not-allowed", accentColor: "#00C8FF" }} />
+                                                        <input type="checkbox" aria-label={`Select ${contact.name}`} checked={selected.has(id)} disabled={!callable.has(contact.callStatus)} onChange={() => toggleOne(id)} style={{ width: "18px", height: "18px", cursor: callable.has(contact.callStatus) ? "pointer" : "not-allowed", accentColor: "#00C8FF" }} />
                                                     </td>
                                                 )}
                                                 <td style={{ padding: "16px", color: "white", fontWeight: 500 }}>
@@ -616,6 +621,18 @@ export default function CampaignDetail({ campaignId }: { campaignId: string }) {
                                                         <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
                                                             {campaign.type === "outbound" && (contact.callStatus === "failed" || contact.callStatus === "no-answer") && (
                                                                 <button onClick={() => handleCallAgain(contact)} style={rowIconButton("#00C8FF", "rgba(0, 200, 255, 0.3)")} title="Call again" aria-label={`Call ${contact.name} again`}>
+                                                                    <RotateCcw size={14} />
+                                                                </button>
+                                                            )}
+                                                            {/* On demand: call this one person again right now, whatever their last call ended as */}
+                                                            {campaign.type === "ondemand" && contact._id && contact.callStatus !== "pending" && callable.has(contact.callStatus) && (
+                                                                <button
+                                                                    onClick={() => handleTriggerCalls([contact._id!])}
+                                                                    disabled={triggering}
+                                                                    style={{ ...rowIconButton("#fbbf24", "rgba(251, 191, 36, 0.35)"), cursor: triggering ? "not-allowed" : "pointer" }}
+                                                                    title="Call again now"
+                                                                    aria-label={`Call ${contact.name} again now`}
+                                                                >
                                                                     <RotateCcw size={14} />
                                                                 </button>
                                                             )}
