@@ -2679,7 +2679,7 @@ export default function AgentsSection() {
             initialOutputMedium: formData.initialOutputMedium,
             joinTimeout: formData.joinTimeout,
             maxDuration: formData.maxDuration,
-            model: "ultravox-v0.7", // Hidden from UI - internal setting
+            // No model: the server chooses what agents run on
             recordingEnabled: formData.recordingEnabled,
             firstSpeakerSettings,
             systemPrompt: formData.systemPrompt,
@@ -2757,7 +2757,7 @@ export default function AgentsSection() {
                     toast.error("Update Failed", response.message || "Failed to update agent");
                 }
             } else {
-                const response = await createAgent(userId, payload);
+                const response = await createAgent(payload);
                 if (response.success && response.data) {
                     // Reload agents list from API to ensure proper data with _id
                     const refreshResponse = await fetchAgentsByUser(userId, { page: 1, limit: itemsPerPage });

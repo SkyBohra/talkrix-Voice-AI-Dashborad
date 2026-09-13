@@ -23,9 +23,10 @@ export const fetchAgentsByUser = async (userId: string, options?: {
   return safeApiCall(() => axios.get(url, { headers: getAuthHeaders() }));
 };
 
-export const createAgent = async (userId: string, agentData: any): Promise<ApiResponse> => {
+/** Create an agent for the signed-in member's organization. */
+export const createAgent = async (agentData: any): Promise<ApiResponse> => {
   return safeApiCall(() => 
-    axios.post(`${API_BASE}/ultravox/${userId}`, agentData, { headers: getAuthHeaders() })
+    axios.post(API_BASE, agentData, { headers: getAuthHeaders() })
   );
 };
 
