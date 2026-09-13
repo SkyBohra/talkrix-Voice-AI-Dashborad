@@ -13,23 +13,31 @@ interface Props {
     customerName?: string;
     /** When set, a line with a time can be clicked to play the recording from there */
     onSeek?: (seconds: number) => void;
+    /**
+     * The element that scrolls — a side panel's body, say. The line being spoken is kept in view
+     * inside it. Without one, the transcript scrolls on its own.
+     */
+    scrollRoot?: React.RefObject<HTMLElement | null>;
 }
 
 /** The conversation, following the recording as it plays. */
-export default function CallTranscript({ lines, loading, message, activeIndex, customerName, onSeek }: Props) {
+export default function CallTranscript({ lines, loading, message, activeIndex, customerName, onSeek, scrollRoot }: Props) {
     const list = useRef<HTMLDivElement>(null);
     const rows = useRef<(HTMLDivElement | null)[]>([]);
 
-    // Keep the line being spoken in view — inside the transcript only, never scrolling the page
+    // Keep the line being spoken in view — inside whatever scrolls, never the page behind it
     useEffect(() => {
-        const box = list.current;
+        const box = scrollRoot?.current ?? list.current;
         const row = rows.current[activeIndex];
         if (!box || !row) return;
-        const top = row.offsetTop - box.offsetTop;
-        if (top < box.scrollTop || top + row.offsetHeight > box.scrollTop + box.clientHeight) {
-            box.scrollTo({ top: Math.max(top - box.clientHeight / 3, 0), behavior: "smooth" });
+        const boxRect = box.getBoundingClientRect();
+        const rowRect = row.getBoundingClientRect();
+        // Leave room for anything pinned to the top of the scroller (a sticky player, say)
+        const topRoom = scrollRoot ? 170 : 0;
+        if (rowRect.top < boxRect.top + topRoom || rowRect.bottom > boxRect.bottom) {
+            box.scrollBy({ top: rowRect.top - boxRect.top - box.clientHeight / 3, behavior: "smooth" });
         }
-    }, [activeIndex]);
+    }, [activeIndex, scrollRoot]);
 
     if (loading) {
         return (
@@ -53,7 +61,7 @@ export default function CallTranscript({ lines, loading, message, activeIndex, c
     }
 
     return (
-        <div ref={list} className="ctx-list">
+        <div ref={list} className={`ctx-list${scrollRoot ? " ctx-list-flow" : ""}`}>
             {lines.map((line, index) => {
                 const agent = line.speaker === "agent";
                 const seekable = !!onSeek && line.startSec !== null;

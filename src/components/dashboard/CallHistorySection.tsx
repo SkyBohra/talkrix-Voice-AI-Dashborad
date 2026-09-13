@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, Clock, Search, Download, Play, Pause, RefreshCw, User, TestTube, ChevronDown, ChevronUp, FileText } from "lucide-react";
+import { Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, Clock, Search, Download, Play, Pause, RefreshCw, User, TestTube, PanelRightOpen } from "lucide-react";
 import { 
     fetchCallHistory, 
     fetchCallStats, 
@@ -12,14 +12,19 @@ import {
     getCallDisplayDate 
 } from "@/lib/callHistoryApi";
 import Pagination from "@/components/ui/Pagination";
-import CallDetailPanel from "./CallDetailPanel";
+import CallDetailDrawer from "./CallDetailDrawer";
 
 export default function CallHistorySection() {
     const [searchQuery, setSearchQuery] = useState("");
     const [filterStatus, setFilterStatus] = useState<string>("all");
     const [filterCallType, setFilterCallType] = useState<string>("all");
     const [playingId, setPlayingId] = useState<string | null>(null);
-    const [expandedId, setExpandedId] = useState<string | null>(null);
+    // The call open in the side panel
+    const [selectedId, setSelectedId] = useState<string | null>(null);
+    const closeCall = useCallback(() => {
+        setSelectedId(null);
+        setPlayingId(null);
+    }, []);
     const [calls, setCalls] = useState<CallHistoryRecord[]>([]);
     const [stats, setStats] = useState<CallStats | null>(null);
     const [loading, setLoading] = useState(true);
@@ -467,11 +472,8 @@ export default function CallHistorySection() {
                 {/* Table Body */}
                 {!loading && filteredCalls.map((call) => {
                     const statusStyle = getStatusColor(call.status);
-                    const isExpanded = expandedId === call._id;
-                    const hasSummary = call.summary || call.shortSummary;
-                    // A call that connected has a transcript, and maybe a recording, even without a summary
-                    const connected = call.status === "completed" || call.status === "in-progress";
-                    const hasDetails = Boolean(hasSummary || connected);
+                    const isSelected = selectedId === call._id;
+
                     return (
                         <div key={call._id}>
                             <div
@@ -479,23 +481,33 @@ export default function CallHistorySection() {
                                     display: "grid",
                                     gridTemplateColumns: "1fr 1fr 1fr 100px 100px 150px 80px",
                                     padding: "16px 24px",
-                                    borderBottom: isExpanded ? "none" : "1px solid rgba(0, 200, 255, 0.08)",
+                                    borderBottom: "1px solid rgba(0, 200, 255, 0.08)",
+                                    boxShadow: isSelected ? "inset 3px 0 0 #00C8FF" : "none",
                                     alignItems: "center",
                                     gap: "16px",
                                     transition: "background 0.2s ease",
-                                    cursor: hasDetails ? "pointer" : "default",
-                                    background: isExpanded ? "rgba(0, 200, 255, 0.05)" : "transparent",
+                                    cursor: "pointer",
+                                    background: isSelected ? "rgba(0, 200, 255, 0.08)" : "transparent",
                                 }}
+                                role="button"
+                                tabIndex={0}
+                                aria-label={`Open the call with ${call.customerName || "this caller"}`}
                                 onClick={() => {
-                                    if (!hasDetails) return;
-                                    setExpandedId(isExpanded ? null : call._id);
-                                    if (isExpanded) setPlayingId(null);
+                                    setPlayingId(null);
+                                    setSelectedId(call._id);
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        setPlayingId(null);
+                                        setSelectedId(call._id);
+                                    }
                                 }}
                                 onMouseEnter={(e) => {
-                                    if (!isExpanded) e.currentTarget.style.background = "rgba(0, 200, 255, 0.05)";
+                                    if (!isSelected) e.currentTarget.style.background = "rgba(0, 200, 255, 0.05)";
                                 }}
                                 onMouseLeave={(e) => {
-                                    if (!isExpanded) e.currentTarget.style.background = "transparent";
+                                    if (!isSelected) e.currentTarget.style.background = "transparent";
                                 }}
                             >
                                 {/* Customer Name */}
@@ -518,13 +530,10 @@ export default function CallHistorySection() {
                                         <span style={{ color: "white", fontWeight: "500" }}>
                                             {call.customerName || (call.callType === "test" ? "Test Call" : "Unknown")}
                                         </span>
-                                        {hasDetails && (
-                                            <span style={{ fontSize: "11px", color: "rgba(0, 200, 255, 0.6)", display: "flex", alignItems: "center", gap: "4px" }}>
-                                                <FileText size={10} />
-                                                {isExpanded ? "Hide details" : "Transcript & recording"}
-                                                {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                                            </span>
-                                        )}
+                                        <span style={{ fontSize: "11px", color: "rgba(0, 200, 255, 0.6)", display: "flex", alignItems: "center", gap: "4px" }}>
+                                            <PanelRightOpen size={11} />
+                                            View call
+                                        </span>
                                     </div>
                                 </div>
 
@@ -578,15 +587,12 @@ export default function CallHistorySection() {
                                 {/* Audio Control */}
                                 {call.status === "completed" && call.recordingEnabled !== false ? (
                                     <button
-                                        aria-label={playingId === call._id ? "Close the recording" : "Play the recording"}
+                                        aria-label={`Play the recording of the call with ${call.customerName || "this caller"}`}
                                         onClick={(e) => {
+                                            // Opens the call and starts its recording
                                             e.stopPropagation();
-                                            if (playingId === call._id) {
-                                                setPlayingId(null);
-                                            } else {
-                                                setExpandedId(call._id);
-                                                setPlayingId(call._id);
-                                            }
+                                            setPlayingId(call._id);
+                                            setSelectedId(call._id);
                                         }}
                                         style={{
                                             width: "36px",
@@ -609,18 +615,6 @@ export default function CallHistorySection() {
                                 )}
                             </div>
 
-                            {/* Everything about the call, read back: recording, summary, details and transcript */}
-                            {isExpanded && (
-                                <div
-                                    style={{
-                                        padding: "4px 24px 20px",
-                                        background: "rgba(0, 200, 255, 0.02)",
-                                        borderBottom: "1px solid rgba(0, 200, 255, 0.08)",
-                                    }}
-                                >
-                                    <CallDetailPanel call={call} autoPlay={playingId === call._id} />
-                                </div>
-                            )}
                         </div>
                     );
                 })}
@@ -634,6 +628,21 @@ export default function CallHistorySection() {
                     </div>
                 )}
             </div>
+
+            {(() => {
+                const index = filteredCalls.findIndex((c) => c._id === selectedId);
+                const selected = index >= 0 ? filteredCalls[index] : null;
+                return (
+                    <CallDetailDrawer
+                        call={selected}
+                        autoPlay={selected !== null && playingId === selected._id}
+                        position={selected ? { index, total: filteredCalls.length } : undefined}
+                        onPrevious={index > 0 ? () => { setPlayingId(null); setSelectedId(filteredCalls[index - 1]._id); } : undefined}
+                        onNext={index >= 0 && index < filteredCalls.length - 1 ? () => { setPlayingId(null); setSelectedId(filteredCalls[index + 1]._id); } : undefined}
+                        onClose={closeCall}
+                    />
+                );
+            })()}
 
             {/* Pagination */}
             <Pagination
