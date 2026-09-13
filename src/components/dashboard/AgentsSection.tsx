@@ -2815,9 +2815,9 @@ export default function AgentsSection() {
         
         try {
             // First create the call to get joinUrl
+            // Recording is left to the agent's own setting, which is on unless someone switched it off
             const response = await createAgentCall(testingAgent._id, {
                 maxDuration: '300s', // 5 minutes for testing
-                recordingEnabled: false,
             });
             
             if (!response.success || !response.data?.joinUrl) {
