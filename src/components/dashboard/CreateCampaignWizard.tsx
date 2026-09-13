@@ -121,6 +121,14 @@ const CAMPAIGN_TYPES = [
   }
 ];
 
+// The room the sidebar takes: the variable the Sidebar keeps current (0 on a phone, where it is
+// off-canvas), or the saved collapsed state if the Sidebar hasn't set it yet
+function currentSidebarWidth(): number {
+  const width = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-width'), 10);
+  if (Number.isFinite(width)) return width;
+  return localStorage.getItem('sidebarCollapsed') === 'true' ? 80 : 260;
+}
+
 export default function CreateCampaignWizard({
   isOpen,
   onClose,
@@ -145,10 +153,7 @@ export default function CreateCampaignWizard({
 
   // Track sidebar width changes
   useEffect(() => {
-    const updateSidebarWidth = () => {
-      const saved = localStorage.getItem('sidebarCollapsed');
-      setSidebarWidth(saved === 'true' ? 80 : 260);
-    };
+    const updateSidebarWidth = () => setSidebarWidth(currentSidebarWidth());
 
     // Initial check
     updateSidebarWidth();
@@ -157,12 +162,7 @@ export default function CreateCampaignWizard({
     window.addEventListener('storage', updateSidebarWidth);
     
     // Also check on CSS variable changes via MutationObserver
-    const observer = new MutationObserver(() => {
-      const width = getComputedStyle(document.documentElement).getPropertyValue('--sidebar-width');
-      if (width) {
-        setSidebarWidth(parseInt(width) || 260);
-      }
-    });
+    const observer = new MutationObserver(updateSidebarWidth);
     
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
 
@@ -177,8 +177,7 @@ export default function CreateCampaignWizard({
     if (isOpen) {
       setCurrentStep(1);
       // Re-check sidebar width when modal opens
-      const saved = localStorage.getItem('sidebarCollapsed');
-      setSidebarWidth(saved === 'true' ? 80 : 260);
+      setSidebarWidth(currentSidebarWidth());
     }
   }, [isOpen]);
 

@@ -102,10 +102,11 @@ export default function Sidebar({ activeSection, onSectionChange, onLogout }: Si
         }
     }, [collapsed, mounted]);
 
-    // Set CSS variable for sidebar width so other components can use it
+    // Set CSS variable for sidebar width so other components can use it. On a phone the sidebar is
+    // off-canvas, so it takes no room and overlays can use the whole screen.
     useEffect(() => {
-        document.documentElement.style.setProperty('--sidebar-width', collapsed ? '80px' : '260px');
-    }, [collapsed]);
+        document.documentElement.style.setProperty('--sidebar-width', isMobile ? '0px' : collapsed ? '80px' : '260px');
+    }, [collapsed, isMobile]);
 
     // Close mobile menu when clicking outside or changing section
     useEffect(() => {

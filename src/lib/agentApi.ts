@@ -50,6 +50,30 @@ export const fetchVoices = async (search?: string): Promise<ApiResponse> => {
   return safeApiCall(() => axios.get(url, { headers: getAuthHeaders() }));
 };
 
+/** Where the value for one of an agent's {{placeholders}} comes from. */
+export type AgentVariableSource = 'customer' | 'campaign' | 'automatic' | 'custom';
+
+export interface AgentVariable {
+  /** What a value is matched by, e.g. "loan_amount" */
+  name: string;
+  /** Every spelling of it in the prompt: "LOAN_AMOUNT", "loanAmount" */
+  placeholders: string[];
+  source: AgentVariableSource;
+}
+
+export interface AgentVariables {
+  variables: AgentVariable[];
+  /** Placeholders no value can ever fill, like {{2nd_line}} */
+  unusable: string[];
+}
+
+/** The {{placeholders}} an agent's prompt uses, so a test call can ask for their values. */
+export const fetchAgentVariables = async (agentId: string): Promise<ApiResponse<AgentVariables>> => {
+  return safeApiCall(() =>
+    axios.get(`${API_BASE}/${agentId}/variables`, { headers: getAuthHeaders() })
+  );
+};
+
 /**
  * Create a call to test an agent
  * Returns joinUrl that can be used with the Voice Client SDK
@@ -60,6 +84,8 @@ export const createAgentCall = async (agentId: string, options?: {
   callType?: 'test' | 'inbound' | 'outbound';
   customerName?: string;
   customerPhone?: string;
+  /** Values for the prompt's other {{placeholders}}, keyed by name: { loan_amount: "45000" } */
+  metadata?: Record<string, string>;
 }): Promise<ApiResponse> => {
   return safeApiCall(() => 
     axios.post(`${API_BASE}/${agentId}/call`, options || {}, { headers: getAuthHeaders() })

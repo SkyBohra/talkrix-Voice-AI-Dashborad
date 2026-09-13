@@ -1,11 +1,13 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Bot, Plus, Pencil, Trash2, X, Save, Play, Pause, Loader2, Search, Mic, Phone, PhoneOff, MicOff, Copy, Check } from "lucide-react";
 import { usePermissions } from "@/lib/useMe";
 import { createAgent, fetchAgentsByUser, updateAgent, deleteAgent, fetchVoices, createAgentCall, endAgentCall } from "../../lib/agentApi";
 import { fetchUserTools, Tool } from "../../lib/toolApi";
 import AgentBuilder from "./AgentBuilder";
+import TestCallSetup, { SentValue, TestCallStart, TestValuesSent } from "./TestCallSetup";
 import Pagination from "@/components/ui/Pagination";
 import { useToast } from "@/components/ui/toast";
 
@@ -2377,6 +2379,8 @@ export default function AgentsSection() {
     const [callHistoryId, setCallHistoryId] = useState<string | null>(null);
     const [callError, setCallError] = useState<string | null>(null);
     const [transcript, setTranscript] = useState<Array<{ role: string; text: string }>>([]);
+    // The prompt values the running test call was started with
+    const [testValuesSent, setTestValuesSent] = useState<SentValue[]>([]);
     const [isMuted, setIsMuted] = useState(false);
     const [agentStatus, setAgentStatus] = useState<string>('');
     const [copiedAgentId, setCopiedAgentId] = useState<string | null>(null);
@@ -2802,22 +2806,26 @@ export default function AgentsSection() {
         setCallHistoryId(null);
         setCallError(null);
         setTranscript([]);
+        setTestValuesSent([]);
         setAgentStatus('');
         setIsMuted(false);
     };
 
-    const startTestCall = async () => {
+    const startTestCall = async ({ request, sent }: TestCallStart) => {
         if (!testingAgent) return;
         
         setCallStatus('connecting');
         setCallError(null);
         setTranscript([]);
+        setTestValuesSent(sent);
         
         try {
             // First create the call to get joinUrl
-            // Recording is left to the agent's own setting, which is on unless someone switched it off
+            // Recording is left to the agent's own setting, which is on unless someone switched it off.
+            // The request carries the values typed in for the prompt's {{placeholders}}.
             const response = await createAgentCall(testingAgent._id, {
                 maxDuration: '300s', // 5 minutes for testing
+                ...request,
             });
             
             if (!response.success || !response.data?.joinUrl) {
@@ -2935,6 +2943,7 @@ export default function AgentsSection() {
         setCallHistoryId(null);
         setCallError(null);
         setTranscript([]);
+        setTestValuesSent([]);
         setAgentStatus('');
         setIsMuted(false);
     };
@@ -4196,8 +4205,8 @@ export default function AgentsSection() {
                 />
             )}
 
-            {/* Test Agent Modal */}
-            {isTestModalOpen && testingAgent && (
+            {/* Test Agent Modal — on document.body, so the page's own layers (the phone header and tab bar) can't cover it */}
+            {isTestModalOpen && testingAgent && createPortal(
                 <div
                     style={{
                         position: "fixed",
@@ -4223,7 +4232,7 @@ export default function AgentsSection() {
                             border: "1px solid rgba(0, 200, 255, 0.2)",
                             borderRadius: "24px",
                             width: "100%",
-                            maxWidth: callStatus === 'connected' || callStatus === 'ended' ? "600px" : "480px",
+                            maxWidth: callStatus === 'connected' || callStatus === 'ended' ? "600px" : "520px",
                             maxHeight: "90vh",
                             overflow: "hidden",
                             display: "flex",
@@ -4333,62 +4342,14 @@ export default function AgentsSection() {
                                 </div>
                             )}
 
-                            {/* Idle State */}
+                            {/* Idle State: the prompt's values, then the call */}
                             {callStatus === 'idle' && (
-                                <div style={{ textAlign: "center", padding: "20px 0" }}>
-                                    <div style={{
-                                        width: "100px",
-                                        height: "100px",
-                                        borderRadius: "50%",
-                                        background: "rgba(0, 200, 255, 0.08)",
-                                        border: "2px solid rgba(0, 200, 255, 0.15)",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        margin: "0 auto 24px",
-                                    }}>
-                                        <Phone size={40} color="#00C8FF" />
-                                    </div>
-                                    <p style={{ 
-                                        fontSize: "14px", 
-                                        color: "rgba(255, 255, 255, 0.5)", 
-                                        marginBottom: "24px", 
-                                        lineHeight: 1.6,
-                                    }}>
-                                        Start a voice call to test your agent.<br/>
-                                        Make sure your microphone is enabled.
-                                    </p>
-                                    <button
-                                        onClick={startTestCall}
-                                        style={{
-                                            display: "inline-flex",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            gap: "10px",
-                                            padding: "16px 40px",
-                                            borderRadius: "14px",
-                                            border: "none",
-                                            background: "linear-gradient(135deg, #00C8FF 0%, #7800FF 100%)",
-                                            color: "white",
-                                            fontSize: "16px",
-                                            fontWeight: "600",
-                                            cursor: "pointer",
-                                            transition: "all 0.2s ease",
-                                            boxShadow: "0 4px 24px rgba(0, 200, 255, 0.3)",
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.transform = "translateY(-2px)";
-                                            e.currentTarget.style.boxShadow = "0 8px 32px rgba(0, 200, 255, 0.4)";
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.transform = "translateY(0)";
-                                            e.currentTarget.style.boxShadow = "0 4px 24px rgba(0, 200, 255, 0.3)";
-                                        }}
-                                    >
-                                        <Phone size={20} />
-                                        Start Call
-                                    </button>
-                                </div>
+                                <TestCallSetup
+                                    key={testingAgent._id}
+                                    agentId={testingAgent._id}
+                                    agentName={testingAgent.name}
+                                    onStart={startTestCall}
+                                />
                             )}
 
                             {/* Connecting State */}
@@ -4419,6 +4380,7 @@ export default function AgentsSection() {
                             {/* Connected State - Show Transcript */}
                             {callStatus === 'connected' && (
                                 <div>
+                                    <TestValuesSent values={testValuesSent} />
                                     {/* Transcript Area */}
                                     <div style={{
                                         background: "rgba(0, 0, 0, 0.3)",
@@ -4560,6 +4522,7 @@ export default function AgentsSection() {
                             {/* Ended State - Show Transcript History */}
                             {callStatus === 'ended' && (
                                 <div>
+                                    <TestValuesSent values={testValuesSent} />
                                     {/* Show transcript if available */}
                                     {transcript.length > 0 && (
                                         <div style={{
@@ -4701,7 +4664,8 @@ export default function AgentsSection() {
                             )}
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body,
             )}
 
             <style>{`

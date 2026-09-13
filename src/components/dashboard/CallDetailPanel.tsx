@@ -113,6 +113,15 @@ export default function CallDetailPanel({
 
     const [tab, setTab] = useState<Tab>(connected ? "transcript" : "details");
 
+    // The contact's columns, or a test's values, as they were handed over with the call
+    const given = useMemo(
+        () =>
+            Object.entries(call.metadata?.customMetadata ?? {})
+                .filter(([, value]) => ["string", "number", "boolean"].includes(typeof value) && String(value).trim() !== "")
+                .map(([key, value]) => [key, typeof value === "boolean" ? (value ? "yes" : "no") : String(value)] as const),
+        [call.metadata],
+    );
+
     // ---- transcript ----
     const [lines, setLines] = useState<TranscriptLine[]>([]);
     const [transcriptLoading, setTranscriptLoading] = useState(connected);
@@ -298,53 +307,71 @@ export default function CallDetailPanel({
                     ))}
 
                 {tab === "details" && (
-                    <dl className="cdp-facts">
-                        <div className="cdp-fact">
-                            <dt>Outcome</dt>
-                            <dd>
-                                <span className="cdp-pill" style={{ color: outcome.color, background: outcome.bg }}>
-                                    {outcome.label}
-                                </span>
-                            </dd>
-                        </div>
-                        <div className="cdp-fact">
-                            <dt>Duration</dt>
-                            <dd className="cdp-mono">{formatDuration(call.durationSeconds)}</dd>
-                        </div>
-                        <div className="cdp-fact">
-                            <dt>How it ended</dt>
-                            <dd>{call.endReason ? endReasonLabel(call.endReason) : "—"}</dd>
-                        </div>
-                        <div className="cdp-fact">
-                            <dt>Type</dt>
-                            <dd>{CALL_TYPE[call.callType] ?? call.callType}</dd>
-                        </div>
-                        <div className="cdp-fact">
-                            <dt>Number</dt>
-                            <dd className="cdp-mono">{call.customerPhone || "—"}</dd>
-                        </div>
-                        <div className="cdp-fact">
-                            <dt>Agent</dt>
-                            <dd>{call.agentName || "—"}</dd>
-                        </div>
-                        <div className="cdp-fact">
-                            <dt>When</dt>
-                            <dd>{formatCallDate(getCallDisplayDate(call))}</dd>
-                        </div>
-                        <div className="cdp-fact">
-                            <dt>Recording</dt>
-                            <dd>{recordingOff ? "Switched off" : connected ? "On" : "—"}</dd>
-                        </div>
-                        <div className="cdp-fact cdp-fact-wide">
-                            <dt>Call ID</dt>
-                            <dd>
-                                <button type="button" className="cdp-copy-id" onClick={() => copy("id", call._id)} title="Copy the call ID">
-                                    <span className="cdp-mono">{call._id}</span>
-                                    {copied === "id" ? <Check size={12} /> : <Copy size={12} />}
-                                </button>
-                            </dd>
-                        </div>
-                    </dl>
+                    <div className="cdp-stack">
+                        <dl className="cdp-facts">
+                            <div className="cdp-fact">
+                                <dt>Outcome</dt>
+                                <dd>
+                                    <span className="cdp-pill" style={{ color: outcome.color, background: outcome.bg }}>
+                                        {outcome.label}
+                                    </span>
+                                </dd>
+                            </div>
+                            <div className="cdp-fact">
+                                <dt>Duration</dt>
+                                <dd className="cdp-mono">{formatDuration(call.durationSeconds)}</dd>
+                            </div>
+                            <div className="cdp-fact">
+                                <dt>How it ended</dt>
+                                <dd>{call.endReason ? endReasonLabel(call.endReason) : "—"}</dd>
+                            </div>
+                            <div className="cdp-fact">
+                                <dt>Type</dt>
+                                <dd>{CALL_TYPE[call.callType] ?? call.callType}</dd>
+                            </div>
+                            <div className="cdp-fact">
+                                <dt>Number</dt>
+                                <dd className="cdp-mono">{call.customerPhone || "—"}</dd>
+                            </div>
+                            <div className="cdp-fact">
+                                <dt>Agent</dt>
+                                <dd>{call.agentName || "—"}</dd>
+                            </div>
+                            <div className="cdp-fact">
+                                <dt>When</dt>
+                                <dd>{formatCallDate(getCallDisplayDate(call))}</dd>
+                            </div>
+                            <div className="cdp-fact">
+                                <dt>Recording</dt>
+                                <dd>{recordingOff ? "Switched off" : connected ? "On" : "—"}</dd>
+                            </div>
+                            <div className="cdp-fact cdp-fact-wide">
+                                <dt>Call ID</dt>
+                                <dd>
+                                    <button type="button" className="cdp-copy-id" onClick={() => copy("id", call._id)} title="Copy the call ID">
+                                        <span className="cdp-mono">{call._id}</span>
+                                        {copied === "id" ? <Check size={12} /> : <Copy size={12} />}
+                                    </button>
+                                </dd>
+                            </div>
+                        </dl>
+                        {given.length > 0 && (
+                            <section className="cdp-card">
+                                <h4 className="cdp-heading">Given to the agent</h4>
+                                <p className="cdp-hint cdp-given-hint">
+                                    What came with this call for the agent&apos;s prompt. Only what the prompt asks for is used.
+                                </p>
+                                <dl className="cdp-facts">
+                                    {given.map(([key, value]) => (
+                                        <div className="cdp-fact" key={key}>
+                                            <dt>{key}</dt>
+                                            <dd>{value}</dd>
+                                        </div>
+                                    ))}
+                                </dl>
+                            </section>
+                        )}
+                    </div>
                 )}
             </div>
         </div>
@@ -373,6 +400,7 @@ const STYLES = `
 .cdp-count { padding: 1px 7px; border-radius: 10px; background: rgba(0, 200, 255, 0.14); color: #00C8FF; font-size: 11px; font-weight: 600; }
 .cdp-lead { margin: 0; color: rgba(255, 255, 255, 0.92); font-size: 15px; line-height: 1.55; font-weight: 500; }
 .cdp-body { margin: 0; color: rgba(255, 255, 255, 0.7); font-size: 14px; line-height: 1.7; white-space: pre-wrap; }
+.cdp-given-hint { display: block; margin: -2px 0 12px; line-height: 1.5; }
 .cdp-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .cdp-hint { color: rgba(255, 255, 255, 0.38); font-size: 12px; }
 .cdp-facts { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }

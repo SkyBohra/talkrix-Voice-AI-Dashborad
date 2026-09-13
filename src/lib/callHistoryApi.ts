@@ -23,6 +23,11 @@ export interface CallHistoryRecord {
   endReason?: 'unjoined' | 'hangup' | 'agent_hangup' | 'timeout' | 'connection_error' | 'system_error';
   recordingEnabled: boolean;
   recordingUrl?: string;
+  metadata?: {
+    /** What came with the call for the agent's prompt: a contact list's columns, an API call's or a test's values */
+    customMetadata?: Record<string, unknown>;
+    [key: string]: unknown;
+  };
   createdAt: string;
   updatedAt: string;
 }
