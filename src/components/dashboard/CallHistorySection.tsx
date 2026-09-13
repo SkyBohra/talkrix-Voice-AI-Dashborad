@@ -12,8 +12,7 @@ import {
     getCallDisplayDate 
 } from "@/lib/callHistoryApi";
 import Pagination from "@/components/ui/Pagination";
-import CallRecordingPlayer from "./CallRecordingPlayer";
-import CallTranscript from "./CallTranscript";
+import CallDetailPanel from "./CallDetailPanel";
 
 export default function CallHistorySection() {
     const [searchQuery, setSearchQuery] = useState("");
@@ -110,44 +109,7 @@ export default function CallHistorySection() {
         }
     };
 
-    const getBillingStatusLabel = (billingStatus?: string) => {
-        if (!billingStatus) return "—";
-        switch (billingStatus) {
-            case "BILLING_STATUS_FREE_MINUTES": return "Free Minutes";
-            case "BILLING_STATUS_BILLED": return "Billed";
-            case "BILLING_STATUS_PENDING": return "Pending";
-            case "BILLING_STATUS_FAILED": return "Failed";
-            case "billed": return "Billed";
-            case "free": return "Free";
-            case "pending": return "Pending";
-            default:
-                // Handle any other format - convert BILLING_STATUS_X to readable format
-                if (billingStatus.startsWith("BILLING_STATUS_")) {
-                    return billingStatus.replace("BILLING_STATUS_", "").replace(/_/g, " ").toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
-                }
-                return billingStatus;
-        }
-    };
 
-    const getBillingStatusColor = (billingStatus?: string) => {
-        if (!billingStatus) return "rgba(255, 255, 255, 0.7)";
-        switch (billingStatus) {
-            case "BILLING_STATUS_FREE_MINUTES":
-            case "free":
-                return "rgba(59, 130, 246, 0.9)"; // Blue for free
-            case "BILLING_STATUS_BILLED":
-            case "billed":
-                return "rgba(34, 197, 94, 0.9)"; // Green for billed
-            case "BILLING_STATUS_PENDING":
-            case "pending":
-                return "rgba(251, 191, 36, 0.9)"; // Yellow for pending
-            case "BILLING_STATUS_FAILED":
-            case "failed":
-                return "rgba(239, 68, 68, 0.9)"; // Red for failed
-            default:
-                return "rgba(255, 255, 255, 0.7)";
-        }
-    };
 
     const handleExport = () => {
         // Export calls as CSV
@@ -647,98 +609,16 @@ export default function CallHistorySection() {
                                 )}
                             </div>
 
-                            {/* Expanded Summary Section */}
+                            {/* Everything about the call, read back: recording, summary, details and transcript */}
                             {isExpanded && (
                                 <div
                                     style={{
-                                        padding: "16px 24px 20px 72px",
-                                        background: "rgba(0, 200, 255, 0.03)",
+                                        padding: "4px 24px 20px",
+                                        background: "rgba(0, 200, 255, 0.02)",
                                         borderBottom: "1px solid rgba(0, 200, 255, 0.08)",
                                     }}
                                 >
-                                    {connected && (
-                                        <div style={{ display: "flex", flexDirection: "column", gap: "18px", marginBottom: hasSummary ? "20px" : 0 }}>
-                                            <div>
-                                                <div style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.4)", textTransform: "uppercase", marginBottom: "8px" }}>
-                                                    Recording
-                                                </div>
-                                                {call.recordingEnabled === false ? (
-                                                    <div style={{ color: "rgba(255, 255, 255, 0.5)", fontSize: "13px" }}>
-                                                        Recording was switched off for this call.
-                                                    </div>
-                                                ) : (
-                                                    <CallRecordingPlayer callId={call._id} autoPlay={playingId === call._id} />
-                                                )}
-                                            </div>
-                                            <div>
-                                                <div style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.4)", textTransform: "uppercase", marginBottom: "8px" }}>
-                                                    Transcript
-                                                </div>
-                                                <CallTranscript callId={call._id} customerName={call.customerName} />
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
-                                        {/* Left Column - Summary */}
-                                        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                                            {call.shortSummary && (
-                                                <div>
-                                                    <div style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.4)", textTransform: "uppercase", marginBottom: "4px" }}>
-                                                        Short Summary
-                                                    </div>
-                                                    <div style={{ color: "rgba(255, 255, 255, 0.9)", fontSize: "14px", lineHeight: "1.5" }}>
-                                                        {call.shortSummary}
-                                                    </div>
-                                                </div>
-                                            )}
-                                            {call.summary && (
-                                                <div>
-                                                    <div style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.4)", textTransform: "uppercase", marginBottom: "4px" }}>
-                                                        Full Summary
-                                                    </div>
-                                                    <div style={{ color: "rgba(255, 255, 255, 0.7)", fontSize: "13px", lineHeight: "1.6" }}>
-                                                        {call.summary}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Right Column - Billing & Technical Details */}
-                                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                                            {call.endReason && (
-                                                <div style={{ display: "flex", gap: "8px" }}>
-                                                    <span style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.4)", minWidth: "100px" }}>End Reason:</span>
-                                                    <span style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.7)" }}>{getEndReasonLabel(call.endReason)}</span>
-                                                </div>
-                                            )}
-                                            {/* Hidden for now - uncomment to show billing info
-                                            {call.billedDuration && (
-                                                <div style={{ display: "flex", gap: "8px" }}>
-                                                    <span style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.4)", minWidth: "100px" }}>Billed Duration:</span>
-                                                    <span style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.7)" }}>{call.billedDuration}</span>
-                                                </div>
-                                            )}
-                                            {call.billingStatus && (
-                                                <div style={{ display: "flex", gap: "8px" }}>
-                                                    <span style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.4)", minWidth: "100px" }}>Billing Status:</span>
-                                                    <span style={{ 
-                                                        fontSize: "12px", 
-                                                        color: getBillingStatusColor(call.billingStatus),
-                                                    }}>
-                                                        {getBillingStatusLabel(call.billingStatus)}
-                                                    </span>
-                                                </div>
-                                            )}
-                                            */}
-                                            {call.talkrixCallId && (
-                                                <div style={{ display: "flex", gap: "8px" }}>
-                                                    <span style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.4)", minWidth: "100px" }}>Call ID:</span>
-                                                    <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.5)", fontFamily: "monospace" }}>{call.talkrixCallId}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
+                                    <CallDetailPanel call={call} autoPlay={playingId === call._id} />
                                 </div>
                             )}
                         </div>
